@@ -1,0 +1,11 @@
+[31-Oct-2025 16:46:09 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[31-Oct-2025 17:12:37 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[01-Nov-2025 19:14:48 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[01-Nov-2025 19:14:55 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[01-Nov-2025 19:15:53 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[01-Nov-2025 19:16:35 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[01-Nov-2025 20:13:15 Asia/Colombo] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home1/imwijqte/public_html/admin/functions.php:13) in /home1/imwijqte/public_html/admin/customer_list.php on line 14
+[15-Nov-2025 00:38:30 Asia/Colombo] PHP Warning:  Undefined array key "password" in /home1/imwijqte/public_html/admin/signin.php on line 17
+[19-Nov-2025 13:48:33 Asia/Colombo] PHP Warning:  Undefined variable $rejected_inquiries in /home1/imwijqte/public_html/admin/sidebar.php on line 78
+[19-Nov-2025 13:49:09 Asia/Colombo] PHP Warning:  Undefined variable $rejected_inquiries in /home1/imwijqte/public_html/admin/sidebar.php on line 78
+[19-Nov-2025 13:49:14 Asia/Colombo] PHP Warning:  Undefined variable $rejected_inquiries in /home1/imwijqte/public_html/admin/sidebar.php on line 78
