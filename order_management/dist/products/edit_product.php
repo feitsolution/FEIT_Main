@@ -236,10 +236,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <div class="form-row">
                                 <div class="product-form-group full-width">
                                     <label for="description" class="form-label">
-                                        <i class="fas fa-align-left"></i> Description<span class="required">*</span>
+                                        <i class="fas fa-align-left"></i> Description
                                     </label>
                                     <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description" required><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
+                                        placeholder="Enter product description (optional)"><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
                                     <div class="error-feedback" id="description-error"></div>
                                     <div class="char-counter">
                                         <span id="desc-char-count">0</span> characters
@@ -537,8 +537,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 const validation = validateDescription($(this).val());
                 if (!validation.valid) {
                     showError('description', validation.message);
-                } else {
+                } else if ($(this).val().trim() !== '') {
                     showSuccess('description');
+                } else {
+                    clearValidation('description');
                 }
             });
         }
@@ -634,14 +636,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         }
 
         function validateDescription(description) {
-            // Description is now required
+            // Description is optional, so empty is valid
             if (description.trim() === '') {
-                return { valid: false, message: 'Description is required' };
-            }
-            
-            // Minimum length check
-            if (description.trim().length < 10) {
-                return { valid: false, message: 'Description must be at least 10 characters long' };
+                return { valid: true, message: '' };
             }
             
             // Check length
@@ -706,7 +703,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 if (!result.valid) {
                     showError(validation.field, result.message);
                     isValid = false;
-                } else {
+                } else if (validation.field === 'description' && validation.value.trim() !== '') {
+                    showSuccess(validation.field);
+                } else if (validation.field !== 'description') {
                     showSuccess(validation.field);
                 }
             });

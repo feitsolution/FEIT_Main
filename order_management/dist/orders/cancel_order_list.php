@@ -660,7 +660,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             viewPaymentSlipBtn.style.display = 'none';
             
             // Determine which PHP file to use based on interface
-            const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
+            const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
             const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
             
             console.log('Fetching from:', fetchUrl);

@@ -3,7 +3,7 @@
 $servername = "localhost";
 $username = "root";
 $password = ""; // Use your actual database password
-$dbname = "test"; // Replace with your database name
+$dbname = "royal_express"; // Replace with your database name
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 

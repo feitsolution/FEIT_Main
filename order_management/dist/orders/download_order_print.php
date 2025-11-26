@@ -171,6 +171,7 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
                     <?php endif; ?>
                 </td>
             </tr>
+
             <!-- Delivery Service Row -->
             <tr>
                 <td class="delivery-service-cell">

@@ -55,65 +55,14 @@ try {
     $product_code = sanitizeInput($_POST['product_code'] ?? '');
     $description = sanitizeInput($_POST['description'] ?? '');
     
-    // Server-side validation for required fields
-    $validationErrors = [];
-    
-    // Validate name
-    if (empty($name)) {
-        $validationErrors['name'] = 'Product name is required';
-    } elseif (strlen($name) < 2) {
-        $validationErrors['name'] = 'Product name must be at least 2 characters long';
-    } elseif (strlen($name) > 255) {
-        $validationErrors['name'] = 'Product name is too long (maximum 255 characters)';
-    }
-    
-    // Validate status
-    if (empty($status)) {
-        $validationErrors['status'] = 'Status is required';
-    } elseif (!in_array($status, ['active', 'inactive'])) {
-        $validationErrors['status'] = 'Invalid status value';
-    }
-    
-    // Validate price
-    if (empty($lkr_price)) {
-        $validationErrors['lkr_price'] = 'Price is required';
-    } elseif (!is_numeric($lkr_price)) {
-        $validationErrors['lkr_price'] = 'Price must be a valid number';
-    } elseif ($lkr_price < 0) {
-        $validationErrors['lkr_price'] = 'Price cannot be negative';
-    } elseif ($lkr_price > 99999999.99) {
-        $validationErrors['lkr_price'] = 'Price is too high (maximum 99,999,999.99)';
-    }
-    
-    // Validate product code
-    if (empty($product_code)) {
-        $validationErrors['product_code'] = 'Product code is required';
-    } elseif (strlen($product_code) < 2) {
-        $validationErrors['product_code'] = 'Product code must be at least 2 characters long';
-    } elseif (strlen($product_code) > 50) {
-        $validationErrors['product_code'] = 'Product code is too long (maximum 50 characters)';
-    } elseif (!preg_match('/^[a-zA-Z0-9\-_]+$/', $product_code)) {
-        $validationErrors['product_code'] = 'Product code can only contain letters, numbers, hyphens, and underscores';
-    }
-    
-    // Validate description (NOW REQUIRED)
-    if (empty($description)) {
-        $validationErrors['description'] = 'Description is required';
-    } elseif (strlen($description) < 10) {
-        $validationErrors['description'] = 'Description must be at least 10 characters long';
-    } elseif (strlen($description) > 65535) {
-        $validationErrors['description'] = 'Description is too long (maximum 65,535 characters)';
-    }
-    
-    // If there are validation errors, return them
-    if (!empty($validationErrors)) {
-        $response['errors'] = $validationErrors;
-        $response['message'] = 'Please correct the errors below';
+    // Basic server-side validation (minimal since frontend handles validation)
+    if (empty($name) || empty($status) || empty($lkr_price) || empty($product_code)) {
+        $response['message'] = 'Required fields are missing';
         echo json_encode($response);
         exit();
     }
     
-    // Check for duplicate product code
+    // Check for duplicate product code only (if provided)
     if (!empty($product_code)) {
         $checkCodeQuery = "SELECT id FROM products WHERE product_code = ? LIMIT 1";
         $checkCodeStmt = $conn->prepare($checkCodeQuery);
@@ -138,7 +87,11 @@ try {
         throw new Exception("Database prepare error: " . $conn->error);
     }
     
-    // Bind parameters (description is no longer nullable, product_code can be null but we already validated it's not empty)
+    // Handle empty description
+    $description = empty($description) ? null : $description;
+    $product_code = empty($product_code) ? null : $product_code;
+    
+    // Bind parameters
     $insertStmt->bind_param("ssdss", $name, $description, $lkr_price, $status, $product_code);
     
     // Execute the query
@@ -149,7 +102,7 @@ try {
         if (isset($_SESSION['user_id'])) {
             $user_id = $_SESSION['user_id'];
             $action_type = 'product_create';
-            $details = "New product created - Name: {$name}, Code: {$product_code}, Price: LKR {$lkr_price}, Status: {$status}";
+            $details = "New product created - Name: {$name}, Code: " . ($product_code ?: 'N/A') . ", Price: LKR {$lkr_price}, Status: {$status}";
             
             $logQuery = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details) VALUES (?, ?, ?, ?)";
             $logStmt = $conn->prepare($logQuery);

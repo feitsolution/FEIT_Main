@@ -1,12 +1,10 @@
 <?php
-// FE IT Database connection
-$servername = "gator4423.hostgator.com";
-$username = "imwijqte_db";
-$password = "imwijqte_db2025a";
-$dbname = "imwijqte_feit_db";
+$fe_servername = "localhost";   // Database server
+$fe_username   = "root";        // Database username (default for XAMPP is root)
+$fe_password   = "";            // Database password (empty by default in XAMPP)
+$fe_dbname     = "fe_it_db";    // Replace with your actual FE IT DB name
 
-// Use $fe_conn instead of $conn to avoid overwriting the order_management connection
-$fe_conn = new mysqli($servername, $username, $password, $dbname);
+$fe_conn = new mysqli($fe_servername, $fe_username, $fe_password, $fe_dbname);
 
 // Check connection
 if ($fe_conn->connect_error) {

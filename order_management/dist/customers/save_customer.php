@@ -151,21 +151,15 @@ try {
         $phoneCheckStmt->close();
     }
 
-    // Validate city exists (FIXED: removed is_active check and added better validation)
+    // Validate city exists and is active
     if ($city_id > 0) {
-        $cityCheckStmt = $conn->prepare("SELECT city_id, city_name, is_active FROM city_table WHERE city_id = ?");
+        $cityCheckStmt = $conn->prepare("SELECT city_id FROM city_table WHERE city_id = ? AND is_active = 1");
         $cityCheckStmt->bind_param("i", $city_id);
         $cityCheckStmt->execute();
         $cityCheckResult = $cityCheckStmt->get_result();
         
         if ($cityCheckResult->num_rows === 0) {
-            $errors['city_id'] = 'Selected city does not exist in the database';
-        } else {
-            // Optional: Check if city is active (but allow NULL as active)
-            $cityData = $cityCheckResult->fetch_assoc();
-            if (isset($cityData['is_active']) && $cityData['is_active'] === 0) {
-                $errors['city_id'] = 'Selected city is currently inactive';
-            }
+            $errors['city_id'] = 'Selected city is not valid';
         }
         $cityCheckStmt->close();
     }
@@ -236,7 +230,7 @@ try {
 
 } catch (Exception $e) {
     // Rollback transaction if it was started
-    if (isset($conn) && method_exists($conn, 'inTransaction') && $conn->inTransaction()) {
+    if ($conn->inTransaction ?? false) {
         $conn->rollback();
     }
     

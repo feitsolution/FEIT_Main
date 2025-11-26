@@ -120,12 +120,8 @@ try {
         $errors['product_code'] = 'Product code can only contain letters, numbers, hyphens, and underscores';
     }
     
-    // Validate description (required)
-    if (empty($description)) {
-        $errors['description'] = 'Description is required';
-    } elseif (strlen($description) < 10) {
-        $errors['description'] = 'Description must be at least 10 characters long';
-    } elseif (strlen($description) > 65535) {
+    // Validate description (optional)
+    if (!empty($description) && strlen($description) > 65535) {
         $errors['description'] = 'Description is too long (maximum 65,535 characters)';
     }
     
@@ -159,7 +155,10 @@ try {
         throw new Exception("Database prepare error: " . $conn->error);
     }
     
-    // Bind parameters (description is now always required, no NULL handling needed)
+    // Handle empty description (set to NULL if empty)
+    $description = empty($description) ? null : $description;
+    
+    // Bind parameters
     $updateStmt->bind_param("ssdssi", $name, $description, $lkr_price, $status, $product_code, $product_id);
     
     // Execute the query
@@ -186,7 +185,7 @@ try {
                 if ($originalProduct['product_code'] !== $product_code) {
                     $changes[] = "Code: '{$originalProduct['product_code']}' → '{$product_code}'";
                 }
-                if (($originalProduct['description'] ?? '') !== $description) {
+                if (($originalProduct['description'] ?? '') !== ($description ?? '')) {
                     $changes[] = "Description updated";
                 }
                 

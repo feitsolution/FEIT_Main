@@ -5,6 +5,7 @@
  * Includes search, pagination, and modal view functionality
  * UPDATED: Uses user_id instead of created_by and adds user filtering
  */
+
 // Start session management
 session_start();
 
@@ -80,12 +81,14 @@ if ($current_user_role != 1) {
     // Non-admin users can only see their own orders
     $roleBasedCondition = " AND i.user_id = $current_user_id";
 }
+
 /**
  * DATABASE QUERIES
  * Main query to fetch orders with customer and payment information
  * Filtered for individual interface and excludes 'pending' and 'cancel' statuses
  * UPDATED: Uses user_id instead of created_by
  */
+
 // Base SQL for counting total records - UPDATED to use user_id
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
              LEFT JOIN customers c ON i.customer_id = c.customer_id
