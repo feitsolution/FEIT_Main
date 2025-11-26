@@ -1,8 +1,8 @@
 <?php
 // Database connection
-$servername = "localhost";
-$username = "root";
-$password = ""; // Use your actual database password
+$servername = getenv('DB_HOST');
+$username   = getenv('DB_USER');
+$password   = getenv('DB_PASS');
 $dbname = "royal_express"; // Replace with your database name
 
 $conn = new mysqli($servername, $username, $password, $dbname);
