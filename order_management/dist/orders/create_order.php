@@ -321,13 +321,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
                     <!-- Customer Information Section -->
                     <div class="section-card">
-                        <div class="section-header">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <h5 class="section-title">Customer Information</h5>
-                                <button type="button" class="btn-outline-primary" id="select_existing_customer" style="float: right; margin-left: 542px;">
-                                    <i class="feather icon-users"></i> Select Customer
-                                </button>
-                            </div>
+                        <div class="section-header" style="display:flex; align-items:center; width:100%;">
+                            <h5 class="section-title" >Customer Information</h5>
+
+                            <button type="button" 
+                                    class="btn-outline-primary" 
+                                    id="select_existing_customer"
+                                    style="margin-left:auto;">
+                                <i class="feather icon-users"></i> Select Customer
+                            </button>
+                        </div>
                         </div>
                         <div class="section-body">
                             <div class="customer-info-grid">
