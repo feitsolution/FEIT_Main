@@ -44,7 +44,7 @@
 <section id="services" class="section-padding">
   <div class="container">
     <div class="section-header text-center">
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s"> When you hire us, what you receive in simple terms
+      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s"> When you hire usss, what you receive in simple terms
         is a not just a technology partner for your company but a remote consultation team who will be..</h2>
       <div class="shape wow fadeInDown" data-wow-delay="0.3s"></div>
     </div>
