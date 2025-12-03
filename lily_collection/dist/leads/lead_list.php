@@ -14,12 +14,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 /**
  * SEARCH AND PAGINATION PARAMETERS
@@ -181,8 +181,8 @@ if ($usersResult && $usersResult->num_rows > 0) {
 }
 
 // Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 
 ?>
 
@@ -192,7 +192,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 <head>
     <title>Leads Management - All Leads</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -253,7 +253,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -599,7 +599,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     </div>
 
     <!-- Lead View Modal -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/order_view_modal.php'); ?>
 
     <script>
     // Lead-specific JavaScript functionality
@@ -738,7 +738,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         }
         
         // Construct the payment slip URL
-        const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentLeadId) + '.jpg';
+        const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(currentLeadId) + '.jpg';
         
         // Open payment slip in new tab
         window.open(slipUrl, '_blank');
@@ -782,7 +782,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         console.log('Printing Order ID:', orderId);
         
         // Construct the print URL
-        const printUrl = '/order_management/dist/orders/download_order_print.php?id=' + encodeURIComponent(orderId.trim());
+        const printUrl = '/lily_collection/dist/orders/download_order_print.php?id=' + encodeURIComponent(orderId.trim());
 
         // Open print page in new window
         const printWindow = window.open(printUrl, '_blank');
@@ -831,8 +831,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     </script>
 
     <!-- Include Footer and Scripts -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
 
 </body>
 </html>

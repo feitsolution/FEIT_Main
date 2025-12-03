@@ -5,12 +5,12 @@
 if (!session_id()) { session_start(); }
 
 if (!isset($_SESSION['logged_in']) && !isset($_SESSION['ClientUserID'])) {
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
 // DB connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 // -------------------------
 // Read Filters
@@ -101,7 +101,7 @@ if($branding && $branding->num_rows > 0){
 } else {
     // fallback
     $companyName = "FE IT Solutions Pvt (Ltd)";
-    $companyLogo = "../assets/images/order_management.png";
+    $companyLogo = "../assets/images/lily_collection.png";
 }
 
 // -------------------------

@@ -8,11 +8,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 // Check if order ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -407,7 +407,7 @@ $column_count = $has_any_discount ? 5 : 4;
 
         <div class="order-header">
             <div class="company-logo">
-            <img src="../assets/images/order_management.png" alt="Company Logo">
+            <img src="../assets/images/lily_collection.png" alt="Company Logo">
             </div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>
@@ -587,7 +587,7 @@ $column_count = $has_any_discount ? 5 : 4;
 
         // Function to view payment slip in new tab
         function viewPaymentSlip(slipFileName) {
-            const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(slipFileName);
+            const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(slipFileName);
             window.open(slipUrl, '_blank');
         }
 

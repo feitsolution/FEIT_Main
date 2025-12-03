@@ -16,12 +16,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 /**
  * PROCESS TRACKING NUMBERS AJAX REQUEST
@@ -279,8 +279,8 @@ $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
 // Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 
 ?>
 
@@ -288,9 +288,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Scanner - order_management Admin Portal</title>
+    <title>Return Scanner - lily_collection Admin Portal</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -462,7 +462,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -742,7 +742,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     </div>
 
     <!-- Include JavaScript files -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
     
     <script>
         // JavaScript functions for scanner functionality
@@ -833,7 +833,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             
             // Load order details via AJAX
             const xhr = new XMLHttpRequest();
-            xhr.open('GET', `/order_management/dist/ajax/order_details.php?order_id=${orderId}`, true);
+            xhr.open('GET', `/lily_collection/dist/ajax/order_details.php?order_id=${orderId}`, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     modalContent.innerHTML = xhr.responseText;
@@ -852,7 +852,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
         function downloadOrder() {
             const orderId = document.getElementById('downloadBtn').getAttribute('data-order-id');
-            window.open(`/order_management/dist/ajax/download_order.php?order_id=${orderId}`, '_blank');
+            window.open(`/lily_collection/dist/ajax/download_order.php?order_id=${orderId}`, '_blank');
         }
     </script>
 </body>

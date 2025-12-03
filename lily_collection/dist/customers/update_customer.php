@@ -11,13 +11,13 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     echo json_encode([
         'success' => false,
         'message' => 'Unauthorized access. Please login again.',
-        'redirect' => '/order_management/dist/pages/login.php'
+        'redirect' => '/lily_collection/dist/pages/login.php'
     ]);
     exit();
 }
 
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 // Check database connection
 if ($conn->connect_error) {
@@ -91,7 +91,7 @@ try {
         echo json_encode([
             'success' => false,
             'message' => 'User session not found. Please login again.',
-            'redirect' => '/order_management/dist/pages/login.php'
+            'redirect' => '/lily_collection/dist/pages/login.php'
         ]);
         exit();
     }

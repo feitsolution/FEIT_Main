@@ -22,7 +22,7 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 ini_set('log_errors', 1);
-ini_set('error_log', $_SERVER['DOCUMENT_ROOT'] . '/order_management/logs/royal_express_errors.log');
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'] . '/lily_collection/logs/royal_express_errors.log');
 
 // Logging function
 function logAction($conn, $user_id, $action, $order_id, $details) {
@@ -147,7 +147,7 @@ function getParcelData($orderId, $conn) {
 
 // Main execution
 try {
-    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
     if (!isset($conn) || $conn->connect_error) {
         throw new Exception('Database connection failed');
     }

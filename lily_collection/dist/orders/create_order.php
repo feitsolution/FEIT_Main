@@ -8,12 +8,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 // Function to log user actions
 function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = null) {
@@ -119,8 +119,8 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
     $deliveryFee = floatval($row['delivery_fee']);
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -130,7 +130,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     <!-- TITLE -->
     <title>Order Management Admin Portal - Create Order</title>
 
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
     <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="../assets/css/styles.css" id="main-style-link" />
@@ -140,7 +140,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- LOADER -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
     <!-- END LOADER -->
 
     <!-- [ Main Content ] start -->
@@ -609,13 +609,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 </div>
     <!-- FOOTER -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php');
     ?>
     <!-- END FOOTER -->
 
     <!-- SCRIPTS -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php');
     ?>
     <!-- END SCRIPTS -->
 <script>
