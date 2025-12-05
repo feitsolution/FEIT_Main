@@ -263,6 +263,49 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     font-size: 0.8em;
     color: #999;
 }
+
+/* Main Container */
+.sync-buttons-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: row; 
+    gap: 6px;
+    z-index: 9999;
+}
+
+/* Button Base (Use your class: .bulk-dispatch-btn) */
+.sync-buttons-container .bulk-dispatch-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px; /* Default size for large screens */
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #17a2b8; 
+    color: #fff;
+    white-space: nowrap; 
+    flex-shrink: 0; /* Ensures they don't shrink on large screens */
+}
+
+/* === Responsive Fix: Scrollable Horizontal Row with Decreased Size === */
+@media (max-width: 600px) {
+    .sync-buttons-container {
+        /* right: 5x;  */
+        top: 100px; 
+    }
+    
+    .sync-buttons-container .bulk-dispatch-btn {
+        font-size: 9px; 
+        padding: 4px 6px; 
+        gap: 1px; 
+    }
+}
+
 </style>
 </head>
 
@@ -399,63 +442,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     </div>
                 </div>
                 
-                                    <!-- Sync Buttons Container -->
-                    <div style="
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        display: flex;
-                        gap: 10px; /* space between buttons */
-                        z-index: 9999;
-                    ">
-                        <!-- Royal Express Button -->
-                        <button id="syncRoyalBtn" class="btn sync-btn bulk-dispatch-btn" style="
-                                padding: 8px 12px;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        font-weight: 500;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        transition: all 0.2s ease;
-                        ">
-                            <i class="fas fa-sync-alt"></i> Sync Royal Status
-                        </button>
-                    <!-- Transexpress Button -->
-                    <button id="syncTransexpBtn" class="btn sync-btn bulk-dispatch-btn" style="
-                        padding: 8px 12px;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        font-weight: 500;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        transition: all 0.2s ease;">
-                        <i class="fas fa-sync-alt"></i> Sync Trans Status
-                    </button>
-                    <!-- Koombiyo Button -->
-                    <button id="syncKoombiyoBtn" class="btn sync-btn bulk-dispatch-btn" style="
-                        padding: 8px 12px;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                        font-weight: 500;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        transition: all 0.2s ease;
-                    ">
-                        <i class="fas fa-sync-alt"></i> Sync Koombiyo Status
-                    </button>
+      <div class="sync-buttons-container">
+    <button id="syncRoyalBtn" class="btn btn-sm bulk-dispatch-btn">
+        <i class="fas fa-sync-alt"></i> Sync Royal Status
+    </button>
 
+    <button id="syncTransexpBtn" class="btn btn-sm bulk-dispatch-btn">
+        <i class="fas fa-sync-alt"></i> Sync Trans Status
+    </button>
 
+    <button id="syncKoombiyoBtn" class="btn btn-sm bulk-dispatch-btn">
+        <i class="fas fa-sync-alt"></i> Sync Koombiyo Status
+    </button>
+</div>
 
-                    </div>
 
                 <!-- Orders Table - MODIFIED to include Created Time column -->
                 <div class="table-wrapper">
@@ -794,7 +794,7 @@ function openOrderModal(orderId, interface = null) {
     viewPaymentSlipBtn.style.display = 'none';
     
     // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
+    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
     const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
     
     console.log('Fetching from:', fetchUrl);

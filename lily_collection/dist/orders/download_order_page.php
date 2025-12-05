@@ -419,7 +419,7 @@ $column_count = $has_any_discount ? 5 : 4;
         <?php if (!$autoPrint): ?>
             <div class="control-buttons">
                 <!-- COMMENTED OUT: Print functionality disabled -->
-                <button class="btn btn-primary" onclick="window.print()">Print Invoice</button>
+                <!-- <button class="btn btn-primary" onclick="window.print()">Print Invoice</button> -->
                 <!-- <button class="btn btn-secondary"
                     onclick="window.location.href='download_order_print.php?id=<?php echo $order_id; ?>'">Print</button> -->
 

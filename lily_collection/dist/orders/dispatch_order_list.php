@@ -577,7 +577,7 @@ function openOrderModal(orderId, interface = null) {
     viewPaymentSlipBtn.style.display = 'none';
     
     // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
+    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
     const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
     
     console.log('Fetching from:', fetchUrl);

@@ -145,61 +145,239 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         error_log("DEBUG - POST city_id: " . ($_POST['city_id'] ?? 'NOT_SET'));
         error_log("DEBUG - Processed city_id: " . ($city_id ?? 'NULL'));
         
-        // Find or create customer
-        $customer_id = 0;
-        $checkCustomerSql = "SELECT customer_id, city_id FROM customers WHERE name = ? AND email = ?";
-        $stmt = $conn->prepare($checkCustomerSql);
-        $stmt->bind_param("ss", $customer_name, $customer_email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // ==========================================
+        // CUSTOMER MATCHING LOGIC - FIXED VERSION
+        // Business Rules:
+        // 1. Match by email OR phone (unique identifiers)
+        // 2. If match found: UPDATE existing customer
+        // 3. If NO match: CREATE new customer (even if name is same)
+        // 4. Multiple customers CAN have the same name
+        // ==========================================
         
-        if ($result->num_rows > 0) {
-            $customer = $result->fetch_assoc();
-            $customer_id = $customer['customer_id'];
+        $customer_id = 0;
+        $existing_customer = null;
+        $is_new_customer = true;
+        
+        // STEP 1: Search for existing customer by email OR phone
+        // Only search if we have at least one unique identifier
+        if (!empty($customer_email) || !empty($customer_phone)) {
             
-            // If city_id is not provided in POST but exists in customer record, use existing
-            if (empty($city_id) && !empty($customer['city_id'])) {
-                $city_id = $customer['city_id'];
+            $search_conditions = [];
+            $search_params = [];
+            $search_types = "";
+            
+            // Add email to search if provided
+            if (!empty($customer_email)) {
+                $search_conditions[] = "email = ?";
+                $search_params[] = $customer_email;
+                $search_types .= "s";
             }
             
-            // Update existing customer information
-            $updateCustomerSql = "UPDATE customers SET 
-                                 phone = ?, 
-                                 address_line1 = ?, 
-                                 address_line2 = ?, 
-                                 city_id = ?, 
-                                 status = 'Active' 
-                                 WHERE customer_id = ?";
-            $stmt = $conn->prepare($updateCustomerSql);
-            $stmt->bind_param("sssii", $customer_phone, $address_line1, $address_line2, $city_id, $customer_id);
-            $stmt->execute();
+            // Add phone to search if provided
+            if (!empty($customer_phone)) {
+                $search_conditions[] = "phone = ?";
+                $search_params[] = $customer_phone;
+                $search_types .= "s";
+            }
+            
+            // Build query with OR condition (match either email OR phone)
+            $checkCustomerSql = "SELECT customer_id, name, email, phone, city_id, address_line1, address_line2 
+                                FROM customers 
+                                WHERE " . implode(" OR ", $search_conditions) . " 
+                                LIMIT 1";
+            
+            $stmt = $conn->prepare($checkCustomerSql);
+            
+            if (!$stmt) {
+                throw new Exception("Failed to prepare customer search query: " . $conn->error);
+            }
+            
+            // Bind parameters
+            if (count($search_params) > 0) {
+                $stmt->bind_param($search_types, ...$search_params);
+            }
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to execute customer search: " . $stmt->error);
+            }
+            
+            $result = $stmt->get_result();
+            
+            // Check if existing customer found
+            if ($result->num_rows > 0) {
+                $existing_customer = $result->fetch_assoc();
+                $customer_id = $existing_customer['customer_id'];
+                $is_new_customer = false;
+                
+                error_log("DEBUG - Existing customer found (ID: $customer_id)");
+                
+                // Log which field matched
+                $matched_by = [];
+                if (!empty($customer_email) && $existing_customer['email'] === $customer_email) {
+                    $matched_by[] = "email";
+                }
+                if (!empty($customer_phone) && $existing_customer['phone'] === $customer_phone) {
+                    $matched_by[] = "phone";
+                }
+                error_log("DEBUG - Matched by: " . implode(" and ", $matched_by));
+            } else {
+                error_log("DEBUG - No matching customer found, will create new");
+            }
+            
+            $stmt->close();
+            
         } else {
-            // Insert new customer with correct column names
-            $insertCustomerSql = "INSERT INTO customers (name, email, phone, address_line1, address_line2, city_id, status) 
-                                 VALUES (?, ?, ?, ?, ?, ?, 'Active')";
-            $stmt = $conn->prepare($insertCustomerSql);
-            $stmt->bind_param("sssssi", $customer_name, $customer_email, $customer_phone, $address_line1, $address_line2, $city_id);
-            $stmt->execute();
-            $customer_id = $conn->insert_id;
+            // No email or phone provided - this shouldn't happen with proper validation
+            error_log("WARNING - No email or phone provided for customer");
         }
-
-        // ADDITIONAL CHECK: If city_id is still null, try to get it from the customer record again
-        if (empty($city_id) && !empty($customer_id)) {
+        
+        // ==========================================
+        // STEP 2: UPDATE EXISTING OR INSERT NEW CUSTOMER
+        // ==========================================
+        
+        if (!$is_new_customer && $customer_id > 0) {
+            // ========== UPDATE EXISTING CUSTOMER ==========
+            error_log("DEBUG - Updating existing customer ID: $customer_id");
+            
+            // Prepare UPDATE statement with ALL fields
+            $updateCustomerSql = "UPDATE customers 
+                                 SET name = ?, 
+                                     email = ?, 
+                                     phone = ?, 
+                                     address_line1 = ?, 
+                                     address_line2 = ?, 
+                                     city_id = ?, 
+                                     status = 'Active'
+                                 WHERE customer_id = ?";
+            
+            $stmt = $conn->prepare($updateCustomerSql);
+            
+            if (!$stmt) {
+                throw new Exception("Failed to prepare customer update query: " . $conn->error);
+            }
+            
+            // Use provided city_id, or fall back to existing if not provided
+            $final_city_id = !empty($city_id) ? $city_id : $existing_customer['city_id'];
+            
+            // Use provided values, or fall back to existing values if empty
+            $final_name = !empty($customer_name) ? $customer_name : $existing_customer['name'];
+            $final_email = !empty($customer_email) ? $customer_email : $existing_customer['email'];
+            $final_phone = !empty($customer_phone) ? $customer_phone : $existing_customer['phone'];
+            $final_address1 = !empty($address_line1) ? $address_line1 : $existing_customer['address_line1'];
+            $final_address2 = !empty($address_line2) ? $address_line2 : $existing_customer['address_line2'];
+            
+            $stmt->bind_param(
+                "sssssii", 
+                $final_name, 
+                $final_email, 
+                $final_phone, 
+                $final_address1, 
+                $final_address2, 
+                $final_city_id, 
+                $customer_id
+            );
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update customer: " . $stmt->error);
+            }
+            
+            // Update city_id for later use
+            $city_id = $final_city_id;
+            
+            error_log("DEBUG - Customer updated successfully (ID: $customer_id)");
+            $stmt->close();
+            
+        } else {
+            // ========== INSERT NEW CUSTOMER ==========
+            error_log("DEBUG - Creating new customer: $customer_name");
+            
+            // Validate required fields for new customer
+            if (empty($customer_name)) {
+                throw new Exception("Customer name is required for new customer");
+            }
+            
+            if (empty($customer_email) && empty($customer_phone)) {
+                throw new Exception("Either email or phone is required for new customer");
+            }
+            
+            // Insert new customer
+            $insertCustomerSql = "INSERT INTO customers 
+                                 (name, email, phone, address_line1, address_line2, city_id, status) 
+                                 VALUES (?, ?, ?, ?, ?, ?, 'Active')";
+            
+            $stmt = $conn->prepare($insertCustomerSql);
+            
+            if (!$stmt) {
+                throw new Exception("Failed to prepare customer insert query: " . $conn->error);
+            }
+            
+            // Handle nullable fields properly
+            $email_value = !empty($customer_email) ? $customer_email : null;
+            $phone_value = !empty($customer_phone) ? $customer_phone : null;
+            $address1_value = !empty($address_line1) ? $address_line1 : null;
+            $address2_value = !empty($address_line2) ? $address_line2 : null;
+            $city_id_value = !empty($city_id) ? $city_id : null;
+            
+            $stmt->bind_param(
+                "sssssi", 
+                $customer_name, 
+                $email_value, 
+                $phone_value, 
+                $address1_value, 
+                $address2_value, 
+                $city_id_value
+            );
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to insert new customer: " . $stmt->error);
+            }
+            
+            $customer_id = $conn->insert_id;
+            
+            if (empty($customer_id) || $customer_id <= 0) {
+                throw new Exception("Failed to get customer ID after insert");
+            }
+            
+            error_log("DEBUG - New customer created successfully (ID: $customer_id)");
+            $stmt->close();
+        }
+        
+        // ==========================================
+        // STEP 3: VALIDATE CUSTOMER ID
+        // ==========================================
+        
+        if (empty($customer_id) || $customer_id <= 0) {
+            throw new Exception("Invalid customer ID. Customer creation/update failed.");
+        }
+        
+        // ==========================================
+        // STEP 4: ENSURE CITY_ID IS SET (FALLBACK)
+        // ==========================================
+        
+        if (empty($city_id)) {
+            // Try to get city_id from the customer record
             $getCustomerCitySql = "SELECT city_id FROM customers WHERE customer_id = ?";
             $customerCityStmt = $conn->prepare($getCustomerCitySql);
-            $customerCityStmt->bind_param("i", $customer_id);
-            $customerCityStmt->execute();
-            $customerCityResult = $customerCityStmt->get_result();
             
-            if ($customerCityResult && $customerCityResult->num_rows > 0) {
-                $customerCityData = $customerCityResult->fetch_assoc();
-                $city_id = $customerCityData['city_id'];
+            if ($customerCityStmt) {
+                $customerCityStmt->bind_param("i", $customer_id);
+                $customerCityStmt->execute();
+                $customerCityResult = $customerCityStmt->get_result();
+                
+                if ($customerCityResult && $customerCityResult->num_rows > 0) {
+                    $customerCityData = $customerCityResult->fetch_assoc();
+                    $city_id = $customerCityData['city_id'];
+                    error_log("DEBUG - Retrieved city_id from customer record: " . ($city_id ?? 'NULL'));
+                }
+                $customerCityStmt->close();
             }
         }
         
-        // Debug log after all city_id processing
-        error_log("DEBUG - Final city_id after customer processing: " . ($city_id ?? 'NULL'));
-        error_log("DEBUG - Customer ID: " . $customer_id);
+        error_log("DEBUG - Final customer_id: $customer_id, city_id: " . ($city_id ?? 'NULL'));
+        
+        // ==========================================
+        // CONTINUE WITH ORDER CREATION
+        // ==========================================
         
         // Prepare order details
         $order_date = $_POST['order_date'] ?? date('Y-m-d');
@@ -260,6 +438,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             ];
         }
         
+        // Validate we have items to process
+        if (empty($order_items)) {
+            throw new Exception("No valid products to process in the order.");
+        }
+        
         // Final total calculation with delivery fee
         $total_amount = $subtotal_before_discounts - $total_discount + $delivery_fee;
         
@@ -271,21 +454,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($insertOrderSql);
+        
+        if (!$stmt) {
+            throw new Exception("Failed to prepare order header insert query: " . $conn->error);
+        }
+        
         $stmt->bind_param(
             "iissddddsssssi", 
             $customer_id, $user_id, $order_date, $due_date, 
             $subtotal_before_discounts, $total_discount, $total_amount, $delivery_fee,
             $notes, $currency, $status, $pay_status, $pay_date, $user_id
         );
-        $stmt->execute();
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to insert order header: " . $stmt->error);
+        }
+        
         $order_id = $conn->insert_id;
+        $stmt->close();
+        
+        if (empty($order_id) || $order_id <= 0) {
+            throw new Exception("Failed to create order ID.");
+        }
+        
+        error_log("DEBUG - Order created with ID: $order_id for customer ID: $customer_id");
         
         // Order items insertion
         $insertItemSql = "INSERT INTO order_items (
             order_id, product_id, unit_price, discount, 
             total_amount, pay_status, status, description
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
         $stmt = $conn->prepare($insertItemSql);
+        
+        if (!$stmt) {
+            throw new Exception("Failed to prepare order items insert query: " . $conn->error);
+        }
 
         foreach ($order_items as $item) {
             // Calculate the price after discount
@@ -302,7 +506,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $status,     
                 $item['description']
             );
-            $stmt->execute();
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to insert order item: " . $stmt->error);
+            }
         }
 
         // COURIER AND TRACKING ASSIGNMENT WITH ENHANCED FDE API
@@ -970,7 +1177,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         // Koombiyo API end here
 
     
-            } elseif ($default_courier_id == 14) {
+            } elseif ($default_courier_id == 13) {
                 // Trans Express API start here
                 if ($courier_type == 1) {
                     // INTERNAL TRACKING SYSTEM for Royal Express
@@ -1204,7 +1411,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }//Trans Express API end here
 
-       } elseif ($default_courier_id == 13) {
+       } elseif ($default_courier_id == 14) {
         // Royal Express API start here
                 if ($courier_type == 1) {
                     // INTERNAL TRACKING SYSTEM for Royal exp
@@ -1304,7 +1511,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $courier_warning = empty($city_id) ? 'City not specified in delivery address' : 'Invalid city selected';
                     } else {
                         // STEP 2: Get unused tracking ID
-                        $getTrackingSql = "SELECT id, tracking_id FROM tracking WHERE courier_id = 13 AND status = 'unused' LIMIT 1";
+                        $getTrackingSql = "SELECT id, tracking_id FROM tracking WHERE courier_id = 14 AND status = 'unused' LIMIT 1";
                         $trackingStmt = $conn->prepare($getTrackingSql);
                         $trackingStmt->execute();
                         $trackingResult = $trackingStmt->get_result();
@@ -1362,7 +1569,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 $updateTrackingStmt->close();
 
                                 // Update order header
-                                $updateOrderSql = "UPDATE order_header SET courier_id = 13, tracking_number = ?, status = 'dispatch' WHERE order_id = ?";
+                                $updateOrderSql = "UPDATE order_header SET courier_id = 14, tracking_number = ?, status = 'dispatch' WHERE order_id = ?";
                                 $updateOrderStmt = $conn->prepare($updateOrderSql);
                                 $updateOrderStmt->bind_param("si", $tracking_number, $order_id);
                                 $order_updated = $updateOrderStmt->execute();

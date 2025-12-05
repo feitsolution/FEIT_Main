@@ -116,8 +116,14 @@ try {
         exit();
     }
 
-    // Check if customer exists and get all current data for comparison
-    $customerCheckStmt = $conn->prepare("SELECT customer_id, name, email, phone, status, address_line1, address_line2, city_id FROM customers WHERE customer_id = ?");
+    // Check if customer exists and get all current data including city name for comparison
+    $customerCheckStmt = $conn->prepare("
+        SELECT c.customer_id, c.name, c.email, c.phone, c.status, 
+               c.address_line1, c.address_line2, c.city_id, ct.city_name 
+        FROM customers c
+        LEFT JOIN city_table ct ON c.city_id = ct.city_id
+        WHERE c.customer_id = ?
+    ");
     $customerCheckStmt->bind_param("i", $customer_id);
     $customerCheckStmt->execute();
     $customerCheckResult = $customerCheckStmt->get_result();
@@ -138,24 +144,64 @@ try {
     // Essential server-side validation
     $errors = [];
 
-    // Basic required field checks
+    // Name validation (required)
     if (empty($name)) {
         $errors['name'] = 'Customer name is required';
-    }
-    if (empty($email)) {
-        $errors['email'] = 'Email address is required';
-    }
-    if (empty($phone)) {
-        $errors['phone'] = 'Phone number is required';
-    }
-    if (empty($address_line1)) {
-        $errors['address_line1'] = 'Address Line 1 is required';
-    }
-    if (empty($city_id) || $city_id <= 0) {
-        $errors['city_id'] = 'City selection is required';
+    } elseif (strlen($name) < 2) {
+        $errors['name'] = 'Name must be at least 2 characters long';
+    } elseif (strlen($name) > 255) {
+        $errors['name'] = 'Name is too long (maximum 255 characters)';
+    } elseif (!preg_match("/^[a-zA-Z\s.\-']+$/", $name)) {
+        $errors['name'] = 'Name can only contain letters, spaces, dots, hyphens, and apostrophes';
     }
 
-    // Check for duplicate email (excluding current customer)
+    // Email validation (OPTIONAL - only validate if provided)
+    if (!empty($email)) {
+        if (strlen($email) > 100) {
+            $errors['email'] = 'Email address is too long (maximum 100 characters)';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Please enter a valid email address';
+        }
+    }
+
+    // Phone validation (required)
+    if (empty($phone)) {
+        $errors['phone'] = 'Phone number is required';
+    } elseif (strlen($phone) > 20) {
+        $errors['phone'] = 'Phone number is too long (maximum 20 characters)';
+    } else {
+        // Validate Sri Lankan phone format
+        $cleanPhone = preg_replace('/\s+/', '', $phone);
+        $digitsOnly = preg_replace('/[^0-9]/', '', $cleanPhone);
+        
+        if (strlen($digitsOnly) !== 10) {
+            $errors['phone'] = 'Phone number must be exactly 10 digits';
+        } elseif (!preg_match('/^0[1-9][0-9]{8}$/', $cleanPhone) && 
+                  !preg_match('/^(\+94|94)[1-9][0-9]{8}$/', $cleanPhone)) {
+            $errors['phone'] = 'Please enter a valid Sri Lankan phone number (e.g., 0771234567)';
+        }
+    }
+
+    // Address Line 1 validation (required)
+    if (empty($address_line1)) {
+        $errors['address_line1'] = 'Address Line 1 is required';
+    } elseif (strlen($address_line1) < 3) {
+        $errors['address_line1'] = 'Address Line 1 must be at least 3 characters long';
+    } elseif (strlen($address_line1) > 255) {
+        $errors['address_line1'] = 'Address Line 1 is too long (maximum 255 characters)';
+    }
+
+    // Address Line 2 validation (optional but validate if provided)
+    if (!empty($address_line2) && strlen($address_line2) > 255) {
+        $errors['address_line2'] = 'Address Line 2 is too long (maximum 255 characters)';
+    }
+
+    // City validation (required)
+    if (empty($city_id) || $city_id <= 0) {
+        $errors['city_id'] = 'City selection is required. Please select a city from the dropdown.';
+    }
+
+    // Check for duplicate email (only if email is provided and changed)
     if (!empty($email) && $email !== $existingCustomer['email']) {
         $emailCheckStmt = $conn->prepare("SELECT customer_id FROM customers WHERE email = ? AND customer_id != ?");
         $emailCheckStmt->bind_param("si", $email, $customer_id);
@@ -181,15 +227,26 @@ try {
         $phoneCheckStmt->close();
     }
 
-    // Validate city exists and is active
+    // Validate city exists and is active - ENHANCED validation for autocomplete
     if ($city_id > 0) {
-        $cityCheckStmt = $conn->prepare("SELECT city_id FROM city_table WHERE city_id = ? AND is_active = 1");
+        $cityCheckStmt = $conn->prepare("
+            SELECT city_id, city_name, postal_code, is_active 
+            FROM city_table 
+            WHERE city_id = ?
+        ");
         $cityCheckStmt->bind_param("i", $city_id);
         $cityCheckStmt->execute();
         $cityCheckResult = $cityCheckStmt->get_result();
         
         if ($cityCheckResult->num_rows === 0) {
-            $errors['city_id'] = 'Selected city is not valid';
+            $errors['city_id'] = 'Selected city does not exist. Please select a valid city.';
+        } else {
+            $cityData = $cityCheckResult->fetch_assoc();
+            
+            // Check if city is active
+            if ($cityData['is_active'] != 1) {
+                $errors['city_id'] = 'Selected city "' . htmlspecialchars($cityData['city_name']) . '" is inactive. Please select an active city.';
+            }
         }
         $cityCheckStmt->close();
     }
@@ -207,7 +264,7 @@ try {
         exit();
     }
 
-    // Check if any data has actually changed
+    // Check if any data has actually changed - ENHANCED to include city name
     $hasChanges = false;
     $changes = [];
 
@@ -215,32 +272,55 @@ try {
         $hasChanges = true;
         $changes[] = "Name: '{$existingCustomer['name']}' → '{$name}'";
     }
-    if ($email !== $existingCustomer['email']) {
+    
+    // Handle email change (including empty to value or value to empty)
+    $existingEmail = $existingCustomer['email'] ?? '';
+    if ($email !== $existingEmail) {
         $hasChanges = true;
-        $changes[] = "Email: '{$existingCustomer['email']}' → '{$email}'";
+        $oldEmailDisplay = empty($existingEmail) ? '(empty)' : $existingEmail;
+        $newEmailDisplay = empty($email) ? '(empty)' : $email;
+        $changes[] = "Email: '{$oldEmailDisplay}' → '{$newEmailDisplay}'";
     }
+    
     if ($phone !== $existingCustomer['phone']) {
         $hasChanges = true;
         $changes[] = "Phone: '{$existingCustomer['phone']}' → '{$phone}'";
     }
+    
     if ($status !== $existingCustomer['status']) {
         $hasChanges = true;
         $changes[] = "Status: '{$existingCustomer['status']}' → '{$status}'";
     }
+    
     if ($address_line1 !== $existingCustomer['address_line1']) {
         $hasChanges = true;
         $changes[] = "Address Line 1: '{$existingCustomer['address_line1']}' → '{$address_line1}'";
     }
-    if ($address_line2 !== $existingCustomer['address_line2']) {
+    
+    // Handle address line 2 change (including empty to value or value to empty)
+    $existingAddress2 = $existingCustomer['address_line2'] ?? '';
+    if ($address_line2 !== $existingAddress2) {
         $hasChanges = true;
-        $changes[] = "Address Line 2: '{$existingCustomer['address_line2']}' → '{$address_line2}'";
+        $oldAddr2Display = empty($existingAddress2) ? '(empty)' : $existingAddress2;
+        $newAddr2Display = empty($address_line2) ? '(empty)' : $address_line2;
+        $changes[] = "Address Line 2: '{$oldAddr2Display}' → '{$newAddr2Display}'";
     }
+    
     if ($city_id != $existingCustomer['city_id']) {
         $hasChanges = true;
-        $changes[] = "City ID: '{$existingCustomer['city_id']}' → '{$city_id}'";
+        
+        // Get new city name for better logging
+        $newCityStmt = $conn->prepare("SELECT city_name FROM city_table WHERE city_id = ?");
+        $newCityStmt->bind_param("i", $city_id);
+        $newCityStmt->execute();
+        $newCityResult = $newCityStmt->get_result();
+        $newCityName = $newCityResult->fetch_assoc()['city_name'] ?? 'Unknown';
+        $newCityStmt->close();
+        
+        $changes[] = "City: '{$existingCustomer['city_name']}' → '{$newCityName}'";
     }
 
-    // If no changes detected, return early without logging
+    // If no changes detected, return early without database update
     if (!$hasChanges) {
         $response['success'] = true;
         $response['message'] = 'No changes were made to the customer.';
@@ -250,7 +330,8 @@ try {
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
-            'status' => $status
+            'status' => $status,
+            'city_id' => $city_id
         ];
         echo json_encode($response);
         exit();
@@ -259,19 +340,30 @@ try {
     // Start transaction
     $conn->begin_transaction();
 
+    // Prepare email value - use NULL if empty (optional field best practice)
+    $emailValue = !empty($email) ? $email : null;
+    $address2Value = !empty($address_line2) ? $address_line2 : null;
+
     // Prepare and execute customer update
     $updateStmt = $conn->prepare("
         UPDATE customers 
-        SET name = ?, email = ?, phone = ?, status = ?, address_line1 = ?, address_line2 = ?, city_id = ?, updated_at = NOW()
+        SET name = ?, 
+            email = ?, 
+            phone = ?, 
+            status = ?, 
+            address_line1 = ?, 
+            address_line2 = ?, 
+            city_id = ?, 
+            updated_at = NOW()
         WHERE customer_id = ?
     ");
 
-    $updateStmt->bind_param("ssssssii", $name, $email, $phone, $status, $address_line1, $address_line2, $city_id, $customer_id);
+    $updateStmt->bind_param("ssssssii", $name, $emailValue, $phone, $status, $address_line1, $address2Value, $city_id, $customer_id);
 
     if ($updateStmt->execute()) {
         // Check if any rows were affected
         if ($updateStmt->affected_rows > 0) {
-            // Log customer update action only if there were actual changes
+            // Log customer update action with detailed changes
             $logDetails = "Customer updated - " . implode(', ', $changes);
             
             $logResult = logUserAction($conn, $currentUserId, 'customer_update', $customer_id, $logDetails);
@@ -283,6 +375,14 @@ try {
             // Commit transaction
             $conn->commit();
             
+            // Get updated city name for response
+            $cityNameStmt = $conn->prepare("SELECT city_name FROM city_table WHERE city_id = ?");
+            $cityNameStmt->bind_param("i", $city_id);
+            $cityNameStmt->execute();
+            $cityNameResult = $cityNameStmt->get_result();
+            $cityName = $cityNameResult->fetch_assoc()['city_name'] ?? '';
+            $cityNameStmt->close();
+            
             // Success response
             $response['success'] = true;
             $response['message'] = 'Customer "' . htmlspecialchars($name) . '" has been successfully updated.';
@@ -292,11 +392,13 @@ try {
                 'name' => $name,
                 'email' => $email,
                 'phone' => $phone,
-                'status' => $status
+                'status' => $status,
+                'city_id' => $city_id,
+                'city_name' => $cityName
             ];
             
             // Log success
-            error_log("Customer updated successfully - ID: $customer_id, Name: $name, Email: $email, Updated by User ID: $currentUserId");
+            error_log("Customer updated successfully - ID: $customer_id, Name: $name, Email: " . ($email ?: 'empty') . ", City ID: $city_id, Updated by User ID: $currentUserId");
         } else {
             // No changes were made (this should not happen since we checked above, but keep as fallback)
             $conn->commit();
@@ -318,7 +420,7 @@ try {
 
 } catch (Exception $e) {
     // Rollback transaction if it was started
-    if ($conn->inTransaction ?? false) {
+    if (isset($conn) && method_exists($conn, 'inTransaction') && $conn->inTransaction()) {
         $conn->rollback();
     }
     

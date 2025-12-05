@@ -201,7 +201,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Handover Orders - lily_collection Admin Portal</title>
+    <title>Return Handover Orders - Lily Collection Admin Portal</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
@@ -461,9 +461,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </div>
 
        <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/order_view_modal.php'); ?>
+      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
     <!-- Include JavaScript files -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
     
     <script>
 
@@ -533,7 +533,7 @@ function openOrderModal(orderId, interface = null) {
     viewPaymentSlipBtn.style.display = 'none';
     
     // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
+    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
     const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
     
     console.log('Fetching from:', fetchUrl);
@@ -623,7 +623,7 @@ function viewPaymentSlip() {
     }
     
     // Construct the payment slip URL
-    const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
+    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
     
     // Open payment slip in new tab
     window.open(slipUrl, '_blank');

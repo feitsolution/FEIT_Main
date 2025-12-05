@@ -402,9 +402,9 @@
     font-size: 0.8rem;
   }
   
-  .order-count-number {
+  /* .order-count-number {
     font-size: 2.5rem;
-  }
+  } */
   
   .pagination {
     flex-direction: column;

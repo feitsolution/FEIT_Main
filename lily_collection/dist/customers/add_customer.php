@@ -4,7 +4,6 @@ session_start();
 
 // Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    // Clear any existing output buffers
     if (ob_get_level()) {
         ob_end_clean();
     }
@@ -29,21 +28,6 @@ function generateCSRFToken() {
     return $_SESSION['csrf_token'];
 }
 
-// Fetch available cities dynamically from city_table
-$cities = [];
-$cityQuery = "SELECT city_id, city_name FROM city_table WHERE is_active = 1 ORDER BY city_name ASC";
-$cityResult = $conn->query($cityQuery);
-
-// Collect cities into an array
-if ($cityResult && $cityResult->num_rows > 0) {
-    while ($cityRow = $cityResult->fetch_assoc()) {
-        $cities[] = $cityRow;
-    }
-} else {
-    // Log error or handle the case where no cities are found
-    error_log("No cities found in city_table or query failed: " . $conn->error);
-}
-
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
@@ -52,18 +36,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <!-- TITLE -->
     <title>Order Management Admin Portal - Add New Customer</title>
 
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php');
-    ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
-    <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
 
-    <!-- Custom CSS for AJAX notifications -->
     <style>
         .ajax-notification {
             position: fixed;
@@ -90,12 +69,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             color: #842029;
             background: linear-gradient(135deg, #f8f9fa 0%, #f8d7da 100%);
             border-left-color: #dc3545;
-        }
-
-        .alert-warning {
-            color: #664d03;
-            background: linear-gradient(135deg, #f8f9fa 0%, #fff3cd 100%);
-            border-left-color: #ffc107;
         }
 
         @keyframes slideInRight {
@@ -141,17 +114,150 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Autocomplete Styles */
+        .autocomplete-container {
+            position: relative;
+            z-index: 100;
+        }
+
+        .autocomplete-dropdown {
+            position: fixed !important;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: 2px solid #4680ff;
+            border-radius: 0 0 8px 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 99999 !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: none;
+            margin-top: 2px;
+            min-width: 300px;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block !important;
+        }
+
+        .autocomplete-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.active {
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            padding-left: 20px;
+        }
+
+        .autocomplete-item .city-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .autocomplete-item .city-details {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .autocomplete-no-results {
+            padding: 20px 15px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .autocomplete-no-results i {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        .autocomplete-loading {
+            padding: 20px 15px;
+            text-align: center;
+            color: #495057;
+        }
+
+        .autocomplete-loading i {
+            margin-right: 8px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        #city_input {
+            position: relative;
+            z-index: 1;
+            transition: border-color 0.3s ease;
+        }
+
+        #city_input:focus {
+            border-color: #4680ff;
+            box-shadow: 0 0 0 0.2rem rgba(70, 128, 255, 0.25);
+        }
+
+        #city_input.loading {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23666' d='M10 3a7 7 0 100 14 7 7 0 000-14zm0 12a5 5 0 110-10 5 5 0 010 10z' opacity='.3'/%3E%3Cpath fill='%23666' d='M10 1a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 18px;
+            padding-right: 40px;
+        }
+
+        /* Make sure parent containers don't clip */
+        .form-section,
+        .section-content,
+        .form-row,
+        .customer-form-group {
+            overflow: visible !important;
+        }
+
+        .main-container {
+            overflow: visible !important;
+        }
+
+        /* Scrollbar styling for dropdown */
+        .autocomplete-dropdown::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 0 0 8px 0;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
 
 <body>
-    <!-- LOADER -->
-    <?php
-        include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php');
-    ?>
-    <!-- END LOADER -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
 
-    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
             <div class="spinner"></div>
@@ -160,10 +266,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         </div>
     </div>
 
-    <!-- [ Main Content ] start -->
     <div class="pc-container">
         <div class="pc-content">
-            <!-- [ breadcrumb ] start -->
             <div class="page-header">
                 <div class="page-block">
                     <div class="page-header-title">
@@ -171,19 +275,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     </div>
                 </div>
             </div>
-            <!-- [ breadcrumb ] end -->
 
-            <!-- [ Main Content ] start -->
             <div class="main-container">
-                <!-- Add Customer Form -->
                 <form method="POST" id="addCustomerForm" class="customer-form" novalidate>
-                    <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                    <input type="hidden" name="city_id" id="city_id" value="">
                     
-                    <!-- Customer Details Section -->
                     <div class="form-section">
                         <div class="section-content">
-                            <!-- First Row: Name and Email -->
                             <div class="form-row">
                                 <div class="customer-form-group">
                                     <label for="name" class="form-label">
@@ -198,14 +297,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <label for="email" class="form-label">
                                         <i class="fas fa-envelope"></i> Email Address<span class="required">*</span>
                                     </label>
-                                    <input type="email" class="form-control" id="email" name="email"
-                                        placeholder="customer@example.com" required>
+                                   <input type="email" class="form-control" id="email" name="email"
+                          placeholder="customer@example.com">
+
                                     <div class="error-feedback" id="email-error"></div>
                                     <div class="email-suggestions" id="email-suggestions"></div>
                                 </div>
                             </div>
 
-                            <!-- Second Row: Phone and Status -->
                             <div class="form-row">
                                 <div class="customer-form-group">
                                     <label for="phone" class="form-label">
@@ -231,10 +330,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                         </div>
                     </div>
 
-                    <!-- Address Details Section -->
                     <div class="form-section address-section">
                         <div class="section-content">
-                            <!-- First Row: Address Lines -->
                             <div class="form-row">
                                 <div class="customer-form-group">
                                     <label for="address_line1" class="form-label">
@@ -255,34 +352,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 </div>
                             </div>
 
-                            <!-- Second Row: City -->
                             <div class="form-row">
-                                <div class="customer-form-group">
-                                    <label for="city_id" class="form-label">
+                                <div class="customer-form-group autocomplete-container">
+                                    <label for="city_input" class="form-label">
                                         <i class="fas fa-city"></i> City<span class="required">*</span>
                                     </label>
-                                    <select class="form-select" id="city_id" name="city_id" required>
-                                        <option value="">Select City</option>
-                                        <?php if (!empty($cities)): ?>
-                                            <?php foreach ($cities as $city): ?>
-                                                <option value="<?= htmlspecialchars($city['city_id']) ?>">
-                                                    <?= htmlspecialchars($city['city_name']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <option value="" disabled>No cities available</option>
-                                        <?php endif; ?>
-                                    </select>
+                                    <input type="text" class="form-control" id="city_input" 
+                                        placeholder="Start typing city name..." 
+                                        autocomplete="off" required>
+                                    <div class="autocomplete-dropdown" id="cityDropdown"></div>
                                     <div class="error-feedback" id="city_id-error"></div>
-                                    <?php if (empty($cities)): ?>
-                                        <div class="no-cities-message">No cities found. Please contact administrator.</div>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Submit Buttons -->
                     <div class="submit-container">
                         <button type="submit" class="btn btn-primary" id="submitBtn">
                             <i class="fas fa-user-plus"></i> Add Customer
@@ -293,91 +377,258 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     </div>
                 </form>
             </div>
-            <!-- [ Main Content ] end -->
         </div>
     </div>
 
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
 
-    <!-- FOOTER -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php');
-    ?>
-    <!-- END FOOTER -->
-
-    <!-- SCRIPTS -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php');
-    ?>
-    <!-- END SCRIPTS -->
-
-    <!-- jQuery -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <script>
         $(document).ready(function() {
-            // Initialize form
             initializeForm();
+            setupCityAutocomplete();
             
-            // AJAX Form submission
             $('#addCustomerForm').on('submit', function(e) {
                 e.preventDefault();
-                
-                // Clear previous validations
                 clearAllValidations();
                 
-                // Validate form
                 if (validateForm()) {
                     submitFormAjax();
                 } else {
-                    // Scroll to first error
                     scrollToFirstError();
                 }
             });
             
-            // Reset button
             $('#resetBtn').on('click', function() {
                 resetForm();
             });
             
-            // Real-time validation
             setupRealTimeValidation();
         });
 
-        // AJAX Form Submission Function
+        // City Autocomplete Setup
+        let citySearchTimeout;
+        let selectedCityId = null;
+        let currentFocusIndex = -1;
+
+        function setupCityAutocomplete() {
+            const $cityInput = $('#city_input');
+            const $dropdown = $('#cityDropdown');
+            const $cityIdHidden = $('#city_id');
+
+            // Handle input
+            $cityInput.on('input', function() {
+                const searchTerm = $(this).val().trim();
+                selectedCityId = null;
+                $cityIdHidden.val('');
+                
+                clearTimeout(citySearchTimeout);
+                
+                if (searchTerm.length < 2) {
+                    $dropdown.removeClass('show').empty();
+                    return;
+                }
+                
+                // Show loading
+                $cityInput.addClass('loading');
+                
+                citySearchTimeout = setTimeout(function() {
+                    searchCities(searchTerm);
+                }, 300);
+            });
+
+            // Handle keyboard navigation
+            $cityInput.on('keydown', function(e) {
+                const $items = $dropdown.find('.autocomplete-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentFocusIndex++;
+                    if (currentFocusIndex >= $items.length) currentFocusIndex = 0;
+                    setActiveItem($items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentFocusIndex--;
+                    if (currentFocusIndex < 0) currentFocusIndex = $items.length - 1;
+                    setActiveItem($items);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentFocusIndex > -1 && $items.length > 0) {
+                        $items.eq(currentFocusIndex).click();
+                    }
+                } else if (e.key === 'Escape') {
+                    $dropdown.removeClass('show').empty();
+                    currentFocusIndex = -1;
+                }
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.autocomplete-container').length) {
+                    $dropdown.removeClass('show').empty();
+                    currentFocusIndex = -1;
+                }
+            });
+
+            // Handle blur validation - only validate on form submit
+            $cityInput.on('blur', function() {
+                // Don't validate on blur, only on form submit
+                // This allows users to click dropdown items
+            });
+        }
+
+        function setActiveItem($items) {
+            $items.removeClass('active');
+            if (currentFocusIndex >= 0 && currentFocusIndex < $items.length) {
+                $items.eq(currentFocusIndex).addClass('active');
+            }
+        }
+
+        function searchCities(searchTerm) {
+            console.log('Searching for:', searchTerm); // Debug
+            
+            $.ajax({
+                url: 'fetch_cities.php',
+                type: 'GET',
+                data: { term: searchTerm },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Search results:', response); // Debug
+                    $('#city_input').removeClass('loading');
+                    displayCityResults(response);
+                },
+                error: function(xhr, status, error) {
+                    $('#city_input').removeClass('loading');
+                    console.error('City search error:', error);
+                    console.error('Response:', xhr.responseText); // Debug
+                    
+                    const $dropdown = $('#cityDropdown');
+                    $dropdown.html('<div class="autocomplete-no-results">Error loading cities. Please try again.</div>');
+                    $dropdown.addClass('show');
+                }
+            });
+        }
+
+        function displayCityResults(cities) {
+            const $dropdown = $('#cityDropdown');
+            const $input = $('#city_input');
+            $dropdown.empty();
+            currentFocusIndex = -1;
+
+            console.log('Displaying results, count:', cities ? cities.length : 0); // Debug
+
+            if (!cities || cities.length === 0) {
+                $dropdown.html('<div class="autocomplete-no-results"><i class="fas fa-search"></i><br>No cities found</div>');
+                positionDropdown();
+                $dropdown.addClass('show');
+                return;
+            }
+
+            cities.forEach(function(city) {
+                const details = [];
+                if (city.postal_code) details.push('Postal: ' + city.postal_code);
+                
+                const detailsHtml = details.length > 0 
+                    ? '<div class="city-details">' + details.join(' • ') + '</div>' 
+                    : '';
+
+                const $item = $('<div class="autocomplete-item">')
+                    .html('<div class="city-name">' + escapeHtml(city.city_name) + '</div>' + detailsHtml)
+                    .data('city-id', city.city_id)
+                    .data('city-name', city.city_name);
+
+                $item.on('mousedown', function(e) {
+                    e.preventDefault(); // Prevent blur event
+                    selectCity($(this).data('city-id'), $(this).data('city-name'));
+                });
+
+                $dropdown.append($item);
+            });
+
+            positionDropdown();
+            $dropdown.addClass('show');
+            console.log('Dropdown shown'); // Debug
+        }
+
+        // Function to position dropdown relative to input
+        function positionDropdown() {
+            const $input = $('#city_input');
+            const $dropdown = $('#cityDropdown');
+            const offset = $input.offset();
+            const inputHeight = $input.outerHeight();
+            const inputWidth = $input.outerWidth();
+
+            $dropdown.css({
+                'top': (offset.top + inputHeight) + 'px',
+                'left': offset.left + 'px',
+                'width': inputWidth + 'px'
+            });
+        }
+
+        // Reposition on window resize or scroll
+        $(window).on('resize scroll', function() {
+            if ($('#cityDropdown').hasClass('show')) {
+                positionDropdown();
+            }
+        });
+
+        function selectCity(cityId, cityName) {
+            selectedCityId = cityId;
+            $('#city_id').val(cityId);
+            $('#city_input').val(cityName);
+            $('#cityDropdown').removeClass('show').empty();
+            currentFocusIndex = -1;
+            
+            // Validate after selection
+            showSuccess('city_id');
+            clearError('city_id');
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Form submission
         function submitFormAjax() {
-            // Show loading overlay
             showLoading();
             
-            // Disable submit button
             const $submitBtn = $('#submitBtn');
             const originalText = $submitBtn.html();
             $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding Customer...');
             
-            // Prepare form data
             const formData = new FormData($('#addCustomerForm')[0]);
             
-            // AJAX request
             $.ajax({
-                url: 'save_customer.php', // Create this new file for AJAX handling
+                url: 'save_customer.php',
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 dataType: 'json',
-                timeout: 30000, // 30 seconds timeout
+                timeout: 30000,
                 success: function(response) {
                     hideLoading();
                     $submitBtn.prop('disabled', false).html(originalText);
                     
                     if (response.success) {
                         showSuccessNotification(response.message || 'Customer added successfully!');
-                        showSuccessModal(response.message || 'Customer has been successfully added to the system.');
+                        setTimeout(function() {
+                            resetForm();
+                        }, 1500);
                     } else {
                         if (response.errors) {
-                            // Show field-specific errors
                             showFieldErrors(response.errors);
                         }
-                        showErrorNotification(response.message || 'Failed to add customer. Please try again.');
+                        showErrorNotification(response.message || 'Failed to add customer.');
                     }
                 },
                 error: function(xhr, status, error) {
@@ -385,50 +636,41 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     $submitBtn.prop('disabled', false).html(originalText);
                     
                     let errorMessage = 'An error occurred while adding the customer.';
-                    
                     if (status === 'timeout') {
                         errorMessage = 'Request timeout. Please try again.';
                     } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.status === 500) {
-                        errorMessage = 'Server error. Please contact administrator.';
-                    } else if (xhr.status === 0) {
-                        errorMessage = 'No internet connection. Please check your connection.';
                     }
                     
                     showErrorNotification(errorMessage);
-                    console.error('AJAX Error:', error);
                 }
             });
         }
-        
-        // Show field-specific errors from server
+
         function showFieldErrors(errors) {
             $.each(errors, function(field, message) {
                 showError(field, message);
             });
         }
-        
-        // Loading functions
+
         function showLoading() {
             $('#loadingOverlay').css('display', 'flex');
             $('body').css('overflow', 'hidden');
         }
-        
+
         function hideLoading() {
             $('#loadingOverlay').hide();
             $('body').css('overflow', 'auto');
         }
-        
-        // Notification functions
+
         function showSuccessNotification(message) {
             showNotification(message, 'success');
         }
-        
+
         function showErrorNotification(message) {
             showNotification(message, 'danger');
         }
-        
+
         function showNotification(message, type) {
             const notificationId = 'notification_' + Date.now();
             const iconClass = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
@@ -445,37 +687,33 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             
             $('body').append(notification);
             
-            // Auto-hide after 5 seconds
             setTimeout(() => {
                 hideNotification(notificationId);
             }, 5000);
         }
-        
+
         function hideNotification(notificationId) {
-            const $notification = $('#' + notificationId);
-            if ($notification.length) {
-                $notification.addClass('hide');
-                setTimeout(() => {
-                    $notification.remove();
-                }, 300);
-            }
+            $('#' + notificationId).fadeOut(300, function() {
+                $(this).remove();
+            });
         }
-        
-        // Form reset function
+
         function resetForm() {
             $('#addCustomerForm')[0].reset();
             clearAllValidations();
+            $('#city_id').val('');
+            $('#city_input').val('');
+            selectedCityId = null;
             $('#email-suggestions').html('');
+            $('#cityDropdown').removeClass('show').empty();
             $('#name').focus();
         }
-        
-        // Clear all validations
+
         function clearAllValidations() {
             $('.form-control, .form-select').removeClass('is-valid is-invalid');
             $('.error-feedback').hide().text('');
         }
-        
-        // Scroll to first error
+
         function scrollToFirstError() {
             const $firstError = $('.is-invalid').first();
             if ($firstError.length) {
@@ -485,12 +723,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 $firstError.focus();
             }
         }
-        
-        // Initialize form
+
         function initializeForm() {
             $('#name').focus();
             
-            // Auto-format phone number
             $('#phone').on('input', function() {
                 let value = this.value.replace(/\D/g, '');
                 if (value.length > 10) {
@@ -499,243 +735,43 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 this.value = value;
             });
             
-            // Email formatting
             $('#email').on('input', function() {
                 this.value = this.value.toLowerCase().trim();
                 $('#email-suggestions').html('');
             });
         }
-        
-        // Setup real-time validation
+
         function setupRealTimeValidation() {
             $('#name').on('blur', function() {
                 const validation = validateName($(this).val());
-                if (!validation.valid) {
-                    showError('name', validation.message);
-                } else {
-                    showSuccess('name');
-                }
+                validation.valid ? showSuccess('name') : showError('name', validation.message);
             });
             
             $('#email').on('blur', function() {
                 const validation = validateEmail($(this).val());
-                if (!validation.valid) {
-                    showError('email', validation.message);
-                } else {
-                    showSuccess('email');
-                }
-                
-                // Show email suggestions
-                const suggestion = suggestEmail($(this).val());
-                if (suggestion && suggestion !== $(this).val().toLowerCase()) {
-                    $('#email-suggestions').html(`Did you mean <a href="#" onclick="$('#email').val('${suggestion}'); $('#email-suggestions').html(''); $('#email').focus();">${suggestion}</a>?`);
-                } else {
-                    $('#email-suggestions').html('');
-                }
+                validation.valid ? showSuccess('email') : showError('email', validation.message);
             });
             
             $('#phone').on('blur', function() {
                 const validation = validatePhone($(this).val());
-                if (!validation.valid) {
-                    showError('phone', validation.message);
-                } else {
-                    showSuccess('phone');
-                }
+                validation.valid ? showSuccess('phone') : showError('phone', validation.message);
             });
             
             $('#address_line1').on('blur', function() {
                 const validation = validateAddressLine1($(this).val());
-                if (!validation.valid) {
-                    showError('address_line1', validation.message);
-                } else {
-                    showSuccess('address_line1');
-                }
-            });
-            
-            $('#address_line2').on('blur', function() {
-                if ($(this).val().trim() !== '') {
-                    const validation = validateAddressLine($(this).val(), 'Address Line 2');
-                    if (!validation.valid) {
-                        showError('address_line2', validation.message);
-                    } else {
-                        showSuccess('address_line2');
-                    }
-                } else {
-                    clearValidation('address_line2');
-                }
-            });
-            
-            $('#city_id').on('change', function() {
-                const validation = validateCity($(this).val());
-                if (!validation.valid) {
-                    showError('city_id', validation.message);
-                } else {
-                    showSuccess('city_id');
-                }
+                validation.valid ? showSuccess('address_line1') : showError('address_line1', validation.message);
             });
         }
 
-        // Validation functions
-        function validateName(name) {
-            if (name.trim() === '') {
-                return { valid: false, message: 'Customer name is required' };
-            }
-            if (name.trim().length < 2) {
-                return { valid: false, message: 'Name must be at least 2 characters long' };
-            }
-            if (name.length > 255) {
-                return { valid: false, message: 'Name is too long (maximum 255 characters)' };
-            }
-            if (!/^[a-zA-Z\s.\-']+$/.test(name)) {
-                return { valid: false, message: 'Name can only contain letters, spaces, dots, hyphens, and apostrophes' };
-            }
-            return { valid: true, message: '' };
-        }
-
-        function validateEmail(email) {
-            if (email.trim() === '') {
-                return { valid: false, message: 'Email address is required' };
-            }
-            if (email.length > 100) {
-                return { valid: false, message: 'Email address is too long (maximum 100 characters)' };
-            }
-            const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-            if (!emailRegex.test(email)) {
-                return { valid: false, message: 'Please enter a valid email address' };
-            }
-            return { valid: true, message: '' };
-        }
-
-        function validatePhone(phone) {
-            if (phone.trim() === '') {
-                return { valid: false, message: 'Phone number is required' };
-            }
-            if (phone.length > 20) {
-                return { valid: false, message: 'Phone number is too long (maximum 20 characters)' };
-            }
-            const cleanPhone = phone.replace(/\s+/g, '');
-            const digitsOnly = cleanPhone.replace(/[^0-9]/g, '');
-            
-            if (digitsOnly.length !== 10) {
-                return { valid: false, message: 'Phone number must be exactly 10 digits' };
-            }
-            
-            const localPattern = /^0[1-9][0-9]{8}$/;
-            const internationalPattern = /^(\+94|94)[1-9][0-9]{8}$/;
-            
-            if (!localPattern.test(cleanPhone) && !internationalPattern.test(cleanPhone)) {
-                return { valid: false, message: 'Please enter a valid Sri Lankan phone number (e.g., 0771234567)' };
-            }
-            return { valid: true, message: '' };
-        }
-
-        function validateAddressLine1(address) {
-            if (address.trim() === '') {
-                return { valid: false, message: 'Address Line 1 is required' };
-            }
-            if (address.trim().length < 3) {
-                return { valid: false, message: 'Address Line 1 must be at least 3 characters long' };
-            }
-            if (address.length > 255) {
-                return { valid: false, message: 'Address Line 1 is too long (maximum 255 characters)' };
-            }
-            return { valid: true, message: '' };
-        }
-
-        function validateCity(cityId) {
-            if (cityId.trim() === '') {
-                return { valid: false, message: 'City selection is required' };
-            }
-            return { valid: true, message: '' };
-        }
-
-        function validateAddressLine(address, fieldName, maxLength = 255) {
-            if (address.length > maxLength) {
-                return { valid: false, message: `${fieldName} is too long (maximum ${maxLength} characters)` };
-            }
-            return { valid: true, message: '' };
-        }
-
-        // Email suggestion function
-        function suggestEmail(email) {
-            if (!email || email.trim() === '' || !email.includes('@')) {
-                return null;
-            }
-            
-            const parts = email.split('@');
-            const username = parts[0];
-            const domain = parts[1].toLowerCase();
-            
-            const typos = {
-                'gamil.com': 'gmail.com',
-                'gmail.co': 'gmail.com',
-                'gmail.cm': 'gmail.com',
-                'gmal.com': 'gmail.com',
-                'yahooo.com': 'yahoo.com',
-                'yaho.com': 'yahoo.com',
-                'yahoo.co': 'yahoo.com',
-                'hotmai.com': 'hotmail.com',
-                'hotmail.co': 'hotmail.com',
-                'outlok.com': 'outlook.com',
-                'outlook.co': 'outlook.com'
-            };
-            
-            if (typos[domain]) {
-                return username + '@' + typos[domain];
-            }
-            
-            return null;
-        }
-
-        // Show/hide error functions
-        function showError(fieldId, message) {
-            const $field = $('#' + fieldId);
-            const $errorDiv = $('#' + fieldId + '-error');
-            
-            if ($field.length && $errorDiv.length) {
-                $field.addClass('is-invalid').removeClass('is-valid');
-                $errorDiv.text(message).show();
-            }
-        }
-
-        function showSuccess(fieldId) {
-            const $field = $('#' + fieldId);
-            const $errorDiv = $('#' + fieldId + '-error');
-            
-            if ($field.length && $errorDiv.length) {
-                $field.addClass('is-valid').removeClass('is-invalid');
-                $errorDiv.hide();
-            }
-        }
-
-        function clearValidation(fieldId) {
-            const $field = $('#' + fieldId);
-            const $errorDiv = $('#' + fieldId + '-error');
-            
-            if ($field.length && $errorDiv.length) {
-                $field.removeClass('is-valid is-invalid');
-                $errorDiv.hide();
-            }
-        }
-
-        // Form validation
         function validateForm() {
             let isValid = true;
             
-            // Get all field values
-            const name = $('#name').val();
-            const email = $('#email').val();
-            const phone = $('#phone').val();
-            const addressLine1 = $('#address_line1').val();
-            const cityId = $('#city_id').val();
-            
-            // Validate required fields
             const validations = [
-                { field: 'name', validator: validateName, value: name },
-                { field: 'email', validator: validateEmail, value: email },
-                { field: 'phone', validator: validatePhone, value: phone },
-                { field: 'address_line1', validator: validateAddressLine1, value: addressLine1 },
-                { field: 'city_id', validator: validateCity, value: cityId }
+                { field: 'name', validator: validateName, value: $('#name').val() },
+                { field: 'email', validator: validateEmail, value: $('#email').val() },
+                { field: 'phone', validator: validatePhone, value: $('#phone').val() },
+                { field: 'address_line1', validator: validateAddressLine1, value: $('#address_line1').val() },
+                { field: 'city_id', validator: validateCity, value: $('#city_id').val() }
             ];
             
             validations.forEach(function(validation) {
@@ -748,62 +784,60 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 }
             });
             
-            // Optional fields validation
-            const addressLine2 = $('#address_line2').val();
-            if (addressLine2.trim() !== '') {
-                const address2Validation = validateAddressLine(addressLine2, 'Address Line 2');
-                if (!address2Validation.valid) {
-                    showError('address_line2', address2Validation.message);
-                    isValid = false;
-                } else {
-                    showSuccess('address_line2');
-                }
-            }
-            
             return isValid;
         }
 
-        // Success modal functions
-        function showSuccessModal(message) {
-            const $modal = $('#successModal');
-            const $messageElement = $('#successMessage');
-            
-            if (message) {
-                $messageElement.text(message);
-            }
-            
-            $modal.show();
-            $('body').css('overflow', 'hidden');
+        function validateName(name) {
+            if (!name.trim()) return { valid: false, message: 'Customer name is required' };
+            if (name.trim().length < 2) return { valid: false, message: 'Name must be at least 2 characters' };
+            if (name.length > 255) return { valid: false, message: 'Name is too long' };
+            if (!/^[a-zA-Z\s.\-']+$/.test(name)) return { valid: false, message: 'Invalid characters in name' };
+            return { valid: true };
         }
 
-        function hideSuccessModal() {
-            const $modal = $('#successModal');
-            $modal.hide();
-            $('body').css('overflow', 'auto');
+     function validateEmail(email) {
+    if (!email.trim()) return { valid: true }; // empty is allowed now
+    if (email.length > 100) return { valid: false, message: 'Email is too long' };
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regex.test(email)) return { valid: false, message: 'Invalid email format' };
+    return { valid: true };
+}
+
+
+        function validatePhone(phone) {
+            if (!phone.trim()) return { valid: false, message: 'Phone is required' };
+            const digits = phone.replace(/\D/g, '');
+            if (digits.length !== 10) return { valid: false, message: 'Phone must be 10 digits' };
+            if (!/^0[1-9][0-9]{8}$/.test(digits)) return { valid: false, message: 'Invalid phone format' };
+            return { valid: true };
         }
 
-        function addAnotherCustomer() {
-            hideSuccessModal();
-            resetForm();
+        function validateAddressLine1(address) {
+            if (!address.trim()) return { valid: false, message: 'Address Line 1 is required' };
+            if (address.trim().length < 3) return { valid: false, message: 'Address too short' };
+            if (address.length > 255) return { valid: false, message: 'Address is too long' };
+            return { valid: true };
         }
 
-        function viewAllCustomers() {
-            hideSuccessModal();
-            window.location.href = 'customer_list.php';
+        function validateCity(cityId) {
+            if (!cityId || cityId.trim() === '') return { valid: false, message: 'Please select a city' };
+            return { valid: true };
         }
 
-        // Close modal when clicking outside or pressing Escape
-        $(window).on('click', function(event) {
-            if (event.target === $('#successModal')[0]) {
-                hideSuccessModal();
-            }
-        });
+        function showError(fieldId, message) {
+            $('#' + fieldId).addClass('is-invalid').removeClass('is-valid');
+            $('#' + fieldId + '-error').text(message).show();
+        }
 
-        $(document).on('keydown', function(event) {
-            if (event.key === 'Escape') {
-                hideSuccessModal();
-            }
-        });
+        function showSuccess(fieldId) {
+            $('#' + fieldId).addClass('is-valid').removeClass('is-invalid');
+            $('#' + fieldId + '-error').hide();
+        }
+
+        function clearError(fieldId) {
+            $('#' + fieldId).removeClass('is-invalid');
+            $('#' + fieldId + '-error').hide();
+        }
     </script>
 </body>
 </html>

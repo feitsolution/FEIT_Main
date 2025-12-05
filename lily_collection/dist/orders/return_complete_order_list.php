@@ -198,7 +198,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Complete Orders - lily_collection Admin Portal</title>
+    <title>Return Complete Orders - Lily Collection Admin Portal</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
@@ -531,8 +531,8 @@ function openOrderModal(orderId, interface = null) {
     downloadBtn.style.display = 'none';
     viewPaymentSlipBtn.style.display = 'none';
     
-    // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
+     // Determine which PHP file to use based on interface
+    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
     const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
     
     console.log('Fetching from:', fetchUrl);

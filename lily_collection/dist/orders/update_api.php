@@ -66,8 +66,8 @@ try {
         $changes[] = "API Key changed from '" . ($courier['api_key'] ?: 'empty') . "' to '" . $api_key . "'";
     }
 
-    // Only update origin fields for courier_id = 13
-    if ($courier_id === 13 || $courier_id == '13') {
+    // Only update origin fields for courier_id = 14
+    if ($courier_id === 14 || $courier_id == '14') {
         if ($courier['origin_city_name'] !== $origin_city_name) {
             $changes[] = "Origin City changed from '" . ($courier['origin_city_name'] ?: 'empty') . "' to '" . $origin_city_name . "'";
         }

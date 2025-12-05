@@ -1,847 +1,501 @@
 <?php
-// Start session at the very beginning
+/**
+ * Nine Nine Bulk Print (8.5cm × 8.5cm Labels) 
+ * Prints multiple orders based on filters from label print page
+ * Each order is printed as a compact label with all essential information
+ * Updated to use external print.css stylesheet
+ * FIXED: Now prints 6 labels per page
+ * FIXED: Customer address display issue resolved with city information
+ * FIXED: Barcode positioning and font size issues
+ * FIXED: Better space management and readable font sizes
+ * MODIFIED: Company header layout, simplified customer section, simplified totals
+ * FIXED: Better styling for "more items" display
+ * UPDATED: Separated address and city display
+ * UPDATED: Products now display comma-separated with grouped quantities
+ * UPDATED: Barcode now displays tracking number instead of order ID
+ * NEW: Added tracking number filter functionality
+ */
+// Start session management
 session_start();
 
-// Check if user is logged in, if not redirect to login page
+// Authentication check
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    // Clear any existing output buffers
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /lily_collection/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
-// Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
-// Function to log user actions
-function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = null) {
-    $stmt = $conn->prepare("INSERT INTO user_logs (user_id, action_type, inquiry_id, details) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("isis", $user_id, $action_type, $inquiry_id, $details);
-    return $stmt->execute();
+// Include database connection
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+
+/**
+ * GET FILTER PARAMETERS FROM URL
+ * These come from the main label print page filters
+ * UPDATED: Added tracking filter parameters
+ * DEFAULT: Nine Nine Bulk Print shows only orders WITH tracking numbers
+ */
+$date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
+$time_from = isset($_GET['time_from']) ? trim($_GET['time_from']) : '';
+$time_to = isset($_GET['time_to']) ? trim($_GET['time_to']) : '';
+$status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 'all';
+
+// NEW: Tracking filter parameters - DEFAULT to 'with_tracking' for Nine Nine Bulk Print
+$tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'with_tracking';
+$tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
+
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+/**
+ * BUILD QUERY TO FETCH ORDERS
+ * UPDATED: Added separate customer address lines for better display control
+ */
+$sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
+               o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
+               o.delivery_fee, o.discount, o.issue_date,
+               c.name as customer_name, c.phone as customer_phone, 
+               c.email as customer_email, c.city_id,
+               
+               -- ADDED: Customer address lines separately for better control
+               c.address_line1 as customer_address_line1,
+               c.address_line2 as customer_address_line2,
+               
+               cr.courier_name as delivery_service,
+               
+               -- City information from city_table
+               ct.city_name,
+               
+               -- Customer address with city (for fallback)
+               CONCAT_WS(', ', 
+                   NULLIF(c.address_line1, ''), 
+                   NULLIF(c.address_line2, ''), 
+                   ct.city_name
+               ) as customer_address,
+               
+               -- Display name with proper fallback
+               COALESCE(NULLIF(o.full_name, ''), c.name, 'Unknown Customer') as display_name,
+               
+               -- Display mobile with proper fallback
+               COALESCE(NULLIF(o.mobile, ''), c.phone, 'No phone') as display_mobile
+               
+        FROM order_header o 
+        LEFT JOIN customers c ON o.customer_id = c.customer_id
+        LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
+        LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
+        WHERE o.interface IN ('individual', 'leads')";
+
+// Build search conditions (same as main page)
+$searchConditions = [];
+
+if (!empty($date)) {
+    $dateTerm = $conn->real_escape_string($date);
+    $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
 }
 
-// Fetch necessary data for the form - only need to do this once
-$sql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+if (!empty($time_from)) {
+    $timeFromTerm = $conn->real_escape_string($time_from);
+    $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
+}
+
+if (!empty($time_to)) {
+    $timeToTerm = $conn->real_escape_string($time_to);
+    $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
+}
+
+if (!empty($status_filter) && $status_filter !== 'all') {
+    $statusTerm = $conn->real_escape_string($status_filter);
+    $searchConditions[] = "o.status = '$statusTerm'";
+}
+
+// NEW: Tracking filter conditions
+if (!empty($tracking_filter) && $tracking_filter !== 'all') {
+    switch ($tracking_filter) {
+        case 'with_tracking':
+            $searchConditions[] = "o.tracking_number IS NOT NULL AND o.tracking_number != '' AND TRIM(o.tracking_number) != ''";
+            break;
+        case 'without_tracking':
+            $searchConditions[] = "(o.tracking_number IS NULL OR o.tracking_number = '' OR TRIM(o.tracking_number) = '')";
+            break;
+        case 'specific_tracking':
+            if (!empty($tracking_number)) {
+                $trackingTerm = $conn->real_escape_string($tracking_number);
+                $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
+            }
+            break;
+    }
+}
+
+// Apply search conditions
+if (!empty($searchConditions)) {
+    $sql .= " AND " . implode(' AND ', $searchConditions);
+}
+
+$sql .= " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT $limit OFFSET $offset";
+
+// Execute query
 $result = $conn->query($sql);
-
-// Updated customer query with proper JOIN to get city_name
-$customerSql = "SELECT c.*, ct.city_name 
-                FROM customers c 
-                LEFT JOIN city_table ct ON c.city_id = ct.city_id 
-                WHERE c.status = 'Active' 
-                ORDER BY c.name ASC";
-$customerResult = $conn->query($customerSql);
-
-// Fetch cities for dropdown
-$citySql = "SELECT city_id, city_name FROM city_table WHERE is_active = 1 ORDER BY city_name ASC";
-$cityResult = $conn->query($citySql);
-
-// Fetch delivery fee from branding table
-$deliveryFeeSql = "SELECT delivery_fee FROM branding LIMIT 1";
-$deliveryFeeResult = $conn->query($deliveryFeeSql);
-$deliveryFee = 0.00;
-if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
-    $row = $deliveryFeeResult->fetch_assoc();
-    $deliveryFee = floatval($row['delivery_fee']);
+if (!$result) {
+    die("Query failed: " . $conn->error);
 }
 
+/**
+ * FETCH ORDER ITEMS FOR ALL ORDERS
+ * Get products for each order in a single optimized query
+ * UPDATED: Group by product_id and product_name to sum quantities properly
+ */
+$orders = [];
+$order_ids = [];
 
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
+while ($order = $result->fetch_assoc()) {
+    $orders[] = $order;
+    $order_ids[] = $order['order_id'];
+}
+
+// Get all items for all orders at once with proper grouping
+$items_by_order = [];
+if (!empty($order_ids)) {
+    $order_ids_str = implode(',', array_map('intval', $order_ids));
+    $items_query = "SELECT oi.order_id, oi.product_id, p.name as product_name, 
+                    SUM(oi.quantity) as total_quantity
+                    FROM order_items oi
+                    JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id IN ($order_ids_str)
+                    GROUP BY oi.order_id, oi.product_id, p.name
+                    ORDER BY oi.order_id, p.name";
+    
+    $items_result = $conn->query($items_query);
+    if ($items_result) {
+        while ($item = $items_result->fetch_assoc()) {
+            $items_by_order[$item['order_id']][] = $item;
+        }
+    }
+}
+
+// Company information
+$company = [
+    'name' => 'FE IT Solutions pvt (Ltd)',
+    'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
+    'email' => 'info@feitsolutions.com',
+    'phone' => '011-2824524'
+];
+
+/**
+ * HELPER FUNCTIONS
+ * UPDATED: Barcode functions now handle tracking numbers
+ */
+function getCurrencySymbol($currency) {
+    return (strtolower($currency) == 'usd') ? '$' : 'Rs.';
+}
+
+function getBarcodeUrl($data) {
+    // Using Code128 format which is widely supported by barcode scanners
+    return "https://barcodeapi.org/api/code128/{$data}";
+}
+
+function getQRCodeUrl($data) {
+    return "https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=" . urlencode($data);
+}
+
+function calculateSubtotal($total, $delivery, $discount) {
+    return floatval($total) - floatval($delivery) + floatval($discount);
+}
+
+// Function to check if tracking number exists
+function hasTracking($tracking_number) {
+    return !empty($tracking_number) && trim($tracking_number) !== '';
+}
+
+// NEW: Function to get tracking filter display text
+function getTrackingFilterText($tracking_filter, $tracking_number = '') {
+    switch ($tracking_filter) {
+        case 'with_tracking':
+            return 'Orders WITH tracking numbers';
+        case 'without_tracking':
+            return 'Orders WITHOUT tracking numbers';
+        case 'specific_tracking':
+            return !empty($tracking_number) ? "Tracking contains: '{$tracking_number}'" : 'Specific tracking (no number provided)';
+        default:
+            return 'All orders (no tracking filter)';
+    }
+}
+
+// NEW: Count orders by tracking status for summary
+$tracking_stats = [
+    'with_tracking' => 0,
+    'without_tracking' => 0,
+    'total' => count($orders)
+];
+
+foreach ($orders as $order) {
+    if (hasTracking($order['tracking_number'])) {
+        $tracking_stats['with_tracking']++;
+    } else {
+        $tracking_stats['without_tracking']++;
+    }
+}
 ?>
 
-<!doctype html>
-<html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <!-- TITLE -->
-    <title>Order Management Admin Portal - Create Order </title>
-
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php');
-    ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nine Nine Bulk Print - Receipt Labels (<?php echo count($orders); ?> orders)</title>
     
-    <!-- [Template CSS Files] -->
-    <link rel="stylesheet" href="../assets/css/styles.css" id="main-style-link" />
+   <!-- Link to external CSS file -->
+<link rel="stylesheet" type="text/css" href="../assets/css/bulk_print.css">
+    
 </head>
-
 <body>
-  
-   
-    <!-- LOADER -->
-    <?php
-        include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php');
-    ?>
-    <!-- END LOADER -->
+    <!-- Print Instructions (hidden when printing) -->
+    <div class="print-instructions">
+        <h3>Nine Nine Bulk Print Instructions </h3>
+        <p><strong>Orders Found:</strong> <?php echo count($orders); ?> orders</p>
+        <p><strong>Label Size:</strong> 8.5cm × 8.5cm compact format</p>
+        <p><strong>Labels Per Page:</strong> 6 labels (2×3 grid)</p>
+        
+      
+        <p><strong>Filters Applied:</strong></p>
+        <ul>
+            <?php if ($date): ?><li>Date: <?php echo htmlspecialchars($date); ?></li><?php endif; ?>
+            <?php if ($time_from): ?><li>Time From: <?php echo htmlspecialchars($time_from); ?></li><?php endif; ?>
+            <?php if ($time_to): ?><li>Time To: <?php echo htmlspecialchars($time_to); ?></li><?php endif; ?>
+            <?php if ($status_filter !== 'all'): ?><li>Status: <?php echo htmlspecialchars($status_filter); ?></li><?php endif; ?>
+            
+            <!-- NEW: Tracking filter display -->
+            <?php if ($tracking_filter !== 'all'): ?>
+                <li><strong>Tracking Filter:</strong> <?php echo htmlspecialchars(getTrackingFilterText($tracking_filter, $tracking_number)); ?></li>
+            <?php endif; ?>
+        </ul>
+        <button class="print-button" onclick="window.print()">🖨️ Print Labels</button>
+        <button class="print-button" onclick="window.close()" style="background: #6c757d;">❌ Close</button>
+    </div>
 
-    <!-- [ Main Content ] start -->
-    <div class="pc-container">
-        <div class="pc-content">
-            <!-- [ breadcrumb ] start -->
-            <div class="page-header">
-                <div class="page-block">
-                    <div class="page-header-title">
-                        <h5 class="mb-0 font-medium">Create Order</h5>
+    <!-- Labels Container -->
+    <div class="labels-container">
+        <?php if (empty($orders)): ?>
+            <div class="no-orders">
+                <h3>No Orders Found</h3>
+                <p>No orders match the selected filters.</p>
+                <?php if ($tracking_filter !== 'all'): ?>
+                    <p><em>Try adjusting your tracking filter: <?php echo htmlspecialchars(getTrackingFilterText($tracking_filter, $tracking_number)); ?></em></p>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <?php 
+            $labels_per_page = 6; // 6 labels per page
+            $total_orders = count($orders);
+            $current_page_labels = 0;
+            ?>
+            
+            <?php foreach ($orders as $index => $order): ?>
+                <?php
+                // Start new page wrapper every 6 labels
+                if ($current_page_labels == 0): ?>
+                    <div class="page-wrapper">
+                <?php endif; ?>
+                
+                <?php
+                // Prepare order data 
+                $order_id = $order['order_id'];
+                $currency_symbol = getCurrencySymbol($order['currency'] ?? 'lkr');
+                
+                // UPDATED: Use tracking number for barcode instead of order ID
+                $tracking_number = !empty($order['tracking_number']) ? trim($order['tracking_number']) : '';
+                $has_tracking = hasTracking($tracking_number);
+                
+                // Barcode data and URLs - only if tracking exists
+                if ($has_tracking) {
+                    $barcode_data = $tracking_number;
+                    $barcode_url = getBarcodeUrl($barcode_data);
+                    $qr_url = getQRCodeUrl("Tracking: " . $tracking_number . " | Order: " . $order_id);
+                } else {
+                    $barcode_data = '';
+                    $barcode_url = '';
+                    $qr_url = '';
+                }
+                
+                // Calculate totals
+                $total_amount = floatval($order['total_amount']);
+                $delivery_fee = floatval($order['delivery_fee']);
+                $discount = floatval($order['discount']);
+                $subtotal = calculateSubtotal($total_amount, $delivery_fee, $discount);
+                
+                // Get items for this order
+                $order_items = isset($items_by_order[$order_id]) ? $items_by_order[$order_id] : [];
+                
+                // Determine if we need compact mode based on content
+                $compact_mode = (count($order_items) > 3 || strlen($order['display_name']) > 50);
+                ?>
+                
+                <div class="label-wrapper <?php echo $compact_mode ? 'compact' : ''; ?>">
+                    <div class="receipt-container">
+                        <!-- MODIFIED: Header Section with order info on right -->
+                        <div class="header-section">
+                            <div class="company-left">
+                                <div class="company-logo">
+                                    <img src="../assets/images/order_management.png" alt="Company Logo">
+                                </div>
+                                <div class="company-name"><?php echo htmlspecialchars($company['name']); ?></div>
+                            </div>
+                            <div class="order-right">
+                                <div class="order-id">ORDER: <?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?></div>
+                                <div class="order-date"><?php echo !empty($order['issue_date']) ? date('Y-m-d', strtotime($order['issue_date'])) : date('Y-m-d'); ?></div>
+                                
+                                <!-- NEW: Tracking status indicator -->
+                                <?php if ($has_tracking): ?>
+                                    <div style="color: #28a745; font-size: 6px; font-weight: bold;"></div>
+                                <?php else: ?>
+                                    <div style="color: #dc3545; font-size: 6px; font-weight: bold;">⚠ NO TRACK</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- UPDATED: Customer Section with separated address and city display -->
+                        <div class="customer-section">
+                            <div class="customer-info">
+                                <div><strong>Customer Name:</strong> <?php echo htmlspecialchars(substr($order['display_name'], 0, 35)) . (strlen($order['display_name']) > 35 ? '...' : ''); ?></div>
+                                <div><strong>Phone:</strong> <?php echo htmlspecialchars($order['display_mobile']); ?></div>
+                                <div><strong>Address:</strong> 
+                                    <?php 
+                                    // Build address with only address lines (no city)
+                                    $address_parts = [];
+                                    
+                                    // Priority 1: Use order address lines if available
+                                    if (!empty($order['address_line1'])) {
+                                        $address_parts[] = trim($order['address_line1']);
+                                    }
+                                    if (!empty($order['address_line2'])) {
+                                        $address_parts[] = trim($order['address_line2']);
+                                    }
+                                    
+                                    // Priority 2: If no order address, use customer address lines
+                                    if (empty($address_parts)) {
+                                        if (!empty($order['customer_address_line1'])) {
+                                            $address_parts[] = trim($order['customer_address_line1']);
+                                        }
+                                        if (!empty($order['customer_address_line2'])) {
+                                            $address_parts[] = trim($order['customer_address_line2']);
+                                        }
+                                    }
+                                    
+                                    $address_only = implode(', ', array_filter($address_parts));
+                                    if (empty($address_only)) {
+                                        $address_only = 'Address not available';
+                                    }
+                                    
+                                    echo htmlspecialchars(substr($address_only, 0, 55)) . (strlen($address_only) > 55 ? '...' : '');
+                                    ?>
+                                </div>
+                                <div><strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'Not specified'; ?></div>
+                            </div>
+                        </div>
+
+                        <!-- UPDATED: Products Section - Now comma-separated -->
+                        <div class="products-section">
+                            <div class="products-header">
+                                <strong>Products (<?php echo count($order_items); ?>):</strong>
+                            </div>
+                            <div class="products-list">
+                                <?php if (!empty($order_items)): ?>
+                                    <?php 
+                                    $product_list = [];
+                                    foreach ($order_items as $item) {
+                                        $product_name = htmlspecialchars(substr($item['product_name'], 0, 20));
+                                        if (strlen($item['product_name']) > 20) $product_name .= '...';
+                                        $product_list[] = $item['product_id'] . " - " . $product_name . " (" . $item['total_quantity'] . ")";
+                                    }
+                                    echo implode(', ', $product_list);
+                                    ?>
+                                <?php else: ?>
+                                    No items found
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Delivery info with tracking status -->
+                            <div class="delivery-info" style="margin-top: 2mm;">
+                                <strong>Service:</strong> <?php echo !empty($order['delivery_service']) ? htmlspecialchars(substr($order['delivery_service'], 0, 15)) : 'none'; ?> | 
+                                <strong>Track:</strong> 
+                                <?php if ($has_tracking): ?>
+                                    <span style="color: #2563eb;"><?php echo htmlspecialchars(substr($tracking_number, 0, 12)); ?></span>
+                                <?php else: ?>
+                                    <span style="color: #dc2626;">No Tracking</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- MODIFIED: Simplified Totals Section - only show total -->
+                        <div class="totals-section">
+                            <div class="total-only">
+                                TOTAL: <?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?>
+                            </div>
+                        </div>
+
+                        <!-- UPDATED: Barcode Section - Show tracking number or "No Tracking" -->
+                        <div class="barcode-section">
+                            <?php if ($has_tracking): ?>
+                                <img src="<?php echo $barcode_url; ?>" alt="Tracking Barcode" class="barcode-image" onerror="this.style.display='none'">
+                                <div class="barcode-text"><?php echo htmlspecialchars($tracking_number); ?></div>
+                                <div style="font-size: 6px; margin-top: 0.5mm; color: #666;"></div>
+                            <?php else: ?>
+                                <div class="no-tracking-barcode">
+                                    <div style="border: 1px dashed #dc2626; padding: 4px; text-align: center; font-size: 8px; color: #dc2626; background: #fef2f2;">
+                                        NO BARCODE<br>
+                                        <span style="font-size: 6px;">No tracking assigned</span>
+                                    </div>
+                                    <div class="barcode-text" style="color: #dc2626;">No Tracking</div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <!-- [ breadcrumb ] end -->
 
-            <!-- [ Main Content ] start -->
-            <div class="alert-container"></div>
-            
-            <div class="order-container">
-                <form method="post" action="process_order.php" id="orderForm" target="_blank">
-
-                    <!-- Order Details Section -->
-                    <div class="order-details-section">
-                        <div class="order-details-grid">
-                            <div class="form-group">
-                                <label class="form-label">Status</label>
-                                <div class="status-radio-group">
-                                    <div class="radio-option">
-                                        <input type="radio" name="order_status" value="Paid" id="status_paid">
-                                        <label for="status_paid">Paid</label>
-                                    </div>
-                                    <div class="radio-option">
-                                        <input type="radio" name="order_status" value="Unpaid" id="status_unpaid" checked>
-                                        <label for="status_unpaid">Unpaid</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Order Date</label>
-                                <input type="date" class="form-control" name="order_date"
-                                    value="<?php echo date('Y-m-d'); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" class="form-control" name="due_date"
-                                    value="<?php echo date('Y-m-d', strtotime('+30 days')); ?>" required>
-                            </div>
-                        </div>
-                        <!-- Hidden currency field - always set to LKR -->
-                        <input type="hidden" name="order_currency" id="order_currency" value="lkr">
-                    </div>
-
-            <!-- Customer Information Section -->
-     <div class="section-card">
-    <div class="section-header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h5 class="section-title">Customer Information</h5>
-            <button type="button" class="btn-outline-primary" id="select_existing_customer">
-                <i class="feather icon-users"></i> Select Customer
-            </button>
-        </div>
-    </div>
-    <div class="section-body">
-        <div class="customer-info-grid">
-            <input type="hidden" name="customer_id" id="customer_id" value="">
-            <div class="form-group">
-                <label class="form-label">Name <span style="color: #dc3545;">*</span></label>
-                <input type="text" class="form-control" name="customer_name" id="customer_name" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control" name="customer_email" id="customer_email">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Phone</label>
-                <input type="text" class="form-control" name="customer_phone" id="customer_phone">
-            </div>
-            <div class="form-group">
-                <label class="form-label">City</label>
-                <select class="form-control" name="city_id" id="city_id">
-                    <option value="">-- Select City --</option>
-                    <?php
-                    if ($cityResult && $cityResult->num_rows > 0) {
-                        while ($city = $cityResult->fetch_assoc()) {
-                            echo '<option value="' . $city['city_id'] . '">' . htmlspecialchars($city['city_name']) . '</option>';
-                        }
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Address Line 1</label>
-                <input type="text" class="form-control" name="address_line1" id="address_line1">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Address Line 2</label>
-                <input type="text" class="form-control" name="address_line2" id="address_line2">
-            </div>
-        </div>
-    </div>
-</div>
-
-                    <!-- Products Section -->
-                    <div class="section-card">
-                        <div class="section-header">
-                            <h5 class="section-title">Products</h5>
-                        </div>
-                        <div class="section-body">
-                            <div style="overflow-x: auto;">
-                                <table class="products-table" id="order_table">
-                                    <thead>
-                                        <tr>
-                                            <th class="action-col">Action</th>
-                                            <th class="product-col">Product</th>
-                                            <th class="description-col">Description</th>
-                                            <th class="price-col">Price</th>
-                                            <th class="discount-col">Discount</th>
-                                            <th class="subtotal-col">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td class="action-col">
-                                                <button type="button" class="btn-remove remove_product">×</button>
-                                            </td>
-                                            <td class="product-col">
-                                                <select name="order_product[]" class="form-select product-select">
-                                                    <option value="">-- Select Product --</option>
-                                                    <?php
-                                                    // Reset the pointer for $result
-                                                    $result->data_seek(0);
-                                                    while ($row = $result->fetch_assoc()): ?>
-                                                        <option value="<?= $row['id'] ?>"
-                                                            data-lkr-price="<?= $row['lkr_price'] ?>"
-                                                            data-description="<?= htmlspecialchars($row['description']) ?>">
-                                                            <?= htmlspecialchars($row['name']) ?>
-                                                        </option>
-                                                    <?php endwhile; ?>
-                                                </select>
-                                            </td>
-                                            <td class="description-col">
-                                                <input type="text" name="order_product_description[]" class="form-control product-description">
-                                            </td>
-                                            <td class="price-col">
-                                                <div class="input-group">
-                                                    <span class="input-group-text">Rs.</span>
-                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01">
-                                                </div>
-                                            </td>
-                                            <td class="discount-col">
-                                                <input type="number" name="order_product_discount[]" class="form-control discount" value="0" min="0" step="1">
-                                            </td>
-                                            <td class="subtotal-col">
-                                                <div class="input-group">
-                                                    <span class="input-group-text">Rs.</span>
-                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" readonly>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
-                                <button type="button" id="add_product" class="btn-add-product">
-                                    <span>+</span> Add Product
-                                </button>
-
-                                <div class="totals-section">
-                                    <div class="totals-row">
-                                        <span class="totals-label">Subtotal:</span>
-                                        <span class="totals-value">
-                                            Rs. <span id="subtotal_display">0.00</span>
-                                            <input type="hidden" id="subtotal_amount" name="subtotal" value="0.00">
-                                        </span>
-                                    </div>
-                                    <div class="totals-row">
-                                        <span class="totals-label">Discount:</span>
-                                        <span class="totals-value">
-                                            Rs. <span id="discount_display">0.00</span>
-                                            <input type="hidden" id="discount_amount" name="discount" value="0.00">
-                                        </span>
-                                    </div>
-                                    <div class="totals-row delivery-fee-row" id="delivery_fee_row">
-                                        <span class="totals-label">Delivery Fee:</span>
-                                        <span class="totals-value">
-                                            Rs. <span id="delivery_fee_display"><?php echo number_format($deliveryFee, 2); ?></span>
-                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo number_format($deliveryFee, 2); ?>">
-                                        </span>
-                                    </div>
-                                    <div class="totals-row">
-                                        <span class="totals-label">Total:</span>
-                                        <span class="totals-value">
-                                            Rs. <span id="total_display">0.00</span>
-                                            <input type="hidden" id="total_amount" name="total_amount" value="0.00">
-                                            <input type="hidden" id="lkr_total_amount" name="lkr_price" value="0.00">
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Notes & Submit Section -->
-                    <div class="section-card">
-                        <div class="section-body">
-                            <div class="notes-section">
-                                <label class="form-label">Additional Notes</label>
-                                <textarea name="notes" class="form-control" rows="3" placeholder="Enter any additional notes for this order..."></textarea>
-                            </div>
-                            <div class="submit-section">
-                                <button type="submit" class="btn-primary" id="submit_order">
-                                    <i class="feather icon-save"></i> Create Order
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <!-- [ Main Content ] end -->
-        </div>
-    </div>
-    <!-- [ Main Content ] end -->
-
-
-    
-<!-- Customer Selection Modal -->
-<div id="customerModal" class="customer-modal">
-    <div class="customer-modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title">
-                <i class="feather icon-users"></i>
-                Select Customer
-            </h5>
-            <button type="button" class="close-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="input-group" style="margin-bottom: 20px;">
-                <span class="input-group-text"><i class="feather icon-search"></i></span>
-                <input type="text" id="customerSearch" class="form-control" placeholder="Search : Customer id | Customer Name | Email | Phone Number |city ">
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>CUSTOMER NAME</th>
-                            <th>PHONE & EMAIL</th>
-                            <th>ADDRESS</th>
-                            <th>ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Reset the pointer for $customerResult
-                        $customerResult->data_seek(0);
-                        while ($customer = $customerResult->fetch_assoc()): ?>
-                            <tr class="customer-row" 
-                                data-customer-id="<?= $customer['customer_id'] ?? '' ?>"
-                                data-name="<?= htmlspecialchars($customer['name'] ?? '') ?>"
-                                data-email="<?= htmlspecialchars($customer['email'] ?? '') ?>"
-                                data-phone="<?= htmlspecialchars($customer['phone'] ?? '') ?>"
-                                data-address-line1="<?= htmlspecialchars($customer['address_line1'] ?? '') ?>"
-                                data-address-line2="<?= htmlspecialchars($customer['address_line2'] ?? '') ?>"
-                                data-city-name="<?= htmlspecialchars($customer['city_name'] ?? '') ?>"
-                                data-city-id="<?= $customer['city_id'] ?? '' ?>">
-                                
-                                <td><?= $customer['customer_id'] ?? '' ?></td>
-                                
-                                <td>
-                                    <div class="customer-name"><?= htmlspecialchars($customer['name'] ?? '') ?></div>
-                                </td>
-                                
-                                <td>
-                                    <div class="contact-info">
-                                        <div class="phone-number"><?= htmlspecialchars($customer['phone'] ?? '') ?></div>
-                                        <div class="email-address"><?= htmlspecialchars($customer['email'] ?? '') ?></div>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="address-info">
-                                        <div class="address-line"><?= htmlspecialchars($customer['address_line1'] ?? '') ?></div>
-                                        <div class="city-name"><?= htmlspecialchars($customer['city_name'] ?? '') ?></div>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <button type="button" class="btn btn-primary select-customer-btn">Select</button>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-    <!-- FOOTER -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php');
-    ?>
-    <!-- END FOOTER -->
-
-    <!-- SCRIPTS -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php');
-    ?>
-    <!-- END SCRIPTS -->
-
-  <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Store the delivery fee value from PHP
-    let deliveryFee = <?php echo $deliveryFee; ?>;
-    let hasProducts = false; // Flag to track if any products have been selected
-
-    // Email validation function
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    // Phone number validation function (10 digits)
-    function isValidPhoneNumber(phone) {
-        const phoneRegex = /^\d{10}$/;
-        return phoneRegex.test(phone);
-    }
-
-    // Validate customer information
-    function validateCustomerInfo() {
-        const customerName = document.getElementById('customer_name').value.trim();
-        const customerEmail = document.getElementById('customer_email').value.trim();
-        const customerPhone = document.getElementById('customer_phone').value.trim();
-
-        // Clear previous error messages
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-
-        let isValid = true;
-
-        // Name validation (required)
-        if (customerName === '') {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.textContent = 'Customer name is required';
-            document.getElementById('customer_name').parentNode.appendChild(errorDiv);
-            isValid = false;
-        }
-
-        // Email validation (optional, but if provided must be valid)
-        if (customerEmail !== '' && !isValidEmail(customerEmail)) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.textContent = 'Invalid email format';
-            document.getElementById('customer_email').parentNode.appendChild(errorDiv);
-            isValid = false;
-        }
-
-        // Phone validation (optional, but if provided must be 10 digits)
-        if (customerPhone !== '' && !isValidPhoneNumber(customerPhone)) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.textContent = 'Phone number must be 10 digits';
-            document.getElementById('customer_phone').parentNode.appendChild(errorDiv);
-            isValid = false;
-        }
-
-        return isValid;
-    }
-
-    // Function to check if any product is selected and show/hide delivery fee
-    function checkForProducts() {
-        let productSelected = false;
-
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                productSelected = true;
-            }
-        });
-
-        hasProducts = productSelected;
-
-        // Show/hide the delivery fee row based on whether products are selected
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (productSelected) {
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        // Always update totals after checking for products to ensure correct calculation
-        updateTotals();
-
-        return productSelected;
-    }
-
-    // Function to update product price based on currency
-    function updateProductPrice(row) {
-        const productSelect = row.querySelector('.product-select');
-        const selectedOption = productSelect.options[productSelect.selectedIndex];
-        
-        if (productSelect.value === "") return;
-
-        const priceField = row.querySelector('.price');
-        const descriptionField = row.querySelector('.product-description');
-        const description = selectedOption.getAttribute('data-description') || '';
-        const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
-
-        priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
-        descriptionField.value = description;
-
-        // First check if any products are selected (this will update the hasProducts flag)
-        checkForProducts();
-        // Then update the row total
-        updateRowTotal(row);
-    }
-
-    // Updated Row Total Calculation Function
-    function updateRowTotal(row) {
-        let price = parseFloat(row.querySelector('.price').value) || 0;
-        let discount = parseFloat(row.querySelector('.discount').value) || 0;
-
-        // Ensure discount doesn't exceed price
-        if (discount > price) {
-            discount = price;
-            row.querySelector('.discount').value = discount;
-        }
-
-        let subtotal = price - discount;
-        row.querySelector('.subtotal').value = subtotal.toFixed(2);
-        updateTotals();
-    }
-
-    // Updated Totals Calculation Function with fix for delivery fee
-    function updateTotals() {
-        let subtotal = 0;
-        let totalDiscount = 0;
-
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
-            let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
-
-            // Ensure discount doesn't exceed price
-            if (rowDiscount > rowPrice) {
-                rowDiscount = rowPrice;
-                row.querySelector('.discount').value = rowDiscount;
-            }
-
-            let rowSubtotal = rowPrice - rowDiscount;
-            row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
-
-            subtotal += rowPrice;
-            totalDiscount += rowDiscount;
-        });
-
-        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-        // Always check for products before calculating total
-        let hasAnyProducts = false;
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                hasAnyProducts = true;
-            }
-        });
-
-        // Calculate total including delivery fee if products are selected
-        let total = subtotal - totalDiscount;
-
-        // Add delivery fee if any products are selected
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (hasAnyProducts) {
-            total += deliveryFee;
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        document.getElementById('total_display').textContent = total.toFixed(2);
-        document.getElementById('total_amount').value = total.toFixed(2);
-        document.getElementById('lkr_total_amount').value = total.toFixed(2);
-    }
-
-    // Customer modal functionality
-        const customerModal = document.getElementById("customerModal");
-        const selectCustomerBtn = document.getElementById("select_existing_customer");
-        const closeModal = document.querySelector(".close-modal");
-
-        selectCustomerBtn.addEventListener('click', function() {
-            customerModal.style.display = "block";
-        });
-
-        closeModal.addEventListener('click', function() {
-            customerModal.style.display = "none";
-        });
-
-        window.addEventListener('click', function(event) {
-            if (event.target == customerModal) {
-                customerModal.style.display = "none";
-            }
-        });
-
-        // Customer search functionality
-        const customerSearch = document.getElementById("customerSearch");
-        customerSearch.addEventListener('keyup', function() {
-            const value = this.value.toLowerCase();
-            document.querySelectorAll(".customer-row").forEach(function(row) {
-                const text = row.textContent || row.innerText;
-                row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
-            });
-        });
-
-        // Updated: Select customer functionality with proper field mapping
-        document.querySelectorAll(".select-customer-btn").forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const row = this.closest('tr');
+                <?php 
+                $current_page_labels++;
                 
-
-                // Your existing form field population code
-              
-                document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
-                document.getElementById('customer_name').value = row.getAttribute('data-name');
-                document.getElementById('customer_email').value = row.getAttribute('data-email');
-                document.getElementById('customer_phone').value = row.getAttribute('data-phone');
-                document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
-                document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
-                document.getElementById('city_id').value = row.getAttribute('data-city-id');
-             
+                // Close page wrapper and reset counter every 6 labels
+                if ($current_page_labels == $labels_per_page || $index == $total_orders - 1): 
+                    $current_page_labels = 0; ?>
+                    </div> <!-- Close page-wrapper -->
+                    
+                    <?php if ($index < $total_orders - 1): ?>
+                        <div class="page-break"></div>
+                    <?php endif; ?>
+                <?php endif; ?>
                 
-                customerModal.style.display = "none";
-                alert('Customer selected: ' + row.getAttribute('data-name'));
-            });
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
+    <script>
+        // Auto print when page loads (with small delay for images to load)
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.print();
+            }, 1000);
         });
 
-    // Real-time validation for email
-    document.getElementById('customer_email').addEventListener('input', function() {
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-        const email = this.value.trim();
-        if (email !== '' && !isValidEmail(email)) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.textContent = 'Invalid email format';
-            this.parentNode.appendChild(errorDiv);
-        }
-    });
-
-    // Real-time validation for phone
-    document.getElementById('customer_phone').addEventListener('input', function() {
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-        const phone = this.value.trim();
-        if (phone !== '' && !isValidPhoneNumber(phone)) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.textContent = 'Phone number must be 10 digits';
-            this.parentNode.appendChild(errorDiv);
-        }
-    });
-
-    // Form submission validation
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
-        // Validate customer information
-        if (!validateCustomerInfo()) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Validate at least one product is added
-        if (document.querySelectorAll('#order_table tbody tr').length === 0) {
-            alert('Please add at least one product to the order.');
-            e.preventDefault();
-            return false;
-        }
-
-        // Validate product selection
-        let isProductValid = true;
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            let productSelect = row.querySelector('.product-select');
-            if (productSelect.value === "") {
-                alert('Please select a product for all order lines.');
-                isProductValid = false;
-            }
+        // Handle print completion
+        window.addEventListener('afterprint', function() {
+            console.log('Print completed');
         });
 
-        if (!isProductValid) {
-            e.preventDefault();
-            return false;
-        }
-
-        // If all validations pass, allow form submission
-        return true;
-    });
-
-    // Product selection change
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('product-select')) {
-            updateProductPrice(e.target.closest('tr'));
-        }
-    });
-
-    // Add product row
-    document.getElementById('add_product').addEventListener('click', function() {
-        let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
-        
-        // Clear all input values in the new row
-        newRow.querySelectorAll('input').forEach(input => {
-            if (input.classList.contains('price')) {
-                input.value = '0.00';
-            } else if (input.classList.contains('discount')) {
-                input.value = '0';
-            } else if (input.classList.contains('subtotal')) {
-                input.value = '0.00';
-            } else {
-                input.value = '';
-            }
-        });
-        
-        // Reset the select element
-        newRow.querySelector('.product-select').value = '';
-        
-        document.querySelector('#order_table tbody').appendChild(newRow);
-    });
-
-    // Remove product row
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove_product')) {
-            const tableBody = document.querySelector('#order_table tbody');
-            if (tableBody.children.length > 1) {
-                e.target.closest('tr').remove();
-                // After removing a row, check if there are any products left
-                checkForProducts();
-            } else {
-                // If it's the last row, just clear it instead of removing
-                let row = e.target.closest('tr');
-                row.querySelector('.product-select').value = '';
-                row.querySelector('.product-description').value = '';
-                row.querySelector('.price').value = '0.00';
-                row.querySelector('.discount').value = '0';
-                row.querySelector('.subtotal').value = '0.00';
-                checkForProducts();
-            }
-        }
-    });
-
-    // Update on price or discount change
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
-            // Ensure discount is a whole number
-            if (e.target.classList.contains('discount')) {
-                let value = e.target.value;
-                e.target.value = value.replace(/[^0-9]/g, '');
-            }
-            updateRowTotal(e.target.closest('tr'));
-        }
-    });
-
-    // Initialize: hide delivery fee row until products are added
-    document.getElementById('delivery_fee_row').style.display = 'none';
-
-    // Initialize the form on page load
-    updateTotals();
-});
-
-
-// Date validation functions
-function isValidDate(dateString) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
-}
-
-function validateDates() {
-    const orderDate = document.querySelector('input[name="order_date"]').value;
-    const dueDate = document.querySelector('input[name="due_date"]').value;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Clear previous error messages
-    document.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-
-    let isValid = true;
-
-    // Order date validation
-    if (!orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Order date is required';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (!isValidDate(orderDate)) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Invalid order date format';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (orderDate > today) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Order date cannot be in the future';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    }
-
-    // Due date validation
-    if (!dueDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Due date is required';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (!isValidDate(dueDate)) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Invalid due date format';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (orderDate && dueDate < orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Due date cannot be earlier than order date';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    }
-
-    return isValid;
-}
-
-// Real-time validation event listeners for dates
-document.querySelector('input[name="order_date"]').addEventListener('change', function() {
-    // Clear previous date errors
-    document.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-    
-    const orderDate = this.value;
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (orderDate && orderDate > today) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Order date cannot be in the future';
-        this.parentNode.appendChild(errorDiv);
-    }
-    
-    // Re-validate due date when order date changes
-    const dueDate = document.querySelector('input[name="due_date"]').value;
-    if (orderDate && dueDate && dueDate < orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Due date cannot be earlier than order date';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-    }
-    
-});
-
-document.querySelector('input[name="due_date"]').addEventListener('change', function() {
-    // Clear previous date errors for due date
-    this.parentNode.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-    
-    const dueDate = this.value;
-    const orderDate = document.querySelector('input[name="order_date"]').value;
-    
-    if (orderDate && dueDate && dueDate < orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.textContent = 'Due date cannot be earlier than order date';
-        this.parentNode.appendChild(errorDiv);
-    }
-});
-</script>
+        console.log('Nine Nine bulk print loaded: <?php echo count($orders); ?> orders');
+        console.log('UPDATED: Barcode now displays tracking number instead of order ID');
+        console.log('NEW: Tracking filter implemented');
+        console.log('Orders with tracking: <?php echo $tracking_stats['with_tracking']; ?>');
+        console.log('Orders without tracking: <?php echo $tracking_stats['without_tracking']; ?>');
+        console.log('Tracking filter: <?php echo $tracking_filter; ?>');
+        <?php if ($tracking_filter === 'specific_tracking' && !empty($tracking_number)): ?>
+        console.log('Tracking search term: <?php echo addslashes($tracking_number); ?>');
+        <?php endif; ?>
+    </script>
 </body>
 </html>
+
 <?php
+$conn->close();
+?>

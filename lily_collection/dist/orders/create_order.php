@@ -137,6 +137,48 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     <link rel="stylesheet" href="../assets/css/alert.css" id="main-style-link" />
 
 </head>
+<style>
+.autocomplete-suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.autocomplete-suggestion {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+.autocomplete-suggestions {
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+}
+.autocomplete-suggestion:hover {
+    background-color: #f5f5f5;
+}
+
+.autocomplete-suggestion:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-suggestion.active {
+    background-color: #e9ecef;
+}
+
+.no-results {
+    padding: 10px;
+    color: #999;
+    text-align: center;
+}
+</style>
 
 <body>
     <!-- LOADER -->
@@ -331,7 +373,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <i class="feather icon-users"></i> Select Customer
                             </button>
                         </div>
-                        </div>
+
                         <div class="section-body">
                             <div class="customer-info-grid">
                                 <input type="hidden" name="customer_id" id="customer_id" value="">
@@ -347,19 +389,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <label class="form-label">Phone</label>
                                     <input type="text" class="form-control" name="customer_phone" id="customer_phone" placeholder="(07) xxxx xxxx">
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">City</label>
-                                    <select class="form-control" name="city_id" id="city_id">
-                                        <option value="">-- Select City --</option>
-                                        <?php
-                                        if ($cityResult && $cityResult->num_rows > 0) {
-                                            while ($city = $cityResult->fetch_assoc()) {
-                                                echo '<option value="' . $city['city_id'] . '">' . htmlspecialchars($city['city_name']) . '</option>';
-                                            }
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
+                                    <div class="form-group">
+                                        <label class="form-label">City</label>
+                                        <input type="text" 
+                                            class="form-control" 
+                                            id="city_autocomplete" 
+                                            placeholder="Start typing city name..."
+                                            autocomplete="off">
+                                        <input type="hidden" name="city_id" id="city_id">
+                                        <div id="city_suggestions" class="autocomplete-suggestions"></div>
+                                    </div>
                                 <div class="form-group">
                                     <label class="form-label">Address Line 1</label>
                                     <input type="text" class="form-control" name="address_line1" id="address_line1">
@@ -620,1030 +659,592 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     <!-- END SCRIPTS -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Store the delivery fee value from PHP
+    // ========== GLOBAL VARIABLES ==========
     let deliveryFee = <?php echo $deliveryFee; ?>;
-    let hasProducts = false; // Flag to track if any products have been selected
-    let isExistingCustomer = false; // Flag to track if existing customer is selected
+    let isExistingCustomer = false;
 
-    // Email validation function
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
+    // ========== VALIDATION UTILITIES ==========
+    const ValidationUtils = {
+        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        isValidPhone: (phone) => /^\d{10}$/.test(phone),
+        isValidDate: (dateString) => {
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
+        },
+        
+        showError: (element, message, className = 'validation-error') => {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = className;
+            errorDiv.style.color = '#dc3545';
+            errorDiv.style.fontSize = '0.875rem';
+            errorDiv.style.marginTop = '0.25rem';
+            errorDiv.textContent = message;
+            element.parentNode.appendChild(errorDiv);
+        },
+        
+        clearErrors: (className = 'validation-error') => {
+            document.querySelectorAll(`.${className}`).forEach(el => el.remove());
+        }
+    };
 
-    // Phone number validation function (10 digits)
-    function isValidPhoneNumber(phone) {
-        const phoneRegex = /^\d{10}$/;
-        return phoneRegex.test(phone);
-    }
+    // ========== CUSTOMER MANAGEMENT ==========
+    const CustomerManager = {
+        toggleFields: (readonly = false) => {
+            const fields = ['customer_name', 'customer_email', 'customer_phone', 'city_autocomplete', 'address_line1', 'address_line2'];
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.readOnly = readonly;
+                    field.style.backgroundColor = readonly ? '#f8f9fa' : '';
+                    field.style.cursor = readonly ? 'not-allowed' : '';
+                }
+            });
+        },
+        
+        clearFields: () => {
+            document.getElementById('customer_id').value = '';
+            document.getElementById('customer_name').value = '';
+            document.getElementById('customer_email').value = '';
+            document.getElementById('customer_phone').value = '';
+            document.getElementById('city_id').value = '';
+            document.getElementById('city_autocomplete').value = '';
+            document.getElementById('address_line1').value = '';
+            document.getElementById('address_line2').value = '';
+            ValidationUtils.clearErrors();
+            isExistingCustomer = false;
+            CustomerManager.toggleFields(false);
+            FormValidator.validateAndToggleSubmit();
+        },
+        
+        validate: () => {
+            const name = document.getElementById('customer_name').value.trim();
+            const email = document.getElementById('customer_email').value.trim();
+            const phone = document.getElementById('customer_phone').value.trim();
+            const cityId = document.getElementById('city_id').value;
+            const address = document.getElementById('address_line1').value.trim();
 
-    // Function to toggle field editability based on customer type
-    function toggleCustomerFields(readonly = false) {
-        const fields = [
-            'customer_name', 'customer_email', 'customer_phone', 
-            'city_id', 'address_line1', 'address_line2'
-        ];
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                if (readonly) {
-                    field.setAttribute('readonly', 'readonly');
-                    field.style.backgroundColor = '#f8f9fa';
-                    field.style.cursor = 'not-allowed';
-                    if (field.tagName === 'SELECT') {
-                        field.setAttribute('disabled', 'disabled');
-                    }
-                } else {
-                    field.removeAttribute('readonly');
-                    field.removeAttribute('disabled');
-                    field.style.backgroundColor = '';
-                    field.style.cursor = '';
+            let isValid = true;
+
+            // Name is always required
+            if (!name) {
+                ValidationUtils.showError(document.getElementById('customer_name'), 'Customer name is required');
+                isValid = false;
+            }
+
+            // For new customers, all fields required
+            if (!isExistingCustomer) {
+                // if (!email) {
+                //     ValidationUtils.showError(document.getElementById('customer_email'), 'Email is required');
+                //     isValid = false;
+                // } else if (!ValidationUtils.isValidEmail(email)) {
+                //     ValidationUtils.showError(document.getElementById('customer_email'), 'Invalid email format');
+                //     isValid = false;
+                // }
+
+                if (!phone) {
+                    ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number is required');
+                    isValid = false;
+                } else if (!ValidationUtils.isValidPhone(phone)) {
+                    ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number must be 10 digits');
+                    isValid = false;
+                }
+
+                if (!cityId) {
+                    ValidationUtils.showError(document.getElementById('city_autocomplete'), 'City is required');
+                    isValid = false;
+                }
+
+                if (!address) {
+                    ValidationUtils.showError(document.getElementById('address_line1'), 'Address Line 1 is required');
+                    isValid = false;
                 }
             }
-        });
-    }
 
-    // Function to clear customer fields
-    function clearCustomerFields() {
-        document.getElementById('customer_id').value = '';
-        document.getElementById('customer_name').value = '';
-        document.getElementById('customer_email').value = '';
-        document.getElementById('customer_phone').value = '';
-        document.getElementById('city_id').value = '';
-        document.getElementById('address_line1').value = '';
-        document.getElementById('address_line2').value = '';
-        
-        // Clear any validation errors
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-        
-        // Reset flags
-        isExistingCustomer = false;
-        toggleCustomerFields(false);
-    }
-
-    // Enhanced customer information validation
-    function validateCustomerInfo() {
-        const customerName = document.getElementById('customer_name').value.trim();
-        const customerEmail = document.getElementById('customer_email').value.trim();
-        const customerPhone = document.getElementById('customer_phone').value.trim();
-        const cityId = document.getElementById('city_id').value;
-        const addressLine1 = document.getElementById('address_line1').value.trim();
-
-        // Clear previous error messages
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-
-        let isValid = true;
-
-        // For new customers, all fields are required
-        if (!isExistingCustomer) {
-            // Name validation (required)
-            if (customerName === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Customer name is required';
-                document.getElementById('customer_name').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            // Email validation (required for new customers)
-            if (customerEmail === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Email is required';
-                document.getElementById('customer_email').parentNode.appendChild(errorDiv);
-                isValid = false;
-            } else if (!isValidEmail(customerEmail)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Invalid email format';
-                document.getElementById('customer_email').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            // Phone validation (required for new customers)
-            if (customerPhone === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Phone number is required';
-                document.getElementById('customer_phone').parentNode.appendChild(errorDiv);
-                isValid = false;
-            } else if (!isValidPhoneNumber(customerPhone)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Phone number must be 10 digits';
-                document.getElementById('customer_phone').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            // City validation (required for new customers)
-            if (cityId === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'City is required';
-                document.getElementById('city_id').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            // Address validation (required for new customers)
-            if (addressLine1 === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Address Line 1 is required';
-                document.getElementById('address_line1').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-        } else {
-            // For existing customers, only validate name (should always be present)
-            if (customerName === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Customer name is required';
-                document.getElementById('customer_name').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
+            return isValid;
         }
+    };
 
-        return isValid;
-    }
+    // ========== DATE VALIDATION ==========
+    const DateValidator = {
+        validate: () => {
+            const orderDate = document.querySelector('input[name="order_date"]').value;
+            const dueDate = document.querySelector('input[name="due_date"]').value;
+            const today = new Date().toISOString().split('T')[0];
 
-    // Function to check if any product is selected and show/hide delivery fee
-    function checkForProducts() {
-        let productSelected = false;
+            ValidationUtils.clearErrors('date-validation-error');
+            let isValid = true;
 
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
+            if (!orderDate) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Order date is required', 'date-validation-error');
+                isValid = false;
+            } else if (!ValidationUtils.isValidDate(orderDate)) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Invalid order date format', 'date-validation-error');
+                isValid = false;
+            } else if (orderDate > today) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Order date cannot be in the future', 'date-validation-error');
+                isValid = false;
+            }
+
+            if (!dueDate) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Due date is required', 'date-validation-error');
+                isValid = false;
+            } else if (!ValidationUtils.isValidDate(dueDate)) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Invalid due date format', 'date-validation-error');
+                isValid = false;
+            } else if (orderDate && dueDate < orderDate) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Due date cannot be earlier than order date', 'date-validation-error');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+    };
+
+    // ========== PRODUCT MANAGEMENT ==========
+    const ProductManager = {
+        updatePrice: (row) => {
             const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                productSelected = true;
-            }
-        });
-
-        hasProducts = productSelected;
-
-        // Show/hide the delivery fee row based on whether products are selected
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (productSelected) {
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        // Always update totals after checking for products to ensure correct calculation
-        updateTotals();
-
-        return productSelected;
-    }
-
-    // Function to update product price based on currency
-    function updateProductPrice(row) {
-        const productSelect = row.querySelector('.product-select');
-        const selectedOption = productSelect.options[productSelect.selectedIndex];
-        
-        if (productSelect.value === "") return;
-
-        const priceField = row.querySelector('.price');
-        const descriptionField = row.querySelector('.product-description');
-        const description = selectedOption.getAttribute('data-description') || '';
-        const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
-
-        priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
-        descriptionField.value = description;
-
-        // First check if any products are selected (this will update the hasProducts flag)
-        checkForProducts();
-        // Then update the row total
-        updateRowTotal(row);
-    }
-
-    // Updated Row Total Calculation Function
-    function updateRowTotal(row) {
-        let price = parseFloat(row.querySelector('.price').value) || 0;
-        let discount = parseFloat(row.querySelector('.discount').value) || 0;
-
-        // Ensure discount doesn't exceed price
-        if (discount > price) {
-            discount = price;
-            row.querySelector('.discount').value = discount;
-        }
-
-        let subtotal = price - discount;
-        row.querySelector('.subtotal').value = subtotal.toFixed(2);
-        updateTotals();
-    }
-
-    // Updated Totals Calculation Function with fix for delivery fee
-    function updateTotals() {
-        let subtotal = 0;
-        let totalDiscount = 0;
-
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
-            let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
-
-            // Ensure discount doesn't exceed price
-            if (rowDiscount > rowPrice) {
-                rowDiscount = rowPrice;
-                row.querySelector('.discount').value = rowDiscount;
-            }
-
-            let rowSubtotal = rowPrice - rowDiscount;
-            row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
-
-            subtotal += rowPrice;
-            totalDiscount += rowDiscount;
-        });
-
-        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-        // Always check for products before calculating total
-        let hasAnyProducts = false;
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                hasAnyProducts = true;
-            }
-        });
-
-        // Calculate total including delivery fee if products are selected
-        let total = subtotal - totalDiscount;
-
-        // Add delivery fee if any products are selected
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (hasAnyProducts) {
-            total += deliveryFee;
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        document.getElementById('total_display').textContent = total.toFixed(2);
-        document.getElementById('total_amount').value = total.toFixed(2);
-        document.getElementById('lkr_total_amount').value = total.toFixed(2);
-    }
-
-    // Customer modal functionality
-    const customerModal = document.getElementById("customerModal");
-    const selectCustomerBtn = document.getElementById("select_existing_customer");
-    const closeModal = document.querySelector(".close-modal");
-
-    selectCustomerBtn.addEventListener('click', function() {
-        customerModal.style.display = "block";
-    });
-
-    closeModal.addEventListener('click', function() {
-        customerModal.style.display = "none";
-    });
-
-    window.addEventListener('click', function(event) {
-        if (event.target == customerModal) {
-            customerModal.style.display = "none";
-        }
-    });
-
-    // Customer search functionality
-    const customerSearch = document.getElementById("customerSearch");
-    customerSearch.addEventListener('keyup', function() {
-        const value = this.value.toLowerCase();
-        document.querySelectorAll(".customer-row").forEach(function(row) {
-            const text = row.textContent || row.innerText;
-            row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
-        });
-    });
-
-    // Updated: Select customer functionality with proper field mapping
-    document.querySelectorAll(".select-customer-btn").forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const row = this.closest('tr');
+            const selectedOption = productSelect.options[productSelect.selectedIndex];
             
-            // Populate form fields with existing customer data
-            document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
-            document.getElementById('customer_name').value = row.getAttribute('data-name');
-            document.getElementById('customer_email').value = row.getAttribute('data-email');
-            document.getElementById('customer_phone').value = row.getAttribute('data-phone');
-            document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
-            document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
-            document.getElementById('city_id').value = row.getAttribute('data-city-id');
+            if (!productSelect.value) return;
+
+            const priceField = row.querySelector('.price');
+            const descriptionField = row.querySelector('.product-description');
+            const description = selectedOption.getAttribute('data-description') || '';
+            const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
+
+            priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
+            descriptionField.value = description;
+
+            ProductManager.updateRowTotal(row);
+            ProductManager.checkForProducts();
+        },
+
+        updateRowTotal: (row) => {
+            let price = parseFloat(row.querySelector('.price').value) || 0;
+            let discount = parseFloat(row.querySelector('.discount').value) || 0;
+
+            if (discount > price) {
+                discount = price;
+                row.querySelector('.discount').value = discount;
+            }
+
+            let subtotal = price - discount;
+            row.querySelector('.subtotal').value = subtotal.toFixed(2);
+            ProductManager.updateTotals();
+        },
+
+        checkForProducts: () => {
+            let hasProducts = false;
+            document.querySelectorAll('#order_table tbody tr').forEach(row => {
+                const productSelect = row.querySelector('.product-select');
+                if (productSelect && productSelect.value !== "") {
+                    hasProducts = true;
+                }
+            });
+
+            const deliveryFeeRow = document.getElementById('delivery_fee_row');
+            deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
             
-            // Set flag and make fields readonly
-            isExistingCustomer = true;
-            toggleCustomerFields(true);
+            return hasProducts;
+        },
+
+        updateTotals: () => {
+            let subtotal = 0;
+            let totalDiscount = 0;
+
+            document.querySelectorAll('#order_table tbody tr').forEach(row => {
+                let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
+                let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
+
+                if (rowDiscount > rowPrice) {
+                    rowDiscount = rowPrice;
+                    row.querySelector('.discount').value = rowDiscount;
+                }
+
+                let rowSubtotal = rowPrice - rowDiscount;
+                row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
+
+                subtotal += rowPrice;
+                totalDiscount += rowDiscount;
+            });
+
+            document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
+            document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
+            document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
+            document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
+
+            let total = subtotal - totalDiscount;
+            const hasProducts = ProductManager.checkForProducts();
+
+            if (hasProducts) {
+                total += deliveryFee;
+            }
+
+            document.getElementById('total_display').textContent = total.toFixed(2);
+            document.getElementById('total_amount').value = total.toFixed(2);
+            document.getElementById('lkr_total_amount').value = total.toFixed(2);
+        },
+
+        validate: () => {
+            ValidationUtils.clearErrors('product-validation-error');
+            let isValid = true;
+
+            document.querySelectorAll('#order_table tbody tr').forEach(row => {
+                const productSelect = row.querySelector('.product-select');
+                const descriptionInput = row.querySelector('.product-description');
+                const priceInput = row.querySelector('.price');
+
+                if (productSelect.value !== '') {
+                    if (!descriptionInput.value.trim()) {
+                        ValidationUtils.showError(descriptionInput, 'Description required', 'product-validation-error');
+                        isValid = false;
+                    }
+
+                    const price = parseFloat(priceInput.value) || 0;
+                    if (price <= 0) {
+                        ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
+                        isValid = false;
+                    }
+                }
+            });
+
+            return isValid;
+        },
+
+        hasValidProduct: () => {
+            let hasValid = false;
+            document.querySelectorAll('#order_table tbody tr').forEach(row => {
+                const productSelect = row.querySelector('.product-select');
+                const descriptionInput = row.querySelector('.product-description');
+                const priceInput = row.querySelector('.price');
+                const price = parseFloat(priceInput.value) || 0;
+
+                if (productSelect.value !== '' && descriptionInput.value.trim() !== '' && price > 0) {
+                    hasValid = true;
+                }
+            });
+            return hasValid;
+        },
+
+        addRow: () => {
+            let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
             
-            // Clear any existing validation errors
-            document.querySelectorAll('.validation-error').forEach(el => el.remove());
+            newRow.querySelectorAll('input').forEach(input => {
+                if (input.classList.contains('price')) {
+                    input.value = '0.00';
+                } else if (input.classList.contains('discount')) {
+                    input.value = '0';
+                } else if (input.classList.contains('subtotal')) {
+                    input.value = '0.00';
+                } else {
+                    input.value = '';
+                }
+            });
             
-            customerModal.style.display = "none";
-            alert('Customer selected: ' + row.getAttribute('data-name'));
-        });
-    });
+            newRow.querySelector('.product-select').value = '';
+            document.querySelector('#order_table tbody').appendChild(newRow);
+        },
 
-    // Add "Clear Selection" button functionality (you may want to add this button to your HTML)
-    // This allows users to switch back to creating a new customer
-    function addClearSelectionButton() {
-        const clearBtn = document.createElement('button');
-        clearBtn.type = 'button';
-        clearBtn.className = 'btn btn-outline-secondary ml-2';
-        clearBtn.innerHTML = '<i class="feather icon-x"></i> Clear Selection';
-        clearBtn.style.marginLeft = '10px';
-        clearBtn.addEventListener('click', clearCustomerFields);
-        
-        // Add the button next to the "Select Customer" button
-        selectCustomerBtn.parentNode.appendChild(clearBtn);
-    }
-
-    // Call this function to add the clear button
-    addClearSelectionButton();
-
-    // Real-time validation for email (only for new customers)
-    document.getElementById('customer_email').addEventListener('input', function() {
-        if (!isExistingCustomer) {
-            document.querySelectorAll('.validation-error').forEach(el => el.remove());
-            const email = this.value.trim();
-            if (email !== '' && !isValidEmail(email)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Invalid email format';
-                this.parentNode.appendChild(errorDiv);
-            }
-        }
-    });
-
-    // Real-time validation for phone (only for new customers)
-    document.getElementById('customer_phone').addEventListener('input', function() {
-        if (!isExistingCustomer) {
-            document.querySelectorAll('.validation-error').forEach(el => el.remove());
-            const phone = this.value.trim();
-            if (phone !== '' && !isValidPhoneNumber(phone)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Phone number must be 10 digits';
-                this.parentNode.appendChild(errorDiv);
-            }
-        }
-    });
-
-    // Enhanced form submission validation
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
-        // Validate customer information
-        if (!validateCustomerInfo()) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Validate dates
-        if (!validateDates()) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Validate at least one product is added
-        if (document.querySelectorAll('#order_table tbody tr').length === 0) {
-            alert('Please add at least one product to the order.');
-            e.preventDefault();
-            return false;
-        }
-
-        // Validate product selection
-        let isProductValid = true;
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            let productSelect = row.querySelector('.product-select');
-            if (productSelect.value === "") {
-                alert('Please select a product for all order lines.');
-                isProductValid = false;
-            }
-        });
-
-        if (!isProductValid) {
-            e.preventDefault();
-            return false;
-        }
-
-        // If all validations pass, allow form submission
-        return true;
-    });
-
-    // Product selection change
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('product-select')) {
-            updateProductPrice(e.target.closest('tr'));
-        }
-    });
-
-    // Add product row
-    document.getElementById('add_product').addEventListener('click', function() {
-        let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
-        
-        // Clear all input values in the new row
-        newRow.querySelectorAll('input').forEach(input => {
-            if (input.classList.contains('price')) {
-                input.value = '0.00';
-            } else if (input.classList.contains('discount')) {
-                input.value = '0';
-            } else if (input.classList.contains('subtotal')) {
-                input.value = '0.00';
-            } else {
-                input.value = '';
-            }
-        });
-        
-        // Reset the select element
-        newRow.querySelector('.product-select').value = '';
-        
-        document.querySelector('#order_table tbody').appendChild(newRow);
-    });
-
-    // Remove product row
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove_product')) {
+        removeRow: (button) => {
             const tableBody = document.querySelector('#order_table tbody');
             if (tableBody.children.length > 1) {
-                e.target.closest('tr').remove();
-                // After removing a row, check if there are any products left
-                checkForProducts();
+                button.closest('tr').remove();
+                ProductManager.checkForProducts();
+                ProductManager.updateTotals();
             } else {
-                // If it's the last row, just clear it instead of removing
-                let row = e.target.closest('tr');
+                let row = button.closest('tr');
                 row.querySelector('.product-select').value = '';
                 row.querySelector('.product-description').value = '';
                 row.querySelector('.price').value = '0.00';
                 row.querySelector('.discount').value = '0';
                 row.querySelector('.subtotal').value = '0.00';
-                checkForProducts();
+                ProductManager.checkForProducts();
+                ProductManager.updateTotals();
             }
+            FormValidator.validateAndToggleSubmit();
         }
-    });
+    };
 
-    // Update on price or discount change
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
-            // Ensure discount is a whole number
-            if (e.target.classList.contains('discount')) {
-                let value = e.target.value;
-                e.target.value = value.replace(/[^0-9]/g, '');
-            }
-            updateRowTotal(e.target.closest('tr'));
-        }
-    });
-
-    // Initialize: hide delivery fee row until products are added
-    document.getElementById('delivery_fee_row').style.display = 'none';
-
-    // Initialize the form on page load
-    updateTotals();
-});
-
-// Date validation functions
-function isValidDate(dateString) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
-}
-
-function validateDates() {
-    const orderDate = document.querySelector('input[name="order_date"]').value;
-    const dueDate = document.querySelector('input[name="due_date"]').value;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Clear previous error messages
-    document.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-
-    let isValid = true;
-
-    // Order date validation
-    if (!orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Order date is required';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (!isValidDate(orderDate)) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Invalid order date format';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (orderDate > today) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Order date cannot be in the future';
-        document.querySelector('input[name="order_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    }
-
-    // Due date validation
-    if (!dueDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Due date is required';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (!isValidDate(dueDate)) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Invalid due date format';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    } else if (orderDate && dueDate < orderDate) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'date-validation-error validation-error';
-        errorDiv.style.color = '#dc3545';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        errorDiv.textContent = 'Due date cannot be earlier than order date';
-        document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        isValid = false;
-    }
-
-    return isValid;
-}
-
-// Real-time validation event listeners for dates
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('input[name="order_date"]').addEventListener('change', function() {
-        // Clear previous date errors
-        document.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-        
-        const orderDate = this.value;
-        const today = new Date().toISOString().split('T')[0];
-        
-        if (orderDate && orderDate > today) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'date-validation-error validation-error';
-            errorDiv.style.color = '#dc3545';
-            errorDiv.style.fontSize = '0.875rem';
-            errorDiv.style.marginTop = '0.25rem';
-            errorDiv.textContent = 'Order date cannot be in the future';
-            this.parentNode.appendChild(errorDiv);
-        }
-        
-        // Re-validate due date when order date changes
-        const dueDate = document.querySelector('input[name="due_date"]').value;
-        if (orderDate && dueDate && dueDate < orderDate) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'date-validation-error validation-error';
-            errorDiv.style.color = '#dc3545';
-            errorDiv.style.fontSize = '0.875rem';
-            errorDiv.style.marginTop = '0.25rem';
-            errorDiv.textContent = 'Due date cannot be earlier than order date';
-            document.querySelector('input[name="due_date"]').parentNode.appendChild(errorDiv);
-        }
-    });
-
-    document.querySelector('input[name="due_date"]').addEventListener('change', function() {
-        // Clear previous date errors for due date
-        this.parentNode.querySelectorAll('.date-validation-error').forEach(el => el.remove());
-        
-        const dueDate = this.value;
-        const orderDate = document.querySelector('input[name="order_date"]').value;
-        
-        if (orderDate && dueDate && dueDate < orderDate) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'date-validation-error validation-error';
-            errorDiv.style.color = '#dc3545';
-            errorDiv.style.fontSize = '0.875rem';
-            errorDiv.style.marginTop = '0.25rem';
-            errorDiv.textContent = 'Due date cannot be earlier than order date';
-            this.parentNode.appendChild(errorDiv);
-        }
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Store the delivery fee value from PHP
-    let deliveryFee = <?php echo $deliveryFee; ?>;
-    let hasProducts = false;
-    let isExistingCustomer = false;
-
-    // Function to validate all form fields and enable/disable submit button
-    function validateFormAndToggleSubmit() {
-        const submitButton = document.getElementById('submit_order');
-        let isFormValid = true;
-        
-        // Clear previous validation errors
-        document.querySelectorAll('.product-validation-error').forEach(el => el.remove());
-        
-        // 1. Validate customer information
-        const customerValid = validateCustomerInfo();
-        
-        // 2. Validate dates
-        const datesValid = validateDates();
-        
-        // 3. Validate products
-        const productsValid = validateProducts();
-        
-        // 4. Check if at least one product row has all required fields filled
-        const hasValidProducts = checkForValidProducts();
-        
-        isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
-        
-        // Enable/disable submit button based on validation
-        if (isFormValid) {
-            submitButton.disabled = false;
-            submitButton.style.opacity = '1';
-            submitButton.style.cursor = 'pointer';
-            submitButton.style.backgroundColor = '#007bff';
-        } else {
-            submitButton.disabled = true;
-            submitButton.style.opacity = '0.6';
-            submitButton.style.cursor = 'not-allowed';
-            submitButton.style.backgroundColor = '#6c757d';
-        }
-        
-        return isFormValid;
-    }
-
-    // Function to validate products section
-    function validateProducts() {
-        let isValid = true;
-        const productRows = document.querySelectorAll('#order_table tbody tr');
-        
-        productRows.forEach(function(row, index) {
-            const productSelect = row.querySelector('.product-select');
-            const descriptionInput = row.querySelector('.product-description');
-            const priceInput = row.querySelector('.price');
+    // ========== FORM VALIDATOR ==========
+    const FormValidator = {
+        validateAndToggleSubmit: () => {
+            const submitButton = document.getElementById('submit_order');
             
-            // Only validate if product is selected
-            if (productSelect.value !== '') {
-                // Validate description
-                if (!descriptionInput.value.trim()) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'product-validation-error';
-                    errorDiv.style.color = '#dc3545';
-                    errorDiv.style.fontSize = '0.75rem';
-                    errorDiv.style.marginTop = '0.25rem';
-                    errorDiv.textContent = 'Description required';
-                    descriptionInput.parentNode.appendChild(errorDiv);
-                    isValid = false;
+            ValidationUtils.clearErrors();
+            ValidationUtils.clearErrors('date-validation-error');
+            ValidationUtils.clearErrors('product-validation-error');
+
+            const customerValid = CustomerManager.validate();
+            const datesValid = DateValidator.validate();
+            const productsValid = ProductManager.validate();
+            const hasValidProducts = ProductManager.hasValidProduct();
+
+            const isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
+
+            submitButton.disabled = !isFormValid;
+            submitButton.style.opacity = isFormValid ? '1' : '0.6';
+            submitButton.style.cursor = isFormValid ? 'pointer' : 'not-allowed';
+            submitButton.style.backgroundColor = isFormValid ? '#007bff' : '#6c757d';
+
+            return isFormValid;
+        }
+    };
+
+    // ========== CITY AUTOCOMPLETE ==========
+    const CityAutocomplete = {
+        cities: [],
+        selectedIndex: -1,
+        
+        init: () => {
+            const cityInput = document.getElementById('city_autocomplete');
+            const cityIdInput = document.getElementById('city_id');
+            const suggestionsDiv = document.getElementById('city_suggestions');
+
+            // Fetch cities
+            fetch('get_cities.php')
+                .then(response => response.json())
+                .then(data => CityAutocomplete.cities = data)
+                .catch(error => console.error('Error loading cities:', error));
+
+            // Input event
+            cityInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim().toLowerCase();
+                
+                if (searchTerm.length === 0) {
+                    suggestionsDiv.style.display = 'none';
+                    cityIdInput.value = '';
+                    FormValidator.validateAndToggleSubmit();
+                    return;
+                }
+
+                const filteredCities = CityAutocomplete.cities.filter(city => 
+                    city.city_name.toLowerCase().includes(searchTerm)
+                );
+
+                CityAutocomplete.displaySuggestions(filteredCities, suggestionsDiv);
+            });
+
+            // Keyboard navigation
+            cityInput.addEventListener('keydown', function(e) {
+                const suggestions = document.querySelectorAll('.autocomplete-suggestion');
+                if (suggestions.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    CityAutocomplete.selectedIndex = (CityAutocomplete.selectedIndex + 1) % suggestions.length;
+                    CityAutocomplete.updateSelection(suggestions);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    CityAutocomplete.selectedIndex = CityAutocomplete.selectedIndex <= 0 ? suggestions.length - 1 : CityAutocomplete.selectedIndex - 1;
+                    CityAutocomplete.updateSelection(suggestions);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (CityAutocomplete.selectedIndex >= 0 && suggestions[CityAutocomplete.selectedIndex]) {
+                        const selected = suggestions[CityAutocomplete.selectedIndex];
+                        CityAutocomplete.selectCity(selected.dataset.cityId, selected.dataset.cityName, cityInput, cityIdInput, suggestionsDiv);
+                    }
+                } else if (e.key === 'Escape') {
+                    suggestionsDiv.style.display = 'none';
+                    CityAutocomplete.selectedIndex = -1;
+                }
+            });
+
+            // Blur event
+            cityInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    if (this.value.trim() === '') {
+                        cityIdInput.value = '';
+                        FormValidator.validateAndToggleSubmit();
+                    }
+                }, 200);
+            });
+
+            // Close on outside click
+            document.addEventListener('click', function(e) {
+                if (e.target !== cityInput && e.target !== suggestionsDiv) {
+                    suggestionsDiv.style.display = 'none';
+                    CityAutocomplete.selectedIndex = -1;
+                }
+            });
+        },
+
+        displaySuggestions: (filteredCities, suggestionsDiv) => {
+            if (filteredCities.length === 0) {
+                suggestionsDiv.innerHTML = '<div class="no-results">No cities found</div>';
+                suggestionsDiv.style.display = 'block';
+                return;
+            }
+
+            let html = filteredCities.map((city, index) => 
+                `<div class="autocomplete-suggestion" data-city-id="${city.city_id}" data-city-name="${city.city_name}" data-index="${index}">
+                    ${city.city_name}
+                </div>`
+            ).join('');
+
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.style.display = 'block';
+            CityAutocomplete.selectedIndex = -1;
+
+            document.querySelectorAll('.autocomplete-suggestion').forEach(suggestion => {
+                suggestion.addEventListener('click', function() {
+                    const cityInput = document.getElementById('city_autocomplete');
+                    const cityIdInput = document.getElementById('city_id');
+                    CityAutocomplete.selectCity(this.dataset.cityId, this.dataset.cityName, cityInput, cityIdInput, suggestionsDiv);
+                });
+            });
+        },
+
+        selectCity: (cityId, cityName, cityInput, cityIdInput, suggestionsDiv) => {
+            cityInput.value = cityName;
+            cityIdInput.value = cityId;
+            suggestionsDiv.style.display = 'none';
+            CityAutocomplete.selectedIndex = -1;
+            FormValidator.validateAndToggleSubmit();
+        },
+
+        updateSelection: (suggestions) => {
+            suggestions.forEach((suggestion, index) => {
+                if (index === CityAutocomplete.selectedIndex) {
+                    suggestion.classList.add('active');
+                    suggestion.scrollIntoView({ block: 'nearest' });
+                } else {
+                    suggestion.classList.remove('active');
+                }
+            });
+        }
+    };
+
+    // ========== CUSTOMER MODAL ==========
+    const CustomerModal = {
+        init: () => {
+            const modal = document.getElementById("customerModal");
+            const selectBtn = document.getElementById("select_existing_customer");
+            const closeBtn = document.querySelector(".close-modal");
+            const searchInput = document.getElementById("customerSearch");
+
+            selectBtn.addEventListener('click', () => modal.style.display = "block");
+            closeBtn.addEventListener('click', () => modal.style.display = "none");
+            
+            window.addEventListener('click', (event) => {
+                if (event.target == modal) modal.style.display = "none";
+            });
+
+            // Search functionality
+            searchInput.addEventListener('keyup', function() {
+                const value = this.value.toLowerCase();
+                document.querySelectorAll(".customer-row").forEach(row => {
+                    const text = row.textContent || row.innerText;
+                    row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
+                });
+            });
+
+            // Select customer
+            document.querySelectorAll(".select-customer-btn").forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    
+                    document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
+                    document.getElementById('customer_name').value = row.getAttribute('data-name');
+                    document.getElementById('customer_email').value = row.getAttribute('data-email');
+                    document.getElementById('customer_phone').value = row.getAttribute('data-phone');
+                    document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
+                    document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
+                    document.getElementById('city_id').value = row.getAttribute('data-city-id');
+                    document.getElementById('city_autocomplete').value = row.getAttribute('data-city-name');
+                    
+                    isExistingCustomer = true;
+                    CustomerManager.toggleFields(true);
+                    ValidationUtils.clearErrors();
+                    
+                    modal.style.display = "none";
+                    alert('Customer selected: ' + row.getAttribute('data-name'));
+                    FormValidator.validateAndToggleSubmit();
+                });
+            });
+
+            // Add clear selection button
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'btn btn-outline-secondary ml-2';
+            clearBtn.innerHTML = '<i class="feather icon-x"></i> Clear Selection';
+            clearBtn.style.marginLeft = '10px';
+            clearBtn.addEventListener('click', CustomerManager.clearFields);
+            selectBtn.parentNode.appendChild(clearBtn);
+        }
+    };
+
+    // ========== EVENT LISTENERS ==========
+    const EventListeners = {
+        init: () => {
+            // Customer field validation
+            ['customer_name', 'customer_email', 'customer_phone', 'address_line1', 'address_line2'].forEach(id => {
+                document.getElementById(id).addEventListener('input', FormValidator.validateAndToggleSubmit);
+            });
+
+            // Date validation
+            document.querySelector('input[name="order_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
+            document.querySelector('input[name="due_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
+
+            // Product events (event delegation)
+            document.addEventListener('change', (e) => {
+                if (e.target.classList.contains('product-select')) {
+                    ProductManager.updatePrice(e.target.closest('tr'));
+                    FormValidator.validateAndToggleSubmit();
+                }
+            });
+
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('discount')) {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
                 }
                 
-                // Validate price
-                const price = parseFloat(priceInput.value) || 0;
-                if (price <= 0) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'product-validation-error';
-                    errorDiv.style.color = '#dc3545';
-                    errorDiv.style.fontSize = '0.75rem';
-                    errorDiv.style.marginTop = '0.25rem';
-                    errorDiv.textContent = 'Price must be greater than 0';
-                    priceInput.parentNode.appendChild(errorDiv);
-                    isValid = false;
+                if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
+                    ProductManager.updateRowTotal(e.target.closest('tr'));
+                    FormValidator.validateAndToggleSubmit();
                 }
-            }
-        });
-        
-        return isValid;
-    }
+                
+                if (e.target.classList.contains('product-description')) {
+                    FormValidator.validateAndToggleSubmit();
+                }
+            });
 
-    // Function to check if there's at least one valid product
-    function checkForValidProducts() {
-        const productRows = document.querySelectorAll('#order_table tbody tr');
-        let hasValidProduct = false;
-        
-        productRows.forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            const descriptionInput = row.querySelector('.product-description');
-            const priceInput = row.querySelector('.price');
-            const price = parseFloat(priceInput.value) || 0;
-            
-            if (productSelect.value !== '' && 
-                descriptionInput.value.trim() !== '' && 
-                price > 0) {
-                hasValidProduct = true;
-            }
-        });
-        
-        return hasValidProduct;
-    }
+            // Add product row
+            document.getElementById('add_product').addEventListener('click', ProductManager.addRow);
 
-    // Enhanced customer validation function
-    function validateCustomerInfo() {
-        const customerName = document.getElementById('customer_name').value.trim();
-        const customerEmail = document.getElementById('customer_email').value.trim();
-        const customerPhone = document.getElementById('customer_phone').value.trim();
-        const cityId = document.getElementById('city_id').value;
-        const addressLine1 = document.getElementById('address_line1').value.trim();
+            // Remove product row
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove_product')) {
+                    ProductManager.removeRow(e.target);
+                }
+            });
 
-        // Clear previous customer validation errors
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-
-        let isValid = true;
-
-        // Name is always required
-        if (customerName === '') {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'validation-error';
-            errorDiv.style.color = '#dc3545';
-            errorDiv.style.fontSize = '0.875rem';
-            errorDiv.style.marginTop = '0.25rem';
-            errorDiv.textContent = 'Customer name is required';
-            document.getElementById('customer_name').parentNode.appendChild(errorDiv);
-            isValid = false;
+            // Form submission
+            document.getElementById('orderForm').addEventListener('submit', (e) => {
+                if (!FormValidator.validateAndToggleSubmit()) {
+                    e.preventDefault();
+                    let issues = [];
+                    if (!CustomerManager.validate()) issues.push('Customer information');
+                    if (!DateValidator.validate()) issues.push('Order dates');
+                    if (!ProductManager.validate()) issues.push('Product information');
+                    if (!ProductManager.hasValidProduct()) issues.push('At least one complete product');
+                    
+                    alert('Please fix the following issues:\n- ' + issues.join('\n- '));
+                    return false;
+                }
+                return true;
+            });
         }
+    };
 
-        // For new customers, all fields are required
-        if (!isExistingCustomer) {
-            if (customerEmail === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Email is required';
-                document.getElementById('customer_email').parentNode.appendChild(errorDiv);
-                isValid = false;
-            } else if (!isValidEmail(customerEmail)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Invalid email format';
-                document.getElementById('customer_email').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            if (customerPhone === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Phone number is required';
-                document.getElementById('customer_phone').parentNode.appendChild(errorDiv);
-                isValid = false;
-            } else if (!isValidPhoneNumber(customerPhone)) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Phone number must be 10 digits';
-                document.getElementById('customer_phone').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            if (cityId === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'City is required';
-                document.getElementById('city_id').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-
-            if (addressLine1 === '') {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-error';
-                errorDiv.style.color = '#dc3545';
-                errorDiv.style.fontSize = '0.875rem';
-                errorDiv.style.marginTop = '0.25rem';
-                errorDiv.textContent = 'Address Line 1 is required';
-                document.getElementById('address_line1').parentNode.appendChild(errorDiv);
-                isValid = false;
-            }
-        }
-
-        return isValid;
-    }
-
-    // Utility functions
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    function isValidPhoneNumber(phone) {
-        const phoneRegex = /^\d{10}$/;
-        return phoneRegex.test(phone);
-    }
-
-    function isValidDate(dateString) {
-        const date = new Date(dateString);
-        return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
-    }
-
-    // Add visual indicators to required fields in products table
-    function addRequiredIndicators() {
-        const productHeader = document.querySelector('#order_table thead th.product-col');
-        const descriptionHeader = document.querySelector('#order_table thead th.description-col');
-        const priceHeader = document.querySelector('#order_table thead th.price-col');
-        
-        if (productHeader && !productHeader.querySelector('.required-indicator')) {
-            productHeader.innerHTML += ' <span class="required-indicator" style="color: #dc3545;">*</span>';
-        }
-        if (descriptionHeader && !descriptionHeader.querySelector('.required-indicator')) {
-            descriptionHeader.innerHTML += ' <span class="required-indicator" style="color: #dc3545;">*</span>';
-        }
-        if (priceHeader && !priceHeader.querySelector('.required-indicator')) {
-            priceHeader.innerHTML += ' <span class="required-indicator" style="color: #dc3545;">*</span>';
-        }
-    }
-
-    // Event listeners for real-time validation
+    // ========== INITIALIZATION ==========
+    CityAutocomplete.init();
+    CustomerModal.init();
+    EventListeners.init();
     
-    // Customer fields validation on input
-    document.getElementById('customer_name').addEventListener('input', validateFormAndToggleSubmit);
-    document.getElementById('customer_email').addEventListener('input', validateFormAndToggleSubmit);
-    document.getElementById('customer_phone').addEventListener('input', validateFormAndToggleSubmit);
-    document.getElementById('city_id').addEventListener('change', validateFormAndToggleSubmit);
-    document.getElementById('address_line1').addEventListener('input', validateFormAndToggleSubmit);
-    document.getElementById('address_line2').addEventListener('input', validateFormAndToggleSubmit);
-
-    // Product fields validation with event delegation
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('product-select')) {
-            updateProductPrice(e.target.closest('tr'));
-            validateFormAndToggleSubmit();
-        }
-    });
-
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('product-description') || 
-            e.target.classList.contains('price') || 
-            e.target.classList.contains('discount')) {
-            
-            if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
-                updateRowTotal(e.target.closest('tr'));
-            }
-            validateFormAndToggleSubmit();
-        }
-    });
-
-    // Enhanced form submission
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
-        if (!validateFormAndToggleSubmit()) {
-            e.preventDefault();
-            // Show alert with specific issues
-            let issues = [];
-            if (!validateCustomerInfo()) issues.push('Customer information');
-            if (!validateDates()) issues.push('Order dates');
-            if (!validateProducts()) issues.push('Product information');
-            if (!checkForValidProducts()) issues.push('At least one complete product');
-            
-            alert('Please fix the following issues before submitting:\n- ' + issues.join('\n- '));
-            return false;
-        }
-        return true;
-    });
-
-    // Your existing functions (updateProductPrice, updateRowTotal, etc.) remain the same
-    function updateProductPrice(row) {
-        const productSelect = row.querySelector('.product-select');
-        const selectedOption = productSelect.options[productSelect.selectedIndex];
-        
-        if (productSelect.value === "") return;
-
-        const priceField = row.querySelector('.price');
-        const descriptionField = row.querySelector('.product-description');
-        const description = selectedOption.getAttribute('data-description') || '';
-        const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
-
-        priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
-        descriptionField.value = description;
-
-        checkForProducts();
-        updateRowTotal(row);
-    }
-
-    function updateRowTotal(row) {
-        let price = parseFloat(row.querySelector('.price').value) || 0;
-        let discount = parseFloat(row.querySelector('.discount').value) || 0;
-
-        if (discount > price) {
-            discount = price;
-            row.querySelector('.discount').value = discount;
-        }
-
-        let subtotal = price - discount;
-        row.querySelector('.subtotal').value = subtotal.toFixed(2);
-        updateTotals();
-    }
-
-    function checkForProducts() {
-        let productSelected = false;
-
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                productSelected = true;
-            }
-        });
-
-        hasProducts = productSelected;
-
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (productSelected) {
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        updateTotals();
-        return productSelected;
-    }
-
-    function updateTotals() {
-        let subtotal = 0;
-        let totalDiscount = 0;
-
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
-            let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
-
-            if (rowDiscount > rowPrice) {
-                rowDiscount = rowPrice;
-                row.querySelector('.discount').value = rowDiscount;
-            }
-
-            let rowSubtotal = rowPrice - rowDiscount;
-            row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
-
-            subtotal += rowPrice;
-            totalDiscount += rowDiscount;
-        });
-
-        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-        let hasAnyProducts = false;
-        document.querySelectorAll('#order_table tbody tr').forEach(function(row) {
-            const productSelect = row.querySelector('.product-select');
-            if (productSelect && productSelect.value !== "") {
-                hasAnyProducts = true;
-            }
-        });
-
-        let total = subtotal - totalDiscount;
-
-        const deliveryFeeRow = document.getElementById('delivery_fee_row');
-        if (hasAnyProducts) {
-            total += deliveryFee;
-            deliveryFeeRow.style.display = 'flex';
-        } else {
-            deliveryFeeRow.style.display = 'none';
-        }
-
-        document.getElementById('total_display').textContent = total.toFixed(2);
-        document.getElementById('total_amount').value = total.toFixed(2);
-        document.getElementById('lkr_total_amount').value = total.toFixed(2);
-    }
-
-    // Add required indicators and initialize
-    addRequiredIndicators();
-    validateFormAndToggleSubmit(); // Initial validation on page load
-    
-    // Initialize: hide delivery fee row until products are added
     document.getElementById('delivery_fee_row').style.display = 'none';
-    updateTotals();
+    ProductManager.updateTotals();
+    FormValidator.validateAndToggleSubmit();
 });
 </script>
 </body>

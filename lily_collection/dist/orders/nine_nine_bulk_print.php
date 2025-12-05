@@ -62,6 +62,9 @@ $sql = "
 SELECT 
     o.order_id,
     o.tracking_number,
+    o.pay_status,
+    o.pay_by,
+    o.pay_date,
     COALESCE(NULLIF(o.full_name,''), NULLIF(c.name,''), 'Unknown Customer') AS name,
     COALESCE(NULLIF(o.mobile,''), NULLIF(c.phone,''), 'No phone') AS phone,
     NULLIF(o.address_line1,'') AS o_addr1,
@@ -86,6 +89,7 @@ ORDER BY o.updated_at DESC
 LIMIT $limit
 ";
 
+
 $res = $conn->query($sql);
 $orders = [];
 if ($res) while($row = $res->fetch_assoc()) $orders[] = $row;
@@ -101,7 +105,7 @@ if($branding && $branding->num_rows > 0){
 } else {
     // fallback
     $companyName = "FE IT Solutions Pvt (Ltd)";
-    $companyLogo = "../assets/images/lily_collection.png";
+    $companyLogo = "../assets/images/FEIT.png";
 }
 
 // -------------------------
@@ -193,7 +197,16 @@ body { margin:0; font-family: Arial; font-size:12px; }
 
     <hr>
 
-    <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'],2); ?></b><br><br>
+ <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'],2); ?></b><br>
+
+<?php if (!empty($o['pay_status']) && $o['pay_status'] === 'paid'): ?>
+    <div style="color: green; font-weight: bold; margin-top: 4px;">
+        ✔ ALREADY PAID
+    </div>
+<?php endif; ?>
+
+<br><br>
+
 
     <!-- Barcode + QR -->
     <?php if (!empty($o['tracking_number'])): ?>

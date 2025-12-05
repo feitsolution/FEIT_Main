@@ -548,8 +548,8 @@ function openOrderModal(orderId, interface = null) {
     downloadBtn.style.display = 'none';
     viewPaymentSlipBtn.style.display = 'none';
     
-    // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
+       // Determine which PHP file to use based on interface
+    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
     const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
     
     console.log('Fetching from:', fetchUrl);
@@ -2431,12 +2431,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 endpoint = dispatchType === 'new' 
                     ? 'fde_bulk_new_parcel_api.php' 
                     : 'fde_bulk_existing_parcel_api.php';
-            } else if (carrier == 14) {
+            } else if (carrier == 13) {
                 // For TransExpress
                 endpoint = dispatchType === 'new' 
                     ? 'transexpress_bulk_new_parcel_api.php' 
                     : 'transexpress_bulk_existing_parcel_api.php';
-            } else if (carrier == 13) {
+            } else if (carrier == 14) {
                  // Royal Express only supports existing parcel API
                 endpoint = dispatchType === 'existing' ? 'royalexpress_bulk_existing_parcel_api.php' : '';
             } else {

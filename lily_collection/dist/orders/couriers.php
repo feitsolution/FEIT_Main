@@ -379,7 +379,7 @@ function getStatusInfo($is_default) {
                                                 </div>
                                             </div> <!-- End of Client ID + API Key Flex -->
 
-                                            <!-- Origin City and State (visible only for courier_id = 13) -->
+                                            <!-- Origin City and State (visible only for courier_id = 14) -->
                                             <div id="originFields" style="display: none; margin-top: 20px;">
                                                 <div style="display: flex; gap: 20px;">
                                                     
@@ -1000,8 +1000,8 @@ function openApiModal(courierId, courierName) {
     // Reset form
     form.reset();
 
-    // Show/hide origin fields for courier 13
-    originFields.style.display = (courierId == 13) ? 'flex' : 'none';
+    // Show/hide origin fields for courier 14
+    originFields.style.display = (courierId == 14) ? 'flex' : 'none';
 
     // Disable inputs while loading
     [clientIdInput, apiKeyInput, originCityInput, originStateInput, saveBtn].forEach(el => el.disabled = true);
@@ -1019,7 +1019,7 @@ function openApiModal(courierId, courierName) {
             clientIdInput.value = data.data.client_id || '';
             apiKeyInput.value = data.data.api_key || '';
 
-            if (courierId == 13) {
+            if (courierId == 14) {
                 originCityInput.value = data.data.origin_city_name || '';
                 originStateInput.value = data.data.origin_state_name || '';
             }
