@@ -343,18 +343,33 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             echo $customerName . ($customerId ? " ($customerId)" : "");
                             ?>
                         </td>
-                        <!-- Issue Date - Due Date -->
-                        <td class="date-range">
-                            <?php
-                            $issueDate = isset($row['issue_date']) ? date('Y-m-d', strtotime($row['issue_date'])) : 'N/A';
-                            $dueDate = isset($row['due_date']) ? date('Y-m-d', strtotime($row['due_date'])) : 'N/A';
-                            echo "<div class='date-container'>";
-                            echo "<span class='issue-date'>" . $issueDate . "</span>";
-                            echo "<span class='date-separator'> - </span>";
-                            echo "<span class='due-date'>" . $dueDate . "</span>";
-                            echo "</div>";
-                            ?>
-                        </td>
+                  <td class="date-range">
+    <?php
+    // Issue & Due dates (DATE only)
+    $issueDate = !empty($row['issue_date']) ? date('Y-m-d', strtotime($row['issue_date'])) : 'N/A';
+    $dueDate   = !empty($row['due_date']) ? date('Y-m-d', strtotime($row['due_date'])) : 'N/A';
+
+    // Time from created_at (FULL TIMESTAMP)
+    $createdTime = !empty($row['created_at']) ? date('H:i:s', strtotime($row['created_at'])) : 'N/A';
+
+    echo "<div class='date-container'>";
+
+    // Issue date
+    echo "<span class='issue-date'>{$issueDate}</span>";
+
+    // Separator
+    echo "<span class='date-separator'> - </span>";
+
+    // Due date
+    echo "<span class='due-date'>{$dueDate}</span>";
+
+    // Time (new line)
+    echo "<div class='created-time'> <strong>{$createdTime}</strong></div>";
+
+    echo "</div>";
+    ?>
+</td>
+
                         
                         <!-- Total Amount with Currency -->
                         <td class="amount">
