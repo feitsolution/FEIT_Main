@@ -6,12 +6,24 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connect
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/fe_it_db_connection.php');
 
 // Check connections
+// Handle connection errors safely
+$connection_error = "";
+
 if ($conn->connect_error) {
-    die("Order Management DB Connection failed: " . $conn->connect_error);
+    error_log("Order Management DB Connection failed: " . $conn->connect_error);
+    $connection_error = "System Error: Unable to connect to main database.";
 }
+
 if ($fe_conn->connect_error) {
-    die("FE IT DB Connection failed: " . $fe_conn->connect_error);
+    error_log("FE IT DB Connection failed: " . $fe_conn->connect_error);
+    $connection_error = "System Error: Unable to connect to customer verification database.";
 }
+
+// If any DB failed → show clean error
+if (!empty($connection_error)) {
+    $error_message = $connection_error;
+}
+
 
 // Initialize variables
 $error_message = "";
