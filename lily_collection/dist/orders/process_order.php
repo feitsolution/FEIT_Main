@@ -1677,9 +1677,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 
                 // Clear any output buffers before redirect
-                while (ob_get_level()) {
-                    ob_end_clean();
-                }
+                // while (ob_get_level()) {
+                //     ob_end_clean();
+                // }
                 
                 header("Location: download_order.php?id=" . $order_id);
                 exit();

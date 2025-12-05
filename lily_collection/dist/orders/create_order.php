@@ -329,7 +329,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
             <!-- [ Main Content ] start -->
             <div class="order-container">
-               <form method="post" action="process_order.php">
+                <form method="post" action="process_order.php" id="orderForm" target="_blank">
                     <!-- Order Details Section -->
                     <div class="order-details-section">
                         <div class="order-details-grid">
