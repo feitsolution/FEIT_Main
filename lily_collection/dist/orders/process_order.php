@@ -8,9 +8,9 @@ if (session_status() == PHP_SESSION_NONE) {
 error_reporting(0);
 
 // Clear any existing output buffers
-// while (ob_get_level()) {
-//     ob_end_clean();
-// }
+while (ob_get_level()) {
+    ob_end_clean();
+}
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
