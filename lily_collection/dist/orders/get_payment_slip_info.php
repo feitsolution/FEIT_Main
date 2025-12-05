@@ -58,7 +58,7 @@ try {
     // Check if payment slip file exists on server
     $file_exists = false;
     if (!empty($payment_slip)) {
-        $file_path = $_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/uploads/payment_slips/' . $payment_slip;
+        $file_path = $_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/uploads/payment_slips/' . $payment_slip;
         $file_exists = file_exists($file_path);
     }
     

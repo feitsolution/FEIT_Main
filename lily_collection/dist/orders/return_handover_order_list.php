@@ -461,9 +461,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </div>
 
        <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
+      <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/order_view_modal.php'); ?>
     <!-- Include JavaScript files -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
     
     <script>
 
@@ -623,7 +623,7 @@ function viewPaymentSlip() {
     }
     
     // Construct the payment slip URL
-    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
+    const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
     
     // Open payment slip in new tab
     window.open(slipUrl, '_blank');

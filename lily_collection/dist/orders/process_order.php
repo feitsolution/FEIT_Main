@@ -1,16 +1,15 @@
 <?php
-// Start session FIRST before any output
+// CRITICAL: Start output buffering FIRST
+ob_start();
+
+// Start session AFTER output buffering
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
 // Disable error reporting for production
 error_reporting(0);
-
-// Clear any existing output buffers
-while (ob_get_level()) {
-    ob_end_clean();
-}
+ini_set('display_errors', 0);
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
@@ -85,15 +84,26 @@ function setMessageAndRedirect($type, $message, $redirect_url = null) {
         $redirect_url = "/lily_collection/dist/orders/create_order.php";
     }
     
-    // Clear any output buffers before redirect
-    while (ob_get_level()) {
+    // Clean output buffer
+    if (ob_get_level()) {
         ob_end_clean();
     }
     
-    header("Location: " . $redirect_url);
-    exit();
+    // Check if headers can be sent
+    if (!headers_sent()) {
+        header("Location: " . $redirect_url, true, 303);
+        exit();
+    } else {
+        // Fallback: JavaScript redirect
+        echo '<script type="text/javascript">';
+        echo 'window.location.href="' . htmlspecialchars($redirect_url, ENT_QUOTES, 'UTF-8') . '";';
+        echo '</script>';
+        echo '<noscript>';
+        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url, ENT_QUOTES, 'UTF-8') . '" />';
+        echo '</noscript>';
+        exit();
+    }
 }
-
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
