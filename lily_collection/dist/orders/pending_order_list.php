@@ -416,10 +416,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             <i class="fas fa-eye"></i>
         </button>
         
-        <button class="action-btn paid-btn" title="Mark as Paid" 
-                onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-            <i class="fas fa-dollar-sign"></i>
-        </button>
+    <?php if ($payStatus == 'unpaid'): ?>
+    <button class="action-btn paid-btn" title="Mark as Paid" 
+        onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+        <i class="fas fa-dollar-sign"></i>
+    </button>
+<?php endif; ?>
+
         
         <button class="action-btn dispatch-btn" title="Mark as Dispatched" 
                 onclick="openDispatchModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
