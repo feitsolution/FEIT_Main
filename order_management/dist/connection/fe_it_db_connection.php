@@ -1,14 +1,14 @@
 <?php
 // Database connection
-$servername = getenv('DB_HOST');
-$username   = getenv('DB_USER');
-$password   = getenv('DB_PASS');
-$dbname     = getenv('DB_NAME_FE_IT_DB');
+$fe_servername = getenv('DB_HOST');   // Database server
+$fe_username   = getenv('DB_USER');        // Database username (default for XAMPP is root)
+$fe_password   = getenv('DB_PASS');            // Database password (empty by default in XAMPP)
+$fe_dbname     = getenv('DB_NAME_FE_IT_DB');    // Replace with your actual FE IT DB name
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$fe_conn = new mysqli($fe_servername, $fe_username, $fe_password, $fe_dbname);
 
 // Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if ($fe_conn->connect_error) {
+    die("Connection failed: " . $fe_conn->connect_error);
 }
 ?>
