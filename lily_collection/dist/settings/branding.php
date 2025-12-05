@@ -583,12 +583,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             </div>
                                         </div>
                                     <?php else: ?>
-                                        <img src="/lily_collection/dist/assets/images/default-logo.png" 
+                                        <img src="/lily_collection/dist/assets/images/lily.jpeg" 
                                              alt="Default Logo" class="logo-preview">
                                         <div class="mt-3">
                                             <h5>Navbar Preview:</h5>
                                             <div class="navbar-logo-preview-container">
-                                                <img src="/lily_collection/dist/assets/images/default-logo.png" 
+                                                <img src="/lily_collection/dist/assets/images/lily.jpeg" 
                                                      alt="Default Logo" class="navbar-logo-preview">
                                             </div>
                                         </div>

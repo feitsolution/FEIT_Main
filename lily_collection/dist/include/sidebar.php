@@ -4,137 +4,74 @@
     <!-- Header section with logo -->
     <div class="m-header flex items-center py-4 px-6 h-header-height">
       <a href="../dashboard/index.php" class="b-brand flex items-center gap-3">
-        <!-- Dynamic logo from branding table with comprehensive error handling -->
         <?php
+        /**
+         * PHP Logic to retrieve logo and company name from the database.
+         * Default values are used if the database connection fails or no active branding is found.
+         */
+        
         // Initialize default values
-        $logo_url = '../assets/images/Sortiq.png';
-        $company_name = 'order_management';
-        $debug_info = [];
+        $default_logo_url = '../assets/images/lily.jpeg'; // Default logo path
+        $default_company_name = 'Lily Collection'; // Default company name
+        
+        $logo_url = $default_logo_url;
+        $company_name = $default_company_name;
         
         try {
-            // Check if database connection exists
+            // Check if database connection is available
             if (!isset($conn) || !$conn) {
-                throw new Exception("Database connection not available");
+                // Connection not available, use defaults
+                throw new Exception("Database connection not available.");
             }
             
-            // Fetch branding data for logo display
+            // Query to fetch active branding data
             $branding_query = "SELECT logo_url, company_name FROM branding WHERE active = 1 LIMIT 1";
             $branding_result = mysqli_query($conn, $branding_query);
             
             if (!$branding_result) {
+                // Query failed
                 throw new Exception("Database query failed: " . mysqli_error($conn));
             }
             
             $branding_data = mysqli_fetch_assoc($branding_result);
-            $debug_info[] = "Query executed successfully";
             
             if ($branding_data) {
-                $debug_info[] = "Branding data found in database";
-                
-                // Handle company name
+                // Update variables from database data if present
                 if (!empty($branding_data['company_name'])) {
                     $company_name = trim($branding_data['company_name']);
-                    $debug_info[] = "Company name: " . $company_name;
                 }
-                
-                // Handle logo URL with multiple validation checks
                 if (!empty($branding_data['logo_url'])) {
-                    $db_logo_url = trim($branding_data['logo_url']);
-                    $debug_info[] = "Database logo URL: " . $db_logo_url;
-                    
-                    // Check if it's a relative or absolute path
-                    if (filter_var($db_logo_url, FILTER_VALIDATE_URL)) {
-                        // It's a full URL - validate it exists
-                        $headers = @get_headers($db_logo_url);
-                        if ($headers && strpos($headers[0], '200')) {
-                            $logo_url = $db_logo_url;
-                            $debug_info[] = "Using external URL: " . $logo_url;
-                        } else {
-                            $debug_info[] = "External URL not accessible, using default";
-                        }
-                    } else {
-                        // It's a local file path
-                        $local_paths_to_check = [
-                            $db_logo_url,
-                            '../' . $db_logo_url,
-                            '../../' . $db_logo_url,
-                            dirname(__FILE__) . '/' . $db_logo_url,
-                            $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($db_logo_url, '/')
-                        ];
-                        
-                        $file_found = false;
-                        foreach ($local_paths_to_check as $path_to_check) {
-                            if (file_exists($path_to_check) && is_readable($path_to_check)) {
-                                $logo_url = $db_logo_url; // Use original path for HTML
-                                $debug_info[] = "File found at: " . $path_to_check;
-                                $file_found = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!$file_found) {
-                            $debug_info[] = "Logo file not found in any expected location";
-                            $debug_info[] = "Checked paths: " . implode(', ', $local_paths_to_check);
-                        }
-                    }
-                } else {
-                    $debug_info[] = "No logo URL in database";
+                    // Use the logo URL exactly as stored in the DB
+                    $logo_url = trim($branding_data['logo_url']);
                 }
             } else {
-                $debug_info[] = "No active branding data found in database";
+                 // No active branding found
+                 // error_log("No active branding found in database. Using defaults.");
             }
             
             // Clean up result
             mysqli_free_result($branding_result);
             
         } catch (Exception $e) {
-            $debug_info[] = "Error: " . $e->getMessage();
-            error_log("Sidebar Logo Error: " . $e->getMessage());
+            // Log error but continue with default logo/name
+            error_log("Sidebar Logo Fetch Error: " . $e->getMessage());
         }
         
-        // Final validation of default fallback
-        $fallback_paths = [
-            '../assets/images/order_management.png',
-            'assets/images/order_management.png',
-            '../assets/images/default-logo.png',
-            'assets/images/default-logo.png'
-        ];
-        
-        $fallback_found = false;
-        if ($logo_url === '../assets/images/order_management.png') {
-            foreach ($fallback_paths as $fallback_path) {
-                if (file_exists($fallback_path)) {
-                    $logo_url = $fallback_path;
-                    $fallback_found = true;
-                    $debug_info[] = "Using fallback: " . $fallback_path;
-                    break;
-                }
-            }
-            
-            if (!$fallback_found) {
-                $debug_info[] = "Warning: Default fallback image not found";
-                // Use a data URI as last resort
-                $logo_url = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPC9zdmc+';
-                $debug_info[] = "Using data URI as last resort";
-            }
-        }
-        
-        // Sanitize output
+        // Sanitize output for security
         $logo_url = htmlspecialchars($logo_url, ENT_QUOTES, 'UTF-8');
         $company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
         
-        // Output debug info as HTML comments (remove in production)
-        if (defined('DEBUG_MODE') && DEBUG_MODE) {
-            echo "<!-- DEBUG INFO:\n" . implode("\n", $debug_info) . "\n-->";
-        }
+        // Final fallback SVG data URI for the HTML onerror attribute
+        $svg_fallback = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPC9zdmc+';
         ?>
         
         <img src="<?php echo $logo_url; ?>" 
              alt="<?php echo $company_name; ?>" 
              class="img-fluid logo logo-lg" 
              style="max-height: 40px;" 
-             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPHN2Zz4=';" 
-             onload="console.log('Logo loaded successfully: <?php echo addslashes($logo_url); ?>');" />
+             onerror="this.onerror=null; this.src='<?php echo $svg_fallback; ?>';" 
+             onload="console.log('Logo source used: <?php echo addslashes($logo_url); ?>');" />
+        <span class="text-lg font-semibold text-primary"><?php echo $company_name; ?></span>
       </a>
     </div>
     
@@ -177,7 +114,6 @@
             <li class="pc-item"><a class="pc-link" href="../orders/couriers.php">Courier Management</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/cancel_order_list.php">Cancel Orders</a></li>
                <li class="pc-item"><a class="pc-link" href="../orders/complete_mark_upload.php">Completed Mark Upload</a></li>
-            <!-- <li class="pc-item"><a class="pc-link" href="../orders/completed_orders_report.php">Completed Orders Report</a></li> -->
             <li class="pc-item"><a class="pc-link" href="../orders/payment_report.php"> Payment Report</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/return_csv_upload.php">Return CSV Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/return_complete_order_list.php">Return Complete Orders</a></li>
@@ -221,9 +157,10 @@
             if ($role_result && $role_data = mysqli_fetch_assoc($role_result)) {
                 // Check if role is admin (by ID or name)
                 $is_admin = ($role_data['role_id'] == 1 || 
-                           strtolower($role_data['role_name']) == 'admin' || 
-                           strtolower($role_data['role_name']) == 'administrator' ||
-                           strtolower($role_data['role_name']) == 'super admin');
+                            strtolower($role_data['role_name']) == 'admin' || 
+                            strtolower($role_data['role_name']) == 'administrator' ||
+                            strtolower($role_data['role_name']) == 'super admin');
+                 mysqli_free_result($role_result); // Clean up
             }
         }
         
@@ -241,9 +178,7 @@
             <li class="pc-item"><a class="pc-link" href="../users/user_logs.php">User Activity Log</a></li>
           </ul>
         </li>
-        <?php else: ?>
-        <!-- DEBUG: User does not have admin access -->
-        <?php endif; ?>
+        <?php endif; // End admin check ?>
         
         <!-- Customers Management Dropdown -->
         <li class="pc-item pc-hasmenu">
@@ -315,63 +250,3 @@
   </div>
 </nav>
 <!-- [ Sidebar Menu ] end -->
-
-<?php
-// Optional: Add this function to your common functions file for reuse
-if (!function_exists('get_logo_with_fallback')) {
-    function get_logo_with_fallback($conn, $default_logo = '../assets/images/FEIT.png', $default_name = 'order_management') {
-        $result = [
-            'logo_url' => $default_logo,
-            'company_name' => $default_name,
-            'debug' => []
-        ];
-        
-        try {
-            if (!$conn) {
-                throw new Exception("No database connection");
-            }
-            
-            $query = "SELECT logo_url, company_name FROM branding WHERE active = 1 LIMIT 1";
-            $db_result = mysqli_query($conn, $query);
-            
-            if (!$db_result) {
-                throw new Exception("Query failed: " . mysqli_error($conn));
-            }
-            
-            $data = mysqli_fetch_assoc($db_result);
-            
-            if ($data) {
-                if (!empty($data['company_name'])) {
-                    $result['company_name'] = trim($data['company_name']);
-                }
-                
-                if (!empty($data['logo_url'])) {
-                    $logo_path = trim($data['logo_url']);
-                    
-                    // Validate logo exists
-                    if (filter_var($logo_path, FILTER_VALIDATE_URL)) {
-                        // External URL
-                        $headers = @get_headers($logo_path);
-                        if ($headers && strpos($headers[0], '200')) {
-                            $result['logo_url'] = $logo_path;
-                        }
-                    } else {
-                        // Local file
-                        if (file_exists($logo_path)) {
-                            $result['logo_url'] = $logo_path;
-                        }
-                    }
-                }
-            }
-            
-            mysqli_free_result($db_result);
-            
-        } catch (Exception $e) {
-            $result['debug'][] = $e->getMessage();
-            error_log("Logo fetch error: " . $e->getMessage());
-        }
-        
-        return $result;
-    }
-}
-?>
