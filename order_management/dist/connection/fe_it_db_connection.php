@@ -1,13 +1,14 @@
 <?php
-$servername = "gator4423.hostgator.com";
-$username = "imwijqte_db";
-$password = "imwijqte_db2025a";
-$dbname = "imwijqte_feit_db";
+// Database connection
+$servername = getenv('DB_HOST');
+$username   = getenv('DB_USER');
+$password   = getenv('DB_PASS');
+$dbname     = getenv('DB_NAME_FE_IT_DB');
 
-$fe_conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
-if ($fe_conn->connect_error) {
-    die("FE IT DB Connection failed: " . $fe_conn->connect_error);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 ?>

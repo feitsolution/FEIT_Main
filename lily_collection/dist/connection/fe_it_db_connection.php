@@ -1,15 +1,14 @@
 <?php
-// FE IT Database connection
-$servername = "gator4423";
-$username = "imwijqte_db";
-$password = "imwijqte_db2025a";
-$dbname = "imwijqte_feit_db";
+// Database connection
+$servername = getenv('DB_HOST');
+$username   = getenv('DB_USER');
+$password   = getenv('DB_PASS');
+$dbname     = getenv('DB_NAME_FE_IT_DB');
 
-// Use $fe_conn instead of $conn to avoid overwriting the order_management connection
-$fe_conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
-if ($fe_conn->connect_error) {
-    die("FE IT DB Connection failed: " . $fe_conn->connect_error);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 ?>

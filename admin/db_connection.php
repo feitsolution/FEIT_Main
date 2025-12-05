@@ -1,9 +1,9 @@
 <?php
 // Database connection
-$servername = "gator4423";
-$username = "imwijqte_db";
-$password = "imwijqte_db2025a"; // Use your actual database password
-$dbname = "imwijqte_feit_db"; // Replace with your database name
+$servername = getenv('DB_HOST');
+$username   = getenv('DB_USER');
+$password   = getenv('DB_PASS');
+$dbname     = getenv('DB_NAME_FE_IT_DB');
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
