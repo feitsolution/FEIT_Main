@@ -9,9 +9,6 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
 if ($conn->connect_error) {
-    echo "Database connection failed!";
-    exit(); // stop the script
+    die("Connection failed: " . $conn->connect_error);
 }
-
-echo "Database connected successfully!";
 ?>
