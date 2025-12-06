@@ -154,7 +154,7 @@ body { margin:0; font-family: Arial; font-size:12px; }
 /* NORMAL PAGE LAYOUT */
 .label-box {
     width: 100mm;
-    height: 110mm;
+    height: 100mm;
     padding: 8px;
     border: 1px solid #ccc;
     float: left;
