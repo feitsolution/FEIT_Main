@@ -189,19 +189,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             </div>
 
                             <!-- Third Row: Description -->
-                            <div class="form-row">
-                                <div class="product-form-group full-width">
-                                    <label for="description" class="form-label">
-                                        <i class="fas fa-align-left"></i> Description
-                                    </label>
-                                    <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description (optional)"></textarea>
-                                    <div class="error-feedback" id="description-error"></div>
-                                    <div class="char-counter">
-                                        <span id="desc-char-count">0</span> characters
-                                    </div>
+                           <div class="form-row">
+                            <div class="product-form-group full-width">
+                                <label for="description" class="form-label">
+                                    <i class="fas fa-align-left"></i> Description <span class="required">*</span>
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="4"
+                                    placeholder="Enter product description" required></textarea>
+                                <div class="error-feedback" id="description-error"></div>
+                                <div class="char-counter">
+                                    <span id="desc-char-count">0</span> characters
                                 </div>
                             </div>
+                        </div>
+
                         </div>
                     </div>
 
@@ -568,17 +569,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             return { valid: true, message: '' };
         }
 
-        function validateDescription(description) {
-            // Description is optional, so empty is valid
+       function validateDescription(description) {
             if (description.trim() === '') {
-                return { valid: true, message: '' };
+                return { valid: false, message: 'Description is required' };
             }
-            
-            // Check length
+
+            if (description.length < 5) {
+                return { valid: false, message: 'Description must be at least 5 characters long' };
+            }
+
             if (description.length > 65535) {
                 return { valid: false, message: 'Description is too long (maximum 65,535 characters)' };
             }
-            
+
             return { valid: true, message: '' };
         }
 

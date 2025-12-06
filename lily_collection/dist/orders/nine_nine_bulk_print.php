@@ -2,7 +2,9 @@
 // -------------------------
 // Basic Session + Auth
 // -------------------------
-if (!session_id()) { session_start(); }
+if (!session_id()) {
+    session_start();
+}
 
 if (!isset($_SESSION['logged_in']) && !isset($_SESSION['ClientUserID'])) {
     header("Location: /lily_collection/dist/pages/login.php");
@@ -45,11 +47,9 @@ if ($status != "all")   $where[] = "o.status = '$status'";
 
 if ($trackingFilter === "with_tracking") {
     $where[] = "o.tracking_number != ''";
-}
-else if ($trackingFilter === "without_tracking") {
+} else if ($trackingFilter === "without_tracking") {
     $where[] = "(o.tracking_number = '' OR o.tracking_number IS NULL)";
-}
-else if ($trackingFilter === "specific_tracking" && $trackingNumber !== "") {
+} else if ($trackingFilter === "specific_tracking" && $trackingNumber !== "") {
     $where[] = "o.tracking_number LIKE '%$trackingNumber%'";
 }
 
@@ -59,7 +59,7 @@ $whereClause = implode(" AND ", $where);
 // Final Query
 // -------------------------
 $sql = "
-SELECT 
+ SELECT  
     o.order_id,
     o.tracking_number,
     o.pay_status,
@@ -77,44 +77,66 @@ SELECT
     o.issue_date,
     cr.courier_name,
     IFNULL(GROUP_CONCAT(CONCAT(p.name,' (', oi.quantity, ')') SEPARATOR ', '),'') AS products
-FROM order_header o
-LEFT JOIN customers c ON o.customer_id = c.customer_id
-LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
-LEFT JOIN city_table ct ON c.city_id = ct.city_id
-LEFT JOIN order_items oi ON oi.order_id = o.order_id
-LEFT JOIN products p ON p.id = oi.product_id
-WHERE $whereClause
-GROUP BY o.order_id
-ORDER BY o.updated_at DESC
-LIMIT $limit
+ FROM order_header o
+ LEFT JOIN customers c ON o.customer_id = c.customer_id
+ LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
+ LEFT JOIN city_table ct ON c.city_id = ct.city_id
+ LEFT JOIN order_items oi ON oi.order_id = o.order_id
+ LEFT JOIN products p ON p.id = oi.product_id
+ WHERE $whereClause
+ GROUP BY o.order_id
+ ORDER BY o.updated_at DESC
+ LIMIT $limit
 ";
-
 
 $res = $conn->query($sql);
 $orders = [];
-if ($res) while($row = $res->fetch_assoc()) $orders[] = $row;
+if ($res) while ($row = $res->fetch_assoc()) $orders[] = $row;
 
 // -------------------------
 // Company Info from Branding Table
 // -------------------------
-$branding = $conn->query("SELECT company_name, logo_url FROM branding WHERE active = 1 ORDER BY branding_id DESC LIMIT 1");
-if($branding && $branding->num_rows > 0){
+$branding = $conn->query("
+    SELECT 
+        company_name, 
+        web_name, 
+        address, 
+        hotline, 
+        email, 
+        logo_url 
+    FROM branding 
+    WHERE active = 1 
+    ORDER BY branding_id DESC 
+    LIMIT 1
+");
+
+if ($branding && $branding->num_rows > 0) {
     $brandingRow = $branding->fetch_assoc();
     $companyName = $brandingRow['company_name'];
     $companyLogo = $brandingRow['logo_url'];
+    $billingAddress = $brandingRow['address'];
+    $billingHotline = $brandingRow['hotline'];
+    $billingEmail = $brandingRow['email'];
+    $billingWebsite = $brandingRow['web_name'];
 } else {
     // fallback
     $companyName = "FE IT Solutions Pvt (Ltd)";
     $companyLogo = "../assets/images/FEIT.png";
+    $billingAddress = "N/A";
+    $billingHotline = "-";
+    $billingEmail = "-";
+    $billingWebsite = "-";
 }
 
 // -------------------------
 // Helper Functions
 // -------------------------
-function currencySymbol($c) {
+function currencySymbol($c)
+{
     return strtolower($c) === "usd" ? "$" : "Rs.";
 }
-function barcodeImg($d) {
+function barcodeImg($d)
+{
     return "https://barcodeapi.org/api/code128/" . urlencode($d);
 }
 
@@ -132,7 +154,7 @@ body { margin:0; font-family: Arial; font-size:12px; }
 /* NORMAL PAGE LAYOUT */
 .label-box {
     width: 100mm;
-    height: 100mm;
+    height: 110mm;
     padding: 8px;
     border: 1px solid #ccc;
     float: left;
@@ -176,6 +198,15 @@ body { margin:0; font-family: Arial; font-size:12px; }
         </tr>
     </table>
 
+    <!-- Billing From Details -->
+    <div style="font-size:10px; margin-top:5px;">
+        <?php echo $companyName; ?><br>
+        <?php echo nl2br($billingAddress); ?><br>
+        Hotline: <?php echo $billingHotline; ?><br>
+        Email: <?php echo $billingEmail; ?><br>
+        <!-- Website: <?php echo $billingWebsite; ?> -->
+    </div>
+
     <hr>
 
     <!-- Customer -->
@@ -197,18 +228,17 @@ body { margin:0; font-family: Arial; font-size:12px; }
 
     <hr>
 
- <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'],2); ?></b><br>
+    <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
 
-<?php if (!empty($o['pay_status']) && $o['pay_status'] === 'paid'): ?>
-    <div style="color: green; font-weight: bold; margin-top: 4px;">
-        ✔ ALREADY PAID
-    </div>
-<?php endif; ?>
+    <?php if (!empty($o['pay_status']) && $o['pay_status'] === 'paid'): ?>
+        <div style="color: green; font-weight: bold; margin-top: 4px;">
+            ✔ ALREADY PAID
+        </div>
+    <?php endif; ?>
 
-<br><br>
+    <br><br>
 
-
-    <!-- Barcode + QR -->
+    <!-- Barcode -->
     <?php if (!empty($o['tracking_number'])): ?>
         <img src="<?php echo barcodeImg($o['tracking_number']); ?>" style="width:150px;"><br>
     <?php else: ?>

@@ -232,20 +232,25 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 </div>
                             </div>
 
-                            <!-- Third Row: Description -->
+                          
+                          <!-- Third Row: Description -->
                             <div class="form-row">
                                 <div class="product-form-group full-width">
                                     <label for="description" class="form-label">
-                                        <i class="fas fa-align-left"></i> Description
+                                        <i class="fas fa-align-left"></i> Description <span class="required">*</span>
                                     </label>
+
                                     <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description (optional)"><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
+                                        placeholder="Enter product description" required><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
+
                                     <div class="error-feedback" id="description-error"></div>
+
                                     <div class="char-counter">
                                         <span id="desc-char-count">0</span> characters
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
 
@@ -634,20 +639,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             
             return { valid: true, message: '' };
         }
-
-        function validateDescription(description) {
-            // Description is optional, so empty is valid
-            if (description.trim() === '') {
+            function validateDescription(desc) {
+                if (desc.trim() === '') {
+                    return { valid: false, message: 'Description is required' };
+                }
+                if (desc.length < 10) {
+                    return { valid: false, message: 'Description must be at least 10 characters long' };
+                }
                 return { valid: true, message: '' };
             }
-            
-            // Check length
-            if (description.length > 65535) {
-                return { valid: false, message: 'Description is too long (maximum 65,535 characters)' };
-            }
-            
-            return { valid: true, message: '' };
-        }
+
 
         // Show/hide error functions
         function showError(fieldId, message) {
