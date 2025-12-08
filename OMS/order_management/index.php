@@ -16,7 +16,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/dashboard/index.php");
+    header("Location: /OMS/order_management/dist/dashboard/index.php");
     exit();
 }
 ?>

@@ -59,7 +59,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <a href="javascript:history.back()" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Go Back
                             </a>
-                            <a href='/order_management/dist/dashboard/index.php' class="btn btn-primary">
+                            <a href='/OMS/order_management/dist/dashboard/index.php' class="btn btn-primary">
                                 <i class="fas fa-home"></i> Go to Dashboard
                             </a>
                         </div>

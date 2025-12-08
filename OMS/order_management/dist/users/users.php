@@ -44,7 +44,7 @@ $user_role = $role_result->fetch_assoc();
 // Check if user is admin (role_id = 1)
 if ($user_role['role_id'] != 1) {
     // User is not admin, redirect to dashboard
-    header("Location: /order_management/dist/dashboard/index.php");
+    header("Location: /OMS/order_management/dist/dashboard/index.php");
     exit();
 }
 

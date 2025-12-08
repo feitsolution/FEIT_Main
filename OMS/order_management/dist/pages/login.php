@@ -142,7 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             case 2: // Regular user
                             case 3: // Other roles
                             default:
-                                header("Location: /order_management/dist/dashboard/index.php");
+                                header("Location: /OMS/order_management/dist/dashboard/index.php");
                         }
                         exit();
                     }
