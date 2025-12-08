@@ -61,6 +61,7 @@ $customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['custo
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
+$call_log_filter = isset($_GET['call_log_filter']) ? trim($_GET['call_log_filter']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -140,6 +141,12 @@ if (!empty($date_to)) {
 if (!empty($pay_status_filter)) {
     $payStatusTerm = $conn->real_escape_string($pay_status_filter);
     $searchConditions[] = "i.pay_status = '$payStatusTerm'";
+}
+
+// Call Log Status filter
+if ($call_log_filter !== '') {
+    $callLogTerm = $conn->real_escape_string($call_log_filter);
+    $searchConditions[] = "i.call_log = '$callLogTerm'";
 }
 
 // Apply all search conditions
@@ -260,6 +267,17 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
                             </select>
                         </div>
+
+                                <!-- NEW CALL LOG FILTER -->
+                            <div class="form-group">
+                                <label for="call_log_filter">Call Status</label>
+                                <select id="call_log_filter" name="call_log_filter">
+                                    <option value="">All Call Status</option>
+                                    <option value="1" <?php echo ($call_log_filter == '1') ? 'selected' : ''; ?>>Answered</option>
+                                    <option value="0" <?php echo ($call_log_filter == '0') ? 'selected' : ''; ?>>No Answer</option>
+                                </select>
+                            </div>
+
                         
                         <div class="form-group">
                             <div class="button-group">
@@ -2536,6 +2554,18 @@ document.addEventListener('DOMContentLoaded', function() {
     dispatchTypeContainer.style.display = 'none';
 });
 
+
+function clearFilters() {
+    document.getElementById('order_id_filter').value = '';
+    document.getElementById('customer_name_filter').value = '';
+    document.getElementById('date_from').value = '';
+    document.getElementById('date_to').value = '';
+    document.getElementById('pay_status_filter').value = '';
+    document.getElementById('call_log_filter').value = '';
+    
+    // Reload page without query parameters
+    window.location.href = window.location.pathname;
+}
  </script>
 
     <!-- Include Footer and Scripts -->
