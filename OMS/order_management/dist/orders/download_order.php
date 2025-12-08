@@ -8,11 +8,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /OMS/order_management/dist/pages/login.php");
     exit();
 }
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
 
 // Check if order ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -141,7 +141,7 @@ if ($branding_result && $branding_result->num_rows > 0) {
             $logo_url = $company['logo_url'];
         } else {
             // Assuming logo_url stores relative path like 'uploads/logos/logo.png'
-            $logo_url = '/order_management/dist/' . $company['logo_url'];
+            $logo_url = '/OMS/order_management/dist/' . $company['logo_url'];
         }
     } else {
         // Fallback to default logo
@@ -634,7 +634,7 @@ $column_count = $has_any_discount ? 5 : 4;
 
         // Function to view payment slip in new tab
         function viewPaymentSlip(slipFileName) {
-            const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(slipFileName);
+            const slipUrl = '/OMS/order_management/dist/uploads/payment_slips/' + encodeURIComponent(slipFileName);
             window.open(slipUrl, '_blank');
         }
 

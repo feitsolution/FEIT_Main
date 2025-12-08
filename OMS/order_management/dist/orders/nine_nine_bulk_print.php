@@ -7,12 +7,12 @@ if (!session_id()) {
 }
 
 if (!isset($_SESSION['logged_in']) && !isset($_SESSION['ClientUserID'])) {
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /OMS/order_management/dist/pages/login.php");
     exit();
 }
 
 // DB connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
 
 // -------------------------
 // Read Filters

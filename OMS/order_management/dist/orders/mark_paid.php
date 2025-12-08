@@ -19,7 +19,7 @@ try {
     }
 
     // Include database connection
-    $db_path = $_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php';
+    $db_path = $_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php';
     if (!file_exists($db_path)) {
         throw new Exception('Database connection file not found');
     }
@@ -116,7 +116,7 @@ try {
     }
     
     // Create upload directory if it doesn't exist
-    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/uploads/payment_slips/';
+    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/uploads/payment_slips/';
     if (!is_dir($uploadDir)) {
         if (!mkdir($uploadDir, 0755, true)) {
             throw new Exception('Failed to create upload directory');

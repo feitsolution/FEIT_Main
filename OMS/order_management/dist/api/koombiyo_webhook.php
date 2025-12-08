@@ -4,7 +4,7 @@
 // =======================================
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
 
 // Set JSON headers
 header('Content-Type: application/json');
