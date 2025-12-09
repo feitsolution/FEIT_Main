@@ -17,46 +17,65 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connec
 // -------------------------
 // Read Filters
 // -------------------------
-$date           = isset($_GET['date']) ? trim($_GET['date']) : date("Y-m-d");
-$time_from      = trim($_GET['time_from'] ?? "");
-$time_to        = trim($_GET['time_to'] ?? "");
-$status         = trim($_GET['status_filter'] ?? "all");
-$trackingFilter = trim($_GET['tracking_filter'] ?? "with_tracking");
-$trackingNumber = trim($_GET['tracking_number'] ?? "");
-$limit          = isset($_GET['limit']) ? (int)$_GET['limit'] : 500;
+$date      = isset($_GET['date']) ? trim($_GET['date']) : "";
+$time_from = trim($_GET['time_from'] ?? "");
+$time_to   = trim($_GET['time_to'] ?? "");
+$date_filter = isset($_GET['date_filter']) ? $_GET['date_filter'] : 'created_at';
+$limit     = 500; // fixed limit
 
-// sanitize
-$date           = $conn->real_escape_string($date);
-$time_from      = $conn->real_escape_string($time_from);
-$time_to        = $conn->real_escape_string($time_to);
-$status         = $conn->real_escape_string($status);
-$trackingFilter = $conn->real_escape_string($trackingFilter);
-$trackingNumber = $conn->real_escape_string($trackingNumber);
+// -------------------------
+// Sanitize Inputs
+// -------------------------
+$date      = $conn->real_escape_string($date);
+$time_from = $conn->real_escape_string($time_from);
+$time_to   = $conn->real_escape_string($time_to);
+
+// Validate date_filter to prevent SQL injection
+$allowed_filters = ['created_at', 'updated_at', 'issue_date'];
+$date_filter = in_array($date_filter, $allowed_filters) ? $date_filter : 'created_at';
 
 // -------------------------
 // Build WHERE Conditions
 // -------------------------
 $where = [];
 $where[] = "o.interface IN ('individual','leads')";
+$where[] = "o.status = 'dispatch'";
 
-if ($date != "")        $where[] = "DATE(o.updated_at) = '$date'";
-if ($time_from != "")   $where[] = "TIME(o.updated_at) >= '$time_from'";
-if ($time_to != "")     $where[] = "TIME(o.updated_at) <= '$time_to'";
-
-if ($status != "all")   $where[] = "o.status = '$status'";
-
-if ($trackingFilter === "with_tracking") {
-    $where[] = "o.tracking_number != ''";
-} else if ($trackingFilter === "without_tracking") {
-    $where[] = "(o.tracking_number = '' OR o.tracking_number IS NULL)";
-} else if ($trackingFilter === "specific_tracking" && $trackingNumber !== "") {
-    $where[] = "o.tracking_number LIKE '%$trackingNumber%'";
+// Default date
+if ($date === "" || !isset($_GET['date'])) {
+    $date = date("Y-m-d");
 }
+
+// Normalize time inputs (HH:MM format)
+$time_from = preg_match('/^\d{1,2}:\d{2}$/', $time_from) ? $time_from : "";
+$time_to   = preg_match('/^\d{1,2}:\d{2}$/', $time_to) ? $time_to : "";
+
+// Default start and end
+$startDateTime = $date . " 00:00:00";
+$endDateTime   = $date . " 23:59:59";
+
+// Apply time range filter
+if ($time_from !== "" && $time_to !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " $time_to:59";
+} elseif ($time_from !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " 23:59:59";
+} elseif ($time_to !== "") {
+    $startDateTime = $date . " 00:00:00";
+    $endDateTime   = $date . " $time_to:59";
+}
+
+// Apply filter on selected date field
+$where[] = "o.$date_filter BETWEEN '$startDateTime' AND '$endDateTime'";
+
+// Always include only orders with tracking numbers
+$where[] = "o.tracking_number IS NOT NULL AND o.tracking_number != ''";
 
 $whereClause = implode(" AND ", $where);
 
 // -------------------------
-// Final Query
+// Main Orders Query (without products)
 // -------------------------
 $sql = "
  SELECT  
@@ -75,36 +94,65 @@ $sql = "
     ct.city_name,
     o.total_amount,
     o.currency,
-    o.issue_date,
-    cr.courier_name,
-    IFNULL(GROUP_CONCAT(CONCAT(p.name,' (', oi.quantity, ')') SEPARATOR ', '),'') AS products
+    o.created_at,
+    o.updated_at,
+    cr.courier_name
  FROM order_header o
  LEFT JOIN customers c ON o.customer_id = c.customer_id
  LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
  LEFT JOIN city_table ct ON c.city_id = ct.city_id
- LEFT JOIN order_items oi ON oi.order_id = o.order_id
- LEFT JOIN products p ON p.id = oi.product_id
  WHERE $whereClause
- GROUP BY o.order_id
- ORDER BY o.updated_at DESC
+ ORDER BY o.$date_filter DESC
  LIMIT $limit
 ";
 
 $res = $conn->query($sql);
 $orders = [];
-if ($res) while ($row = $res->fetch_assoc()) $orders[] = $row;
+$order_ids = [];
+
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $orders[] = $row;
+        $order_ids[] = $row['order_id'];
+    }
+}
 
 // -------------------------
-// Company Info from Branding Table
+// Fetch Products Separately with Aggregation
+// -------------------------
+$products_by_order = [];
+if (!empty($order_ids)) {
+    $order_ids_str = implode(',', array_map('intval', $order_ids));
+    
+    $products_sql = "
+        SELECT 
+            oi.order_id,
+            oi.product_id,
+            p.name as product_name,
+            SUM(oi.quantity) as total_quantity
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id IN ($order_ids_str)
+        GROUP BY oi.order_id, oi.product_id, p.name
+        ORDER BY oi.order_id, oi.product_id
+    ";
+    
+    $products_result = $conn->query($products_sql);
+    if ($products_result) {
+        while ($item = $products_result->fetch_assoc()) {
+            if (!isset($products_by_order[$item['order_id']])) {
+                $products_by_order[$item['order_id']] = [];
+            }
+            $products_by_order[$item['order_id']][] = $item;
+        }
+    }
+}
+
+// -------------------------
+// Branding Info
 // -------------------------
 $branding = $conn->query("
-    SELECT 
-        company_name, 
-        web_name, 
-        address, 
-        hotline, 
-        email, 
-        logo_url 
+    SELECT company_name, web_name, address, hotline, email, logo_url 
     FROM branding 
     WHERE active = 1 
     ORDER BY branding_id DESC 
@@ -120,13 +168,12 @@ if ($branding && $branding->num_rows > 0) {
     $billingEmail = $brandingRow['email'];
     $billingWebsite = $brandingRow['web_name'];
 } else {
-    // fallback
-    // $companyName = "FE IT Solutions Pvt (Ltd)";
-    // $companyLogo = "../assets/images/FEIT.png";
-    // $billingAddress = "N/A";
-    // $billingHotline = "-";
-    // $billingEmail = "-";
-    // $billingWebsite = "-";
+    $companyName = "";
+    $companyLogo = "";
+    $billingAddress = "";
+    $billingHotline = "";
+    $billingEmail = "";
+    $billingWebsite = "";
 }
 
 // -------------------------
@@ -136,124 +183,186 @@ function currencySymbol($c)
 {
     return strtolower($c) === "usd" ? "$" : "Rs.";
 }
+
 function barcodeImg($d)
 {
     return "https://barcodeapi.org/api/code128/" . urlencode($d);
+}
+
+function formatProducts($order_id, $products_by_order)
+{
+    if (!isset($products_by_order[$order_id]) || empty($products_by_order[$order_id])) {
+        return 'N/A';
+    }
+    
+    $product_list = [];
+    foreach ($products_by_order[$order_id] as $item) {
+        $product_list[] = $item['product_id'] . ' - ' . $item['product_name'] . ' (' . $item['total_quantity'] . ')';
+    }
+    
+    return implode(', ', $product_list);
 }
 
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Bulk Print</title>
+<meta charset="UTF-8">
+<title>Bulk Print - <?php echo count($orders); ?> Labels</title>
 
 <style>
-@page { margin: 0; }
-body { margin:0; font-family: Arial; font-size:12px; }
+@page { 
+    margin: 0; 
+    size: 100mm 100mm;
+}
 
-/* NORMAL PAGE LAYOUT */
+body { 
+    margin: 0; 
+    font-family: Arial, sans-serif; 
+    font-size: 12px; 
+}
+
 .label-box {
     width: 100mm;
     height: 98mm;
     padding: 8px;
     border: 1px solid #ccc;
-    float: left;
-    margin: 5px;
     box-sizing: border-box;
+    page-break-after: always;
+    page-break-inside: avoid;
 }
-.small { font-size: 10px; color:#555; }
 
-/* PRINT MODE: 1 ORDER PER PAGE */
+.small { 
+    font-size: 10px; 
+    color: #555; 
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 5px 0;
+}
+
+/* Print Styles */
 @media print {
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    
     .label-box {
-        page-break-after: always !important;
-        float: none !important;
-        display: block !important;
+        border: none;
+        margin: 0;
+        padding: 8px;
     }
 }
+
+/* No orders message */
+.no-orders {
+    padding: 40px;
+    text-align: center;
+    font-size: 16px;
+    color: #666;
+}
 </style>
+
+<script>
+// Auto-print when page loads
+window.onload = function() {
+    setTimeout(function() {
+        window.print();
+    }, 500);
+};
+</script>
+
 </head>
 
-<body onload="window.print()">
+<body>
 
-<?php if (empty($orders)) { ?>
-    <p style="padding:20px;">No orders found.</p>
-<?php } ?>
+<?php if (empty($orders)): ?>
+    <div class="no-orders">
+        <h2>No Orders Found</h2>
+        <p>No orders found for the selected date and filters.</p>
+        <p>Please go back and adjust your search criteria.</p>
+    </div>
+<?php else: ?>
 
-<?php foreach ($orders as $o): ?>
+    <?php foreach ($orders as $o): ?>
 
-<div class="label-box">
+    <div class="label-box">
 
-    <!-- Header -->
-    <table width="100%">
-        <tr>
-            <td width="60">
-                <img src="<?php echo $companyLogo; ?>" width="50">
-            </td>
-            <td style="text-align:right;">
-                <b>Order: <?php echo $o['order_id']; ?></b><br>
-                <span class="small"><?php echo $o['issue_date'] ?: date("Y-m-d"); ?></span><br>
-                <span class="small"><?php echo $o['courier_name'] ?: "-"; ?></span>
-            </td>
-        </tr>
-    </table>
+        <!-- Header -->
+        <table width="100%">
+            <tr>
+                <td width="60">
+                    <?php if (!empty($companyLogo)): ?>
+                        <img src="<?php echo htmlspecialchars($companyLogo); ?>" width="50" alt="Company Logo">
+                    <?php endif; ?>
+                </td>
+                <td style="text-align:right;">
+                    <b>Order: <?php echo htmlspecialchars($o['order_id']); ?></b><br>
+                    <span class="small"><?php echo htmlspecialchars($o['created_at'] ?: date("Y-m-d")); ?></span><br>
+                    <span class="small"><?php echo htmlspecialchars($o['courier_name'] ?: "-"); ?></span><br>
+                    <?php if (!empty($o['pay_status']) && $o['pay_status'] === 'paid'): ?>
+                        <span style="color: green; font-weight: bold; font-size: 11px; display: inline-block; margin-top: 3px; padding: 2px 6px; background-color: #d4edda; border-radius: 3px;">
+                            ✔ PAID
+                        </span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
 
-    <!-- Billing From Details -->
-    <div style="font-size:10px; margin-top:5px;">
-        <?php echo $companyName; ?><br>
-        <?php echo nl2br($billingAddress); ?><br>
-        Hotline: <?php echo $billingHotline; ?><br>
-        Email: <?php echo $billingEmail; ?><br>
-        <!-- Website: <?php echo $billingWebsite; ?> -->
+        <!-- Billing From Details -->
+        <div style="font-size:10px; margin-top:5px;">
+            <?php echo htmlspecialchars($companyName); ?><br>
+            <?php echo nl2br(htmlspecialchars($billingAddress)); ?><br>
+            Hotline: <?php echo htmlspecialchars($billingHotline); ?><br>
+            Email: <?php echo htmlspecialchars($billingEmail); ?>
+        </div>
+
+        <hr>
+
+        <!-- Customer Details -->
+        <b><?php echo htmlspecialchars($o['name']); ?></b><br>
+        Phone: <?php echo htmlspecialchars($o['phone']); ?><br>
+        <?php if (!empty($o['phone_2'])): ?>
+            Phone 2: <?php echo htmlspecialchars($o['phone_2']); ?><br>
+        <?php endif; ?>
+
+        <?php
+            $addr = $o['o_addr1'] ?: $o['c_addr1'];
+            $addr2 = $o['o_addr2'] ?: $o['c_addr2'];
+        ?>
+        Address: <?php echo htmlspecialchars(trim($addr . " " . $addr2)); ?><br>
+        <?php if (!empty($o['city_name'])): ?>
+            City: <?php echo htmlspecialchars($o['city_name']); ?><br>
+        <?php endif; ?>
+
+        <hr>
+
+        <!-- Products -->
+        <b>Products:</b><br>
+        <span class="small"><?php echo htmlspecialchars(formatProducts($o['order_id'], $products_by_order)); ?></span>
+
+        <hr>
+
+        <!-- Total Amount -->
+        <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
+
+        <br>
+
+        <!-- Barcode -->
+        <?php if (!empty($o['tracking_number'])): ?>
+            <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
+                 style="width:150px; height:auto;" 
+                 alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
+        <?php endif; ?>
+
     </div>
 
-    <hr>
+    <?php endforeach; ?>
 
-    <!-- Customer -->
-    <b><?php echo $o['name']; ?></b><br>
-    Phone: <?php echo $o['phone']; ?><br>
-    <?php if (!empty($o['phone_2'])): ?>
-        Phone 2: <?php echo $o['phone_2']; ?><br>
-    <?php endif; ?>
-
-    <?php
-        $addr = $o['o_addr1'] ?: $o['c_addr1'];
-        $addr2 = $o['o_addr2'] ?: $o['c_addr2'];
-    ?>
-    Address: <?php echo $addr . " " . $addr2; ?><br>
-    City: <?php echo $o['city_name']; ?><br>
-
-    <hr>
-
-    <!-- Products -->
-    <b>Products:</b><br>
-    <span class="small"><?php echo $o['products']; ?></span>
-
-    <hr>
-
-    <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
-
-    <?php if (!empty($o['pay_status']) && $o['pay_status'] === 'paid'): ?>
-        <div style="color: green; font-weight: bold; margin-top: 4px;">
-            ✔ ALREADY PAID
-        </div>
-    <?php endif; ?>
-
-    <br><br>
-
-    <!-- Barcode -->
-    <?php if (!empty($o['tracking_number'])): ?>
-        <img src="<?php echo barcodeImg($o['tracking_number']); ?>" style="width:150px;"><br>
-    <?php else: ?>
-        <div style="border:1px dashed red; padding:5px; text-align:center;">
-            NO TRACKING
-        </div>
-    <?php endif; ?>
-
-</div>
-
-<?php endforeach; ?>
+<?php endif; ?>
 
 </body>
 </html>

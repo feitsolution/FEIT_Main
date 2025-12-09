@@ -43,12 +43,13 @@ $order_id = $_GET['id'];
 // =============================================================
 //  ORDER HEADER QUERY
 // =============================================================
-// ✅ CHANGE 1: Added c.phone_2 to query and display_mobile_2 field
+// ✅ ADDED: pay_status, pay_by, pay_date fields to query
 $order_query = "SELECT o.*, c.name as customer_name, c.phone as customer_phone, 
                 c.phone_2 as customer_phone_2,
                 c.email as customer_email, c.city_id,
                 CONCAT_WS(', ', c.address_line1, c.address_line2) as customer_address,
                 o.delivery_fee, o.discount, o.total_amount, o.issue_date, o.tracking_number,
+                o.pay_status, o.pay_by, o.pay_date,
                 cr.courier_name as delivery_service,
                 ct.city_name,
 
@@ -120,6 +121,9 @@ $total_payable = floatval($order['total_amount']);
 $tracking_number = !empty($order['tracking_number']) ? $order['tracking_number'] : '';
 $has_tracking = !empty($tracking_number);
 
+// ✅ ADDED: Payment status check
+$is_paid = !empty($order['pay_status']) && $order['pay_status'] === 'paid';
+
 function getBarcodeUrl($data) {
     return "https://barcodeapi.org/api/code128/{$data}";
 }
@@ -139,6 +143,20 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Print - <?php echo $order_id; ?></title>
     <link rel="stylesheet" href="../assets/css/print.css" id="main-style-link" />
+    <style>
+        /* Additional styling for payment badge */
+        .payment-badge {
+            display: inline-block;
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-top: 2mm;
+        }
+    </style>
 </head>
 
 <body>
@@ -176,20 +194,26 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
                 <!-- ORDER ID + BARCODE -->
                 <td class="order-id-cell">
 
-                    <div style="font-weight:bold; margin-bottom:2mm;">
+                    <div style="font-weight:bold; ">
                         Order ID: <?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?>
                     </div>
 
+                    <?php if ($is_paid): ?>
+                        <div class="payment-badge">
+                            ✔ PAID
+                        </div>
+                    <?php endif; ?>
+
                     <?php if ($has_tracking): ?>
-                        <div class="barcode-section">
+                        <div class="barcode-section" style="margin-top:2mm;">
                             <img src="<?php echo $barcode_url; ?>" 
                                  alt="Tracking Barcode" 
                                  class="barcode-image"
                                  onerror="this.style.display='none'">
                         </div>
                     <?php else: ?>
-                        <div style="color:#dc2626; font-weight:bold;">No Tracking Assigned</div>
-                        <div style="border:2px dashed #dc2626; padding:8px; text-align:center;">
+                        <div style="color:#dc2626; font-weight:bold; margin-top:2mm;">No Tracking Assigned</div>
+                        <div style="border:2px dashed #dc2626; padding:8px; text-align:center; margin-top:2mm;">
                             NO BARCODE<br><span style="font-size:8px;">Tracking not available</span>
                         </div>
                     <?php endif; ?>
@@ -218,7 +242,7 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
             <!-- PRODUCT LIST -->
             <tr>
                 <td class="product-header" colspan="3">
-                    <strong>Products (<?php echo count($items); ?>):</strong>
+                    <strong>Products :</strong>
                     <div style="margin-top:1mm; font-size:9px;">
                         <?php 
                         $product_list = [];
@@ -244,9 +268,6 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
             <tr>
                 <td class="customer-info">
                     <strong>Name:</strong> <?php echo htmlspecialchars(substr($order['display_name'], 0, 20)); ?><br>
-                    <?php 
-                    // ✅ CHANGE 2: Display both phone numbers with conditional display
-                    ?>
                     <strong>Phone 1:</strong> <?php echo htmlspecialchars($order['display_mobile']); ?><br>
                     <?php if (!empty($order['display_mobile_2'])): ?>
                         <strong>Phone 2:</strong> <?php echo htmlspecialchars($order['display_mobile_2']); ?><br>
