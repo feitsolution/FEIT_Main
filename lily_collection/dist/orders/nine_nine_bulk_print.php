@@ -39,9 +39,10 @@ $trackingNumber = $conn->real_escape_string($trackingNumber);
 $where = [];
 $where[] = "o.interface IN ('individual','leads')";
 
-if ($date != "")        $where[] = "DATE(o.updated_at) = '$date'";
-if ($time_from != "")   $where[] = "TIME(o.updated_at) >= '$time_from'";
-if ($time_to != "")     $where[] = "TIME(o.updated_at) <= '$time_to'";
+// CHANGED: Filter by created_at instead of updated_at for dispatch date
+if ($date != "")        $where[] = "DATE(o.created_at) = '$date'";
+if ($time_from != "")   $where[] = "TIME(o.created_at) >= '$time_from'";
+if ($time_to != "")     $where[] = "TIME(o.created_at) <= '$time_to'";
 
 if ($status != "all")   $where[] = "o.status = '$status'";
 
@@ -65,6 +66,7 @@ $sql = "
     o.pay_status,
     o.pay_by,
     o.pay_date,
+    o.created_at,
     COALESCE(NULLIF(o.full_name,''), NULLIF(c.name,''), 'Unknown Customer') AS name,
     COALESCE(NULLIF(o.mobile,''), NULLIF(c.phone,''), 'No phone') AS phone,
     NULLIF(o.address_line1,'') AS o_addr1,
@@ -85,7 +87,7 @@ $sql = "
  LEFT JOIN products p ON p.id = oi.product_id
  WHERE $whereClause
  GROUP BY o.order_id
- ORDER BY o.updated_at DESC
+ ORDER BY o.created_at DESC
  LIMIT $limit
 ";
 
