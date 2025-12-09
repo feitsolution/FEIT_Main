@@ -4,7 +4,6 @@ session_start();
 
 // Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    // Clear any existing output buffers
     if (ob_get_level()) {
         ob_end_clean();
     }
@@ -36,8 +35,8 @@ $offset = ($page - 1) * $limit;
 // Base SQL for counting total records with city join
 $countSql = "SELECT COUNT(*) as total FROM customers c LEFT JOIN city_table ct ON c.city_id = ct.city_id";
 
-// Main query with city join
-$sql = "SELECT c.customer_id, c.name, c.email, c.phone, c.address_line1, c.address_line2, 
+// Main query with city join - ADDED phone_2
+$sql = "SELECT c.customer_id, c.name, c.email, c.phone, c.phone_2, c.address_line1, c.address_line2, 
         c.city_id, ct.city_name, c.status, c.created_at, c.updated_at 
         FROM customers c
         LEFT JOIN city_table ct ON c.city_id = ct.city_id";
@@ -45,14 +44,15 @@ $sql = "SELECT c.customer_id, c.name, c.email, c.phone, c.address_line1, c.addre
 // Build search conditions
 $searchConditions = [];
 
-// General search condition
+// General search condition - ADDED phone_2 to search
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         c.customer_id LIKE '%$searchTerm%' OR
                         c.name LIKE '%$searchTerm%' OR 
                         c.email LIKE '%$searchTerm%' OR 
-                        c.phone LIKE '%$searchTerm%' OR 
+                        c.phone LIKE '%$searchTerm%' OR
+                        c.phone_2 LIKE '%$searchTerm%' OR
                         c.address_line1 LIKE '%$searchTerm%' OR
                         c.address_line2 LIKE '%$searchTerm%' OR
                         ct.city_name LIKE '%$searchTerm%')";
@@ -76,10 +76,10 @@ if (!empty($email_filter)) {
     $searchConditions[] = "c.email LIKE '%$emailTerm%'";
 }
 
-// Specific Phone filter
+// Specific Phone filter - UPDATED to search both phone and phone_2
 if (!empty($phone_filter)) {
     $phoneTerm = $conn->real_escape_string($phone_filter);
-    $searchConditions[] = "c.phone LIKE '%$phoneTerm%'";
+    $searchConditions[] = "(c.phone LIKE '%$phoneTerm%' OR c.phone_2 LIKE '%$phoneTerm%')";
 }
 
 // Status filter
@@ -145,9 +145,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
-        <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
-    
-   
+    <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
 </head>
 
 <body>
@@ -195,7 +193,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                         <div class="form-group">
                             <label for="phone_filter">Phone</label>
                             <input type="text" id="phone_filter" name="phone_filter" 
-                                   placeholder="Enter phone number" 
+                                   placeholder="Search phone numbers" 
                                    value="<?php echo htmlspecialchars($phone_filter); ?>">
                         </div>
                         
@@ -235,6 +233,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                         </div>
                     </form>
                 </div>
+
                 <!-- Customer Count Display -->
                 <div class="order-count-container">
                     <div class="order-count-number"><?php echo number_format($totalRows); ?></div>
@@ -269,11 +268,25 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                                             </div>
                                         </td>
                                         
-                                        <!-- Phone & Email (Combined Column) -->
+                                        <!-- Phone & Email (Combined Column) - UPDATED to show phone_2 -->
                                         <td>
-                                            <div style="line-height: 1.4;">
-                                                <div style="font-weight: 500; margin-bottom: 2px;"><?php echo htmlspecialchars($row['phone']); ?></div>
-                                                <div style="font-size: 12px; color: #6c757d;"><?php echo htmlspecialchars($row['email']); ?></div>
+                                            <div style="line-height: 1.6;">
+                                                <div style="font-weight: 500; margin-bottom: 2px;">
+                                                    <i class="fas fa-phone" style="font-size: 11px; margin-right: 4px;"></i>
+                                                    <?php echo htmlspecialchars($row['phone']); ?>
+                                                </div>
+                                                <?php if (!empty($row['phone_2'])): ?>
+                                                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 2px;">
+                                                        <i class="fas fa-phone" style="font-size: 10px; margin-right: 4px;"></i>
+                                                        <?php echo htmlspecialchars($row['phone_2']); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($row['email'])): ?>
+                                                    <div style="font-size: 12px; color: #007bff;">
+                                                        <i class="fas fa-envelope" style="font-size: 10px; margin-right: 4px;"></i>
+                                                        <?php echo htmlspecialchars($row['email']); ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         
@@ -299,7 +312,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                                             <?php endif; ?>
                                         </td>
                                         
-                                        <!-- Action Buttons -->
+                                        <!-- Action Buttons - ADDED phone_2 data attribute -->
                                         <td class="actions">
                                             <div class="action-buttons-group">
                                                 <button type="button" class="action-btn view-btn view-customer-btn"
@@ -307,6 +320,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                                                         data-customer-name="<?= htmlspecialchars($row['name']) ?>"
                                                         data-customer-email="<?= htmlspecialchars($row['email']) ?>"
                                                         data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
+                                                        data-customer-phone2="<?= htmlspecialchars($row['phone_2'] ?? '') ?>"
                                                         data-customer-address1="<?= htmlspecialchars($row['address_line1']) ?>"
                                                         data-customer-address2="<?= htmlspecialchars($row['address_line2'] ?? '') ?>"
                                                         data-customer-city="<?= htmlspecialchars($row['city_id']) ?>"
@@ -323,15 +337,14 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                           
-                                            <!-- Fixed Button with Correct Logic -->
-                                             <button type="button" class="action-btn <?= $row['status'] == 'Active' ? 'deactivate-btn' : 'activate-btn' ?> toggle-status-btn"
-                                              data-customer-id="<?= $row['customer_id'] ?>"
-                                              data-current-status="<?= $row['status'] ?>"
-                                              data-customer-name="<?= htmlspecialchars($row['name']) ?>"
-                                               title="<?= $row['status'] == 'Active' ? 'Deactivate Customer' : 'Activate Customer' ?>"
-                                               data-action="<?= $row['status'] == 'Active' ? 'deactivate' : 'activate' ?>">
-                                                   <i class="fas <?= $row['status'] == 'Active' ? 'fa-user-times' : 'fa-user-check' ?>"></i>
-                                            </button>
+                                                <button type="button" class="action-btn <?= $row['status'] == 'Active' ? 'deactivate-btn' : 'activate-btn' ?> toggle-status-btn"
+                                                  data-customer-id="<?= $row['customer_id'] ?>"
+                                                  data-current-status="<?= $row['status'] ?>"
+                                                  data-customer-name="<?= htmlspecialchars($row['name']) ?>"
+                                                   title="<?= $row['status'] == 'Active' ? 'Deactivate Customer' : 'Activate Customer' ?>"
+                                                   data-action="<?= $row['status'] == 'Active' ? 'deactivate' : 'activate' ?>">
+                                                       <i class="fas <?= $row['status'] == 'Active' ? 'fa-user-times' : 'fa-user-check' ?>"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -378,7 +391,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
         </div>
     </div>
 
-    <!-- Customer Details Modal -->
+    <!-- Customer Details Modal - ADDED phone_2 field -->
     <div id="customerDetailsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -402,6 +415,10 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                     <span class="detail-label">Phone:</span>
                     <span class="detail-value" id="modal-customer-phone"></span>
                 </div>
+                <div class="customer-detail-row" id="phone2-row" style="display: none;">
+                    <span class="detail-label">Phone 2:</span>
+                    <span class="detail-value" id="modal-customer-phone2"></span>
+                </div>
                 <div class="customer-detail-row">
                     <span class="detail-label">Address:</span>
                     <span class="detail-value">
@@ -411,10 +428,6 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
                 <div class="customer-detail-row">
                     <span class="detail-label">City:</span>
                     <span class="detail-value" id="modal-customer-city"></span>
-                </div>
-                <div class="customer-detail-row">
-                    <span class="detail-label">Postal Code:</span>
-                    <span class="detail-value" id="modal-customer-postal"></span>
                 </div>
                 <div class="customer-detail-row">
                     <span class="detail-label">Status:</span>
@@ -434,7 +447,6 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
         </div>
     </div>
 
-   
     <!-- Status Confirmation Modal -->
     <div id="statusConfirmationModal" class="modal confirmation-modal">
         <div class="modal-content confirmation-modal-content">
@@ -462,7 +474,6 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
         </div>
     </div>
 
-
     <!-- Footer -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/footer.php'); ?>
 
@@ -474,7 +485,7 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
             window.location.href = 'customer_list.php';
         }
 
-        // Customer Details Modal Functions
+        // Customer Details Modal Functions - UPDATED to handle phone_2
         function openCustomerModal(button) {
             const modal = document.getElementById('customerDetailsModal');
             
@@ -483,11 +494,11 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
             const customerName = button.getAttribute('data-customer-name');
             const customerEmail = button.getAttribute('data-customer-email');
             const customerPhone = button.getAttribute('data-customer-phone');
+            const customerPhone2 = button.getAttribute('data-customer-phone2');
             const customerAddress1 = button.getAttribute('data-customer-address1');
             const customerAddress2 = button.getAttribute('data-customer-address2');
             const customerCity = button.getAttribute('data-customer-city');
             const customerCityName = button.getAttribute('data-customer-city-name');
-            const customerPostal = button.getAttribute('data-customer-postal');
             const customerStatus = button.getAttribute('data-customer-status');
             const customerCreated = button.getAttribute('data-customer-created');
             const customerUpdated = button.getAttribute('data-customer-updated');
@@ -495,8 +506,18 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
             // Populate modal fields
             document.getElementById('modal-customer-id').textContent = customerId;
             document.getElementById('modal-customer-name').textContent = customerName;
-            document.getElementById('modal-customer-email').textContent = customerEmail;
+            document.getElementById('modal-customer-email').textContent = customerEmail || 'N/A';
             document.getElementById('modal-customer-phone').textContent = customerPhone;
+            
+            // Handle phone_2 - show/hide row based on value
+            const phone2Row = document.getElementById('phone2-row');
+            const phone2Value = document.getElementById('modal-customer-phone2');
+            if (customerPhone2 && customerPhone2.trim() !== '') {
+                phone2Value.textContent = customerPhone2;
+                phone2Row.style.display = 'flex';
+            } else {
+                phone2Row.style.display = 'none';
+            }
             
             // Build address display
             let addressDisplay = customerAddress1;
@@ -506,7 +527,6 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
             document.getElementById('modal-customer-address').innerHTML = addressDisplay;
             
             document.getElementById('modal-customer-city').textContent = customerCityName || customerCity || 'N/A';
-            document.getElementById('modal-customer-postal').textContent = customerPostal || 'N/A';
             
             // Set status badge
             const statusElement = document.getElementById('modal-customer-status');
@@ -557,38 +577,11 @@ $cities = $city_result->fetch_all(MYSQLI_ASSOC);
             window.location.href = 'edit_customer.php?id=' + customerId;
         }
 
-        function deleteCustomer(customerId, customerName) {
-            if (confirm('Are you sure you want to delete customer "' + customerName + '"? This action cannot be undone.')) {
-                fetch('delete_customer.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        customer_id: customerId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Customer deleted successfully!');
-                        location.reload();
-                    } else {
-                        alert('Error deleting customer: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the customer.');
-                });
-            }
-        }
-
         function closeConfirmationModal() {
             document.getElementById('statusConfirmationModal').style.display = 'none';
         }
 
-        // Toggle Customer Status Functionality
+              // Toggle Customer Status Functionality
         document.addEventListener('DOMContentLoaded', function() {
             // Add event listeners for toggle status buttons
             const toggleButtons = document.querySelectorAll('.toggle-status-btn');

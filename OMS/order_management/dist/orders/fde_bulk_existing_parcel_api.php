@@ -1,8 +1,14 @@
 <?php
 /**
- * FDE Bulk Existing Parcel API Handler - EXACT DATA VERSION
- * @version 2.2
+ * FDE Bulk Existing Parcel API Handler - WITH PHONE 2 SUPPORT & CUSTOM DESCRIPTION
+ * @version 2.4
  * @date 2025
+ * 
+ * CHANGES:
+ * - Added phone_2 field to SQL query
+ * - Added phone_2 to API data payload
+ * - Added fallback logic for empty phone_2
+ * - Updated description format to match New API style: "Order #XXX - Y items"
  */
 
 session_start();
@@ -61,7 +67,9 @@ function callFdeApi($apiData) {
     ];
 }
 
-// Get parcel description and weight
+// ==========================================
+// ✅ UPDATED: Get parcel description and weight (NEW API STYLE)
+// ==========================================
 function getParcelData($orderId, $conn) {
     $stmt = $conn->prepare("SELECT SUM(quantity) as total_qty FROM order_items WHERE order_id = ?");
     $stmt->bind_param("i", $orderId);
@@ -80,6 +88,7 @@ function getParcelData($orderId, $conn) {
         'weight' => number_format($weight, 1)
     ];
 }
+
 try {
     include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
     
@@ -116,10 +125,19 @@ try {
         throw new Exception("Need $orderCount tracking numbers, only " . count($tracking) . " available");
     }
     
-    // Get orders
+    // ==========================================
+    // ✅ CHANGE 1: Added phone_2 to SELECT query
+    // ==========================================
     $placeholders = str_repeat('?,', count($orderIds) - 1) . '?';
     $stmt = $conn->prepare("
-        SELECT oh.*, c.name as customer_name, c.phone as customer_phone, c.address_line1 as customer_address1, c.address_line2 as customer_address2, ct.city_name
+        SELECT 
+            oh.*, 
+            c.name as customer_name, 
+            c.phone as customer_phone, 
+            c.phone_2 as customer_phone_2,
+            c.address_line1 as customer_address1, 
+            c.address_line2 as customer_address2, 
+            ct.city_name
         FROM order_header oh 
         LEFT JOIN customers c ON oh.customer_id = c.customer_id 
         LEFT JOIN city_table ct ON c.city_id = ct.city_id
@@ -142,26 +160,46 @@ try {
         $trackingNumber = $tracking[$index]['tracking_id'];
         
         try {
+            // ==========================================
+            // ✅ USES NEW getParcelData function with custom description
+            // ==========================================
             $parcelData = getParcelData($orderId, $conn);
             
             // Determine amount based on pay_status
             $apiAmount = ($order['pay_status'] === 'paid') ? 0 : $order['total_amount'];
             
+            // ==========================================
+            // ✅ CHANGE 2: Prepare phone numbers with proper fallback
+            // ==========================================
+            // Primary phone (required)
+            $recipientPhone1 = $order['mobile'] ?: $order['customer_phone'];
+            
+            // Secondary phone (optional) - use customer_phone_2 if available
+            $recipientPhone2 = !empty($order['customer_phone_2']) ? $order['customer_phone_2'] : '';
+            
+            // ==========================================
+            // ✅ CHANGE 3: Updated API data array with phone_2
+            // ==========================================
             $apiData = [
                 'api_key' => $courier['api_key'],
                 'client_id' => $courier['client_id'],
                 'waybill_id' => $trackingNumber,
                 'order_id' => $orderId,
                 'parcel_weight' => $parcelData['weight'],
-                'parcel_description' => $parcelData['description'],
+                'parcel_description' => $parcelData['description'],  // Now uses "Order #XXX - Y items" format
                 'recipient_name' => $order['full_name'] ?: $order['customer_name'],
-                'recipient_contact_1' => $order['mobile'] ?: $order['customer_phone'],
-                'recipient_contact_2' => '',
+                'recipient_contact_1' => $recipientPhone1,
+                'recipient_contact_2' => $recipientPhone2,  // ✅ Now includes phone_2
                 'recipient_address' => trim(($order['address_line1'] ?? $order['customer_address1'] ?? '') . ' ' . ($order['address_line2'] ?? $order['customer_address2'] ?? '')),
                 'recipient_city' => $order['city_name'] ?: '',  // Pass exact city data, empty if null
                 'amount' => $apiAmount,
                 'exchange' => '0'
             ];
+            
+            // ==========================================
+            // ✅ CHANGE 4: Added debug logging for phone numbers
+            // ==========================================
+            error_log("DEBUG - Order $orderId API Data: Phone1={$recipientPhone1}, Phone2={$recipientPhone2}, Description={$parcelData['description']}");
             
             $result = callFdeApi($apiData);
             
@@ -179,11 +217,21 @@ try {
                 $stmt->bind_param("i", $orderId);
                 $stmt->execute();
                 
+                // ==========================================
+                // ✅ CHANGE 5: Enhanced logging with phone info and description
+                // ==========================================
                 logAction($conn, $userId, 'api_existing_dispatch', $orderId, 
-                    "Order $orderId dispatched - Tracking: $trackingNumber, Status: {$result['message']}");
+                    "Order $orderId dispatched - Tracking: $trackingNumber, Description: {$parcelData['description']}, Phone1: $recipientPhone1, Phone2: " . ($recipientPhone2 ?: 'N/A') . ", Status: {$result['message']}");
                 
                 $successCount++;
-                $processedOrders[] = ['order_id' => $orderId, 'tracking_number' => $trackingNumber];
+                $processedOrders[] = [
+                    'order_id' => $orderId, 
+                    'tracking_number' => $trackingNumber,
+                    'description' => $parcelData['description'],
+                    'weight' => $parcelData['weight'],
+                    'phone_1' => $recipientPhone1,
+                    'phone_2' => $recipientPhone2
+                ];
                 
             } else {
                 $failedOrders[] = [

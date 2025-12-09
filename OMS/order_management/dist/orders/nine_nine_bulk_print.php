@@ -67,6 +67,7 @@ $sql = "
     o.pay_date,
     COALESCE(NULLIF(o.full_name,''), NULLIF(c.name,''), 'Unknown Customer') AS name,
     COALESCE(NULLIF(o.mobile,''), NULLIF(c.phone,''), 'No phone') AS phone,
+    NULLIF(c.phone_2,'') AS phone_2,
     NULLIF(o.address_line1,'') AS o_addr1,
     NULLIF(o.address_line2,'') AS o_addr2,
     NULLIF(c.address_line1,'') AS c_addr1,
@@ -120,12 +121,12 @@ if ($branding && $branding->num_rows > 0) {
     $billingWebsite = $brandingRow['web_name'];
 } else {
     // fallback
-    $companyName = "FE IT Solutions Pvt (Ltd)";
-    $companyLogo = "../assets/images/FEIT.png";
-    $billingAddress = "N/A";
-    $billingHotline = "-";
-    $billingEmail = "-";
-    $billingWebsite = "-";
+    // $companyName = "FE IT Solutions Pvt (Ltd)";
+    // $companyLogo = "../assets/images/FEIT.png";
+    // $billingAddress = "N/A";
+    // $billingHotline = "-";
+    // $billingEmail = "-";
+    // $billingWebsite = "-";
 }
 
 // -------------------------
@@ -212,6 +213,9 @@ body { margin:0; font-family: Arial; font-size:12px; }
     <!-- Customer -->
     <b><?php echo $o['name']; ?></b><br>
     Phone: <?php echo $o['phone']; ?><br>
+    <?php if (!empty($o['phone_2'])): ?>
+        Phone 2: <?php echo $o['phone_2']; ?><br>
+    <?php endif; ?>
 
     <?php
         $addr = $o['o_addr1'] ?: $o['c_addr1'];

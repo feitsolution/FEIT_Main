@@ -22,7 +22,10 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $order_id = $_GET['id'];
 $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] === 'true';
 
-// Updated query to include payment slip information
+// ==========================================
+// ✅ CHANGE 1: Added c.phone_2 to SELECT query
+// ==========================================
+// Updated query to include payment slip information and phone_2
 $order_query = "SELECT 
                 i.*, 
                 i.pay_status AS order_pay_status, 
@@ -30,6 +33,7 @@ $order_query = "SELECT
                 CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
                 c.email AS customer_email, 
                 c.phone AS customer_phone,
+                c.phone_2 AS customer_phone_2,
                 city.city_name AS customer_city,
                 p.payment_id, 
                 p.amount_paid, 
@@ -318,6 +322,14 @@ $column_count = $has_any_discount ? 5 : 4;
             object-fit: contain;
         }
 
+        /* ==========================================
+           ✅ CHANGE 2: Added styling for secondary phone
+           ========================================== */
+        .phone-secondary {
+            color: #666;
+            font-size: 0.95em;
+        }
+
         /* Make alerts responsive */
         @media (max-width: 768px) {
             .alert {
@@ -502,7 +514,16 @@ $column_count = $has_any_discount ? 5 : 4;
                     <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong><br>
                     <?php echo nl2br(htmlspecialchars($order['customer_address'])); ?><br>
                     City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
-                    Phone: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    
+                    <?php 
+                    // ==========================================
+                    // ✅ CHANGE 3: Display phone numbers with phone_2 support
+                    // ==========================================
+                    ?>
+                    PhoneNumber 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    <?php if (!empty($order['customer_phone_2'])): ?>
+                        <br><span class="phone-secondary">Phone Number 2: <?php echo htmlspecialchars($order['customer_phone_2']); ?></span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

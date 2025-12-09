@@ -1,15 +1,16 @@
 <?php
-// CRITICAL: Start output buffering FIRST
-ob_start();
+// Start session at the very beginning
+session_start();
 
-// Start session AFTER output buffering
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
+// Check if user is logged in, if not redirect to login page
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    // Clear any existing output buffers
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    header("Location: /OMS/order_management/dist/pages/login.php");
+    exit();
 }
-
-// Disable error reporting for production
-error_reporting(0);
-ini_set('display_errors', 0);
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
@@ -21,1712 +22,1291 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = nu
     return $stmt->execute();
 }
 
-/**
- * Get user-friendly FDE API status message
- * Handles both New Parcel API and Existing Parcel API status codes
- */
-function getFdeStatusMessage($status_code, $api_type = 'new') {
-    if ($api_type === 'existing') {
-        // FDE Existing Parcel API status messages
-        $existing_status_messages = [
-            200 => 'Successfully insert the parcel',
-            201 => 'Incorrect waybill type. Only allow CRE or CCP',
-            202 => 'The waybill is used',
-            203 => 'The waybill is not yet assigned',
-            204 => 'Inactive Client',
-            205 => 'Invalid order id',
-            206 => 'Invalid weight',
-            207 => 'Empty or invalid parcel description',
-            208 => 'Empty or invalid name',
-            209 => 'Invalid contact number 1',
-            210 => 'Invalid contact number 2',
-            211 => 'Empty or invalid address',
-            212 => 'Empty or invalid amount (If you have CRE numbers, you can ignore or set as a 0 value to this)',
-            213 => 'Invalid city',
-            214 => 'Parcel insert unsuccessfully',
-            215 => 'Invalid or inactive client',
-            216 => 'Invalid API key',
-            217 => 'Invalid exchange value',
-            218 => 'System maintain mode is activated'
-        ];
+// Function to check courier and tracking status
+function checkCourierStatus($conn) {
+    $status = [
+        'has_courier' => false,
+        'courier_type' => null,
+        'courier_name' => '',
+        'has_tracking' => false,
+        'tracking_count' => 0,
+        'warning_message' => '',
+        'error_message' => '',
+        'info_message' => ''
+    ];
+  
+    // Get default courier - Updated to include status 3 (Existing API Parcel)
+    $courierSql = "SELECT courier_id, courier_name, api_key, client_id, is_default, status 
+                   FROM couriers 
+                   WHERE is_default IN (1, 2, 3) AND status = 'active' 
+                   ORDER BY is_default ASC 
+                   LIMIT 1";
+    $courierResult = $conn->query($courierSql);
+    
+    if ($courierResult && $courierResult->num_rows > 0) {
+        $courier = $courierResult->fetch_assoc();
+        $status['has_courier'] = true;
+        $status['courier_type'] = $courier['is_default'];
+        $status['courier_name'] = $courier['courier_name'];
         
-        return isset($existing_status_messages[$status_code]) ? $existing_status_messages[$status_code] : 'Unknown error occurred';
+        if ($courier['is_default'] == 1) {
+            // Internal tracking system - check for unused tracking numbers
+            $trackingSql = "SELECT COUNT(*) as unused_count 
+                           FROM tracking 
+                           WHERE courier_id = ? AND status = 'unused'";
+            $trackingStmt = $conn->prepare($trackingSql);
+            $trackingStmt->bind_param("i", $courier['courier_id']);
+            $trackingStmt->execute();
+            $trackingResult = $trackingStmt->get_result();
+            
+            if ($trackingResult) {
+                $trackingData = $trackingResult->fetch_assoc();
+                $status['tracking_count'] = $trackingData['unused_count'];
+                
+                if ($status['tracking_count'] > 0) {
+                    $status['has_tracking'] = true;
+                } else {
+                    // $status['warning_message'] = "Warning: No unused tracking numbers available. Orders will be created as 'pending' status until tracking numbers are added.";
+                }
+            }
+                    } else if ($courier['is_default'] == 2) {
+                    // FDE API system
+                    $status['has_tracking'] = true; // API generates tracking numbers
+                    if (empty($courier['api_key'])) {
+                        $status['warning_message'] = "Warning: {$courier['courier_name']} API key is missing. Orders may not get tracking numbers automatically.";
+                    }
+                } else if ($courier['is_default'] == 3) {
+                    // Existing API Parcel system
+                    $status['has_tracking'] = true; // API integration available
+                    if (empty($courier['api_key'])) {
+                        $status['warning_message'] = "Warning: {$courier['courier_name']} API key is missing. Existing API integration may not function properly.";
+                    } else {
+                        // $status['info_message'] = "Using existing API parcel integration for {$courier['courier_name']}.";
+                    }
+                }
     } else {
-        // FDE New Parcel API status messages (default)
-        $new_status_messages = [
-            200 => 'Successful insert',
-            201 => 'Inactive Client',
-            202 => 'Invalid order id',
-            203 => 'Invalid weight',
-            204 => 'Empty or invalid parcel description',
-            205 => 'Empty or invalid name',
-            206 => 'Contact number 1 is not valid',
-            207 => 'Contact number 2 is not valid',
-            208 => 'Empty or invalid address',
-            209 => 'Invalid City',
-            210 => 'Unsuccessful insert, try again',
-            211 => 'Invalid API key',
-            212 => 'Invalid or inactive client',
-            213 => 'Invalid exchange value',
-            214 => 'System maintain mode is activated'
-        ];
-        
-        return isset($new_status_messages[$status_code]) ? $new_status_messages[$status_code] : 'Unknown error occurred';
+        $status['info_message'] = "No default courier selected. ";
     }
+    
+    return $status;
 }
 
-// Function to set session message and redirect
-function setMessageAndRedirect($type, $message, $redirect_url = null) {
-    $_SESSION["order_{$type}"] = $message;
-    
-    // Default redirect to create order page
-    if (!$redirect_url) {
-        $redirect_url = "/OMS/order_management/dist/orders/create_order.php";
-    }
-    
-    // Clean output buffer
-    if (ob_get_level()) {
-        ob_end_clean();
-    }
-    
-    // Check if headers can be sent
-    if (!headers_sent()) {
-        header("Location: " . $redirect_url, true, 303);
-        exit();
-    } else {
-        // Fallback: JavaScript redirect
-        echo '<script type="text/javascript">';
-        echo 'window.location.href="' . htmlspecialchars($redirect_url, ENT_QUOTES, 'UTF-8') . '";';
-        echo '</script>';
-        echo '<noscript>';
-        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url, ENT_QUOTES, 'UTF-8') . '" />';
-        echo '</noscript>';
-        exit();
-    }
+// Check courier status
+$courierStatus = checkCourierStatus($conn);
+
+// Fetch necessary data for the form
+$sql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+$result = $conn->query($sql);
+
+// Updated customer query with proper JOIN to get city_name
+$customerSql = "SELECT c.*, ct.city_name 
+                FROM customers c 
+                LEFT JOIN city_table ct ON c.city_id = ct.city_id 
+                WHERE c.status = 'Active' 
+                ORDER BY c.name ASC";
+$customerResult = $conn->query($customerSql);
+
+// Fetch cities for dropdown
+$citySql = "SELECT city_id, city_name FROM city_table WHERE is_active = 1 ORDER BY city_name ASC";
+$cityResult = $conn->query($citySql);
+
+// Fetch delivery fee from branding table
+$deliveryFeeSql = "SELECT delivery_fee FROM branding LIMIT 1";
+$deliveryFeeResult = $conn->query($deliveryFeeSql);
+$deliveryFee = 0.00;
+if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
+    $row = $deliveryFeeResult->fetch_assoc();
+    $deliveryFee = floatval($row['delivery_fee']);
 }
-// Check if the form is submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    try {
-        // Validate required fields
-        if (empty($_POST['customer_name'])) {
-            throw new Exception("Customer name is required.");
+
+include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.php');
+?>
+
+<!doctype html>
+<html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
+
+<head>
+    <!-- TITLE -->
+    <title>Order Management Admin Portal - Create Order</title>
+
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php'); ?>
+    
+    <!-- [Template CSS Files] -->
+    <link rel="stylesheet" href="../assets/css/styles.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/alert.css" id="main-style-link" />
+
+</head>
+<style>
+.autocomplete-suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.autocomplete-suggestion {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+.autocomplete-suggestions {
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+}
+.autocomplete-suggestion:hover {
+    background-color: #f5f5f5;
+}
+
+.autocomplete-suggestion:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-suggestion.active {
+    background-color: #e9ecef;
+}
+
+.no-results {
+    padding: 10px;
+    color: #999;
+    text-align: center;
+}
+</style>
+
+<body>
+    <!-- LOADER -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/loader.php'); ?>
+    <!-- END LOADER -->
+
+    <!-- [ Main Content ] start -->
+    <div class="pc-container">
+        <div class="pc-content">
+        <!-- [ breadcrumb ] start -->
+<div class="page-header">
+    <div class="page-block">
+        <div class="page-header-title" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <!-- Left side: Create Order title -->
+            <h5 class="mb-0 font-medium">Create Order</h5>
+            
+            <!-- Right side: Alert messages and courier status -->
+            <div style="max-width: 400px;">
+                <div class="alert-container">
+                    <?php
+                    // Display success messages
+                    if (isset($_SESSION['order_success'])) {
+                        echo '<div class="alert alert-success" id="success-alert">
+                                <div>
+                                    <span class="alert-icon">✅</span>
+                                    <span>' . htmlspecialchars($_SESSION['order_success']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                        unset($_SESSION['order_success']);
+                    }
+
+                    // Display error messages
+                    if (isset($_SESSION['order_error'])) {
+                        echo '<div class="alert alert-error" id="error-alert">
+                                <div>
+                                    <span class="alert-icon">❌</span>
+                                    <span>' . htmlspecialchars($_SESSION['order_error']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                        unset($_SESSION['order_error']);
+                    }
+
+                    // Display warning messages
+                    if (isset($_SESSION['order_warning'])) {
+                        echo '<div class="alert alert-warning" id="warning-alert">
+                                <div>
+                                    <span class="alert-icon">⚠️</span>
+                                    <span>' . htmlspecialchars($_SESSION['order_warning']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                        unset($_SESSION['order_warning']);
+                    }
+
+                    // Display info messages
+                    if (isset($_SESSION['order_info'])) {
+                        echo '<div class="alert alert-info" id="info-alert">
+                                <div>
+                                    <span class="alert-icon">ℹ️</span>
+                                    <span>' . htmlspecialchars($_SESSION['order_info']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                        unset($_SESSION['order_info']);
+                    }
+
+                    // Display courier status messages
+                    if (!empty($courierStatus['error_message'])) {
+                        echo '<div class="alert alert-error">
+                                <div>
+                                    <span class="alert-icon">❌</span>
+                                    <span>' . htmlspecialchars($courierStatus['error_message']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                    }
+
+                    if (!empty($courierStatus['warning_message'])) {
+                        echo '<div class="alert alert-warning">
+                                <div>
+                                    <span class="alert-icon">⚠️</span>
+                                    <span>' . htmlspecialchars($courierStatus['warning_message']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                    }
+
+                    // Display info messages for courier status
+                    if (!empty($courierStatus['info_message'])) {
+                        echo '<div class="alert alert-info">
+                                <div>
+                                    <span class="alert-icon">ℹ️</span>
+                                    <span>' . htmlspecialchars($courierStatus['info_message']) . '</span>
+                                </div>
+                                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                              </div>';
+                    }
+                    ?>
+
+                    <!-- Courier Status Information Card -->
+                    <?php if ($courierStatus['has_courier']): ?>
+                    <div class="courier-status-card">
+                        <h6 style="margin-bottom: 10px; color: #495057;">
+                            <!-- <i class="feather icon-truck"></i> Delivery Status -->
+                        </h6>
+                        <div style="font-size: 11px;">
+                            <?php if ($courierStatus['courier_type'] == 1): ?>
+                                <div>
+                                    <span class="status-indicator <?php echo $courierStatus['has_tracking'] ? 'status-active' : 'status-warning'; ?>"></span>
+                                    <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (Internal Tracking)
+                                </div>
+                                <div style="margin-top: 5px;">
+                                    <strong>Available Tracking Numbers:</strong> 
+                                    <?php if ($courierStatus['has_tracking']): ?>
+                                        <span style="color: #28a745;"><?php echo $courierStatus['tracking_count']; ?> unused numbers</span>
+                                    <?php else: ?>
+                                        <span style="color: #dc3545;">0 unused numbers - Orders will be pending</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif ($courierStatus['courier_type'] == 2): ?>
+                                <div>
+                                    <span class="status-indicator status-active"></span>
+                                    <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (API Parcel Courier)
+                                </div>
+                                <div style="margin-top: 5px;">
+                                    <strong>Info:</strong> <span style="color: #28a745;">Automatic tracking number generation</span>
+                                </div>
+                            <?php elseif ($courierStatus['courier_type'] == 3): ?>
+                                <div>
+                                    <span class="status-indicator status-api"></span>
+                                    <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (Existing API Parcel)
+                                </div>
+                                <div style="margin-top: 5px;">
+                                    <strong>Info:</strong> <span style="color: #17a2b8;">Integrated with existing API parcel system</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- [ breadcrumb ] end -->
+
+            <!-- [ Main Content ] start -->
+            <div class="order-container">
+                <form method="post" action="process_order.php" id="orderForm" >
+                    <!-- Order Details Section -->
+                    <div class="order-details-section">
+                        <div class="order-details-grid">
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <div class="status-radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" name="order_status" value="Paid" id="status_paid">
+                                        <label for="status_paid">Paid</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" name="order_status" value="Unpaid" id="status_unpaid" checked>
+                                        <label for="status_unpaid">Unpaid</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Order Date</label>
+                                <input type="date" class="form-control" name="order_date"
+                                    value="<?php echo date('Y-m-d'); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" class="form-control" name="due_date"
+                                    value="<?php echo date('Y-m-d', strtotime('+30 days')); ?>" required>
+                            </div>
+                        </div>
+                        <!-- Hidden currency field - always set to LKR -->
+                        <input type="hidden" name="order_currency" id="order_currency" value="lkr">
+                    </div>
+
+                                <!-- Customer Information Section -->
+                <div class="section-card">
+                    <div class="section-header" style="display:flex; align-items:center; width:100%;">
+                        <h5 class="section-title">Customer Information</h5>
+
+                        <button type="button" 
+                                class="btn-outline-primary" 
+                                id="select_existing_customer"
+                                style="margin-left:auto;">
+                            <i class="feather icon-users"></i> Select Customer
+                        </button>
+                    </div>
+
+                    <div class="section-body">
+                        <div class="customer-info-grid">
+                            <input type="hidden" name="customer_id" id="customer_id" value="">
+                            
+                            <div class="form-group">
+                                <label class="form-label">Name <span style="color: #dc3545;">*</span></label>
+                                <input type="text" class="form-control" name="customer_name" id="customer_name" required placeholder="Enter Full Name">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="customer_email" id="customer_email" placeholder="example@email.com">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" name="customer_phone" id="customer_phone" placeholder="(07) xxxx xxxx">
+                            </div>
+
+                            <!-- NEW Phone 2 Field -->
+                            <div class="form-group">
+                                <label class="form-label">Phone 2</label>
+                                <input type="text" class="form-control" name="customer_phone_2" id="customer_phone_2" placeholder="(07) xxxx xxxx">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">City</label>
+                                <input type="text" 
+                                    class="form-control" 
+                                    id="city_autocomplete" 
+                                    placeholder="Start typing city name..."
+                                    autocomplete="off">
+                                <input type="hidden" name="city_id" id="city_id">
+                                <div id="city_suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" name="address_line1" id="address_line1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control" name="address_line2" id="address_line2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                    <!-- Products Section -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h5 class="section-title">Products</h5>
+                        </div>
+                        <div class="section-body">
+                            <div style="overflow-x: auto;">
+                                <table class="products-table" id="order_table">
+                                    <thead>
+                                        <tr>
+                                            <th class="action-col">Action</th>
+                                            <th class="product-col">Product</th>
+                                            <th class="description-col">Description</th>
+                                            <th class="price-col">Price</th>
+                                            <th class="discount-col">Discount</th>
+                                            <th class="subtotal-col">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="action-col">
+                                                <button type="button" class="btn-remove remove_product">×</button>
+                                            </td>
+                                            <td class="product-col">
+                                                <select name="order_product[]" class="form-select product-select">
+                                                    <option value="">-- Select Product --</option>
+                                                    <?php
+                                                    // Reset the pointer for $result
+                                                    $result->data_seek(0);
+                                                    while ($row = $result->fetch_assoc()): ?>
+                                                        <option value="<?= $row['id'] ?>"
+                                                            data-lkr-price="<?= $row['lkr_price'] ?>"
+                                                            data-description="<?= htmlspecialchars($row['description']) ?>">
+                                                            <?= htmlspecialchars($row['name']) ?>
+                                                        </option>
+                                                    <?php endwhile; ?>
+                                                </select>
+                                            </td>
+                                            <td class="description-col">
+                                                <input type="text" name="order_product_description[]" class="form-control product-description">
+                                            </td>
+                                            <td class="price-col">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">Rs.</span>
+                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01">
+                                                </div>
+                                            </td>
+                                            <td class="discount-col">
+                                                <input type="number" name="order_product_discount[]" class="form-control discount" value="0" min="0" step="1">
+                                            </td>
+                                            <td class="subtotal-col">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">Rs.</span>
+                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" readonly>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+                                <button type="button" id="add_product" class="btn-add-product">
+                                    <span>+</span> Add Product
+                                </button>
+
+                                <div class="totals-section">
+                                    <div class="totals-row">
+                                        <span class="totals-label">Subtotal:</span>
+                                        <span class="totals-value">
+                                            Rs. <span id="subtotal_display">0.00</span>
+                                            <input type="hidden" id="subtotal_amount" name="subtotal" value="0.00">
+                                        </span>
+                                    </div>
+                                    <div class="totals-row">
+                                        <span class="totals-label">Discount:</span>
+                                        <span class="totals-value">
+                                            Rs. <span id="discount_display">0.00</span>
+                                            <input type="hidden" id="discount_amount" name="discount" value="0.00">
+                                        </span>
+                                    </div>
+                                    <div class="totals-row delivery-fee-row" id="delivery_fee_row">
+                                        <span class="totals-label">Delivery Fee:</span>
+                                        <span class="totals-value">
+                                            Rs. <span id="delivery_fee_display"><?php echo number_format($deliveryFee, 2); ?></span>
+                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo number_format($deliveryFee, 2); ?>">
+                                        </span>
+                                    </div>
+                                    <div class="totals-row">
+                                        <span class="totals-label">Total:</span>
+                                        <span class="totals-value">
+                                            Rs. <span id="total_display">0.00</span>
+                                            <input type="hidden" id="total_amount" name="total_amount" value="0.00">
+                                            <input type="hidden" id="lkr_total_amount" name="lkr_price" value="0.00">
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes & Submit Section -->
+                    <div class="section-card">
+                        <div class="section-body">
+                            <div class="notes-section">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea name="notes" class="form-control" rows="3" placeholder="Enter any additional notes for this order..."></textarea>
+                            </div>
+                            <div class="submit-section">
+                                <button type="submit" class="btn-primary" id="submit_order" 
+                                    <?php echo (!$courierStatus['has_courier']) ? 'title="Warning: No courier configured"' : ''; ?>>
+                                    <i class="feather icon-save"></i> Create Order
+                                    <?php if (!$courierStatus['has_courier']): ?>
+                                        <small style="display: block; font-size: 11px; opacity: 0.8;"></small>
+                                    <?php elseif ($courierStatus['courier_type'] == 1 && !$courierStatus['has_tracking']): ?>
+                                        <small style="display: block; font-size: 11px; opacity: 0.8;"></small>
+                                    <?php endif; ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <script>
+                // Auto-hide success and info alerts after 5 seconds
+                setTimeout(function() {
+                    const successAlert = document.getElementById('success-alert');
+                    const infoAlert = document.getElementById('info-alert');
+                    
+                    if (successAlert) {
+                        successAlert.style.opacity = '0';
+                        setTimeout(() => successAlert.remove(), 300);
+                    }
+                    
+                    if (infoAlert) {
+                        infoAlert.style.opacity = '0';
+                        setTimeout(() => infoAlert.remove(), 300);
+                    }
+                }, 5000);
+
+                // Keep error and warning alerts visible longer (10 seconds)
+                setTimeout(function() {
+                    const errorAlert = document.getElementById('error-alert');
+                    const warningAlert = document.getElementById('warning-alert');
+                    
+                    if (errorAlert) {
+                        errorAlert.style.opacity = '0';
+                        setTimeout(() => errorAlert.remove(), 300);
+                    }
+                    
+                    if (warningAlert) {
+                        warningAlert.style.opacity = '0';
+                        setTimeout(() => warningAlert.remove(), 300);
+                    }
+                }, 10000);
+            </script>
+
+            <!-- [ Main Content ] end -->
+        </div>
+    </div>
+    <!-- [ Main Content ] end -->
+
+
+  <!-- Customer Selection Modal -->
+<div id="customerModal" class="customer-modal">
+    <div class="customer-modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">
+                <i class="feather icon-users"></i>
+                Select Customer
+            </h5>
+            <button type="button" class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="input-group" style="margin-bottom: 20px;">
+                <span class="input-group-text"><i class="feather icon-search"></i></span>
+                <input type="text" id="customerSearch" class="form-control" placeholder="Search : Customer id | Customer Name | Email | Phone Number | city ">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>CUSTOMER NAME</th>
+                            <th>PHONE & EMAIL</th>
+                            <th>ADDRESS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        // Reset the pointer for $customerResult
+                        $customerResult->data_seek(0);
+                        while ($customer = $customerResult->fetch_assoc()): ?>
+                            <tr class="customer-row" 
+                                data-customer-id="<?= $customer['customer_id'] ?? '' ?>"
+                                data-name="<?= htmlspecialchars($customer['name'] ?? '') ?>"
+                                data-email="<?= htmlspecialchars($customer['email'] ?? '') ?>"
+                                data-phone="<?= htmlspecialchars($customer['phone'] ?? '') ?>"
+                                data-phone-2="<?= htmlspecialchars($customer['phone_2'] ?? '') ?>"
+                                data-address-line1="<?= htmlspecialchars($customer['address_line1'] ?? '') ?>"
+                                data-address-line2="<?= htmlspecialchars($customer['address_line2'] ?? '') ?>"
+                                data-city-name="<?= htmlspecialchars($customer['city_name'] ?? '') ?>"
+                                data-city-id="<?= $customer['city_id'] ?? '' ?>">
+                                
+                                <td><?= $customer['customer_id'] ?? '' ?></td>
+                                
+                                <td>
+                                    <div class="customer-name"><?= htmlspecialchars($customer['name'] ?? '') ?></div>
+                                </td>
+                                
+                                <td>
+                                    <div class="contact-info">
+                                        <div class="phone-number"><?= htmlspecialchars($customer['phone'] ?? '') ?></div>
+                                        <?php if (!empty($customer['phone_2'])): ?>
+                                            <div class="phone-number-2" style="color: #6c757d; font-size: 0.9em;">
+                                                <?= htmlspecialchars($customer['phone_2']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="email-address"><?= htmlspecialchars($customer['email'] ?? '') ?></div>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="address-info">
+                                        <div class="address-line"><?= htmlspecialchars($customer['address_line1'] ?? '') ?></div>
+                                        <div class="city-name"><?= htmlspecialchars($customer['city_name'] ?? '') ?></div>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <button type="button" class="btn btn-primary select-customer-btn">Select</button>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- FOOTER -->
+    <?php
+    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/footer.php');
+    ?>
+    <!-- END FOOTER -->
+
+    <!-- SCRIPTS -->
+    <?php
+    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php');
+    ?>
+    <!-- END SCRIPTS -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ========== GLOBAL VARIABLES ==========
+    let deliveryFee = <?php echo $deliveryFee; ?>;
+    let isExistingCustomer = false;
+
+    // ========== VALIDATION UTILITIES ==========
+    const ValidationUtils = {
+        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        isValidPhone: (phone) => /^\d{10}$/.test(phone),
+        isValidDate: (dateString) => {
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date) && dateString === date.toISOString().split('T')[0];
+        },
+        
+        showError: (element, message, className = 'validation-error') => {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = className;
+            errorDiv.style.color = '#dc3545';
+            errorDiv.style.fontSize = '0.875rem';
+            errorDiv.style.marginTop = '0.25rem';
+            errorDiv.textContent = message;
+            element.parentNode.appendChild(errorDiv);
+        },
+        
+        clearErrors: (className = 'validation-error') => {
+            document.querySelectorAll(`.${className}`).forEach(el => el.remove());
         }
-        
-        // Get customer details early
-        $customer_name = trim($_POST['customer_name']);
-        $customer_email = trim($_POST['customer_email'] ?? '');
-        $customer_phone = trim($_POST['customer_phone'] ?? '');
-        
-        // Additional customer validation (optional but recommended)
-        if (!empty($customer_email) && !filter_var($customer_email, FILTER_VALIDATE_EMAIL)) {
-            throw new Exception("Invalid email format.");
-        }
-        
-        if (!empty($customer_phone) && !preg_match('/^[0-9+\-\s()]+$/', $customer_phone)) {
-            throw new Exception("Invalid phone number format.");
+    };
+
+// ========== CUSTOMER MANAGEMENT ==========
+const CustomerManager = {
+    toggleFields: (readonly = false) => {
+        const fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_phone_2', 'city_autocomplete', 'address_line1', 'address_line2'];
+        fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = readonly;
+                field.style.backgroundColor = readonly ? '#f8f9fa' : '';
+                field.style.cursor = readonly ? 'not-allowed' : '';
+            }
+        });
+    },
+
+    clearFields: () => {
+        document.getElementById('customer_id').value = '';
+        document.getElementById('customer_name').value = '';
+        document.getElementById('customer_email').value = '';
+        document.getElementById('customer_phone').value = '';
+        document.getElementById('customer_phone_2').value = '';
+        document.getElementById('city_id').value = '';
+        document.getElementById('city_autocomplete').value = '';
+        document.getElementById('address_line1').value = '';
+        document.getElementById('address_line2').value = '';
+        ValidationUtils.clearErrors();
+        isExistingCustomer = false;
+        CustomerManager.toggleFields(false);
+        FormValidator.validateAndToggleSubmit();
+    },
+
+    validate: () => {
+        const name = document.getElementById('customer_name').value.trim();
+        const email = document.getElementById('customer_email').value.trim();
+        const phone = document.getElementById('customer_phone').value.trim();
+        const phone2 = document.getElementById('customer_phone_2').value.trim();
+        const cityId = document.getElementById('city_id').value;
+        const address = document.getElementById('address_line1').value.trim();
+
+        let isValid = true;
+
+        // Name is always required
+        if (!name) {
+            ValidationUtils.showError(document.getElementById('customer_name'), 'Customer name is required');
+            isValid = false;
         }
 
-        // Check if products are added
-        if (empty($_POST['order_product'])) {
-            throw new Exception("At least one product must be added to the order.");
+        // For new customers, all fields required
+        if (!isExistingCustomer) {
+            if (!phone) {
+                ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number is required');
+                isValid = false;
+            } else if (!ValidationUtils.isValidPhone(phone)) {
+                ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number must be 10 digits');
+                isValid = false;
+            }
+
+            // NEW: Validate phone_2 ONLY if value is entered
+            if (phone2 && !ValidationUtils.isValidPhone(phone2)) {
+                ValidationUtils.showError(document.getElementById('customer_phone_2'), 'Phone 2 must be 10 digits');
+                isValid = false;
+            }
+
+            if (!cityId) {
+                ValidationUtils.showError(document.getElementById('city_autocomplete'), 'City is required');
+                isValid = false;
+            }
+
+            if (!address) {
+                ValidationUtils.showError(document.getElementById('address_line1'), 'Address Line 1 is required');
+                isValid = false;
+            }
         }
 
-        // Validate that at least one product is selected (not empty)
-        $valid_products = array_filter($_POST['order_product'], function($product_id) {
-            return !empty($product_id);
+        return isValid;
+    }
+};
+// Helper function to allow only digits and max 10 characters
+function enforcePhoneInput(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.addEventListener('input', (e) => {
+        // Remove any non-digit characters
+        let digits = e.target.value.replace(/\D/g, '');
+
+        // Limit to 10 digits
+        if (digits.length > 10) {
+            digits = digits.slice(0, 10);
+        }
+
+        // Set the cleaned value back
+        e.target.value = digits;
+    });
+}
+
+// Apply to both phone fields
+enforcePhoneInput('customer_phone');
+enforcePhoneInput('customer_phone_2');
+
+
+    // ========== DATE VALIDATION ==========
+    const DateValidator = {
+        validate: () => {
+            const orderDate = document.querySelector('input[name="order_date"]').value;
+            const dueDate = document.querySelector('input[name="due_date"]').value;
+            const today = new Date().toISOString().split('T')[0];
+
+            ValidationUtils.clearErrors('date-validation-error');
+            let isValid = true;
+
+            if (!orderDate) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Order date is required', 'date-validation-error');
+                isValid = false;
+            } else if (!ValidationUtils.isValidDate(orderDate)) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Invalid order date format', 'date-validation-error');
+                isValid = false;
+            } else if (orderDate > today) {
+                ValidationUtils.showError(document.querySelector('input[name="order_date"]'), 'Order date cannot be in the future', 'date-validation-error');
+                isValid = false;
+            }
+
+            if (!dueDate) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Due date is required', 'date-validation-error');
+                isValid = false;
+            } else if (!ValidationUtils.isValidDate(dueDate)) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Invalid due date format', 'date-validation-error');
+                isValid = false;
+            } else if (orderDate && dueDate < orderDate) {
+                ValidationUtils.showError(document.querySelector('input[name="due_date"]'), 'Due date cannot be earlier than order date', 'date-validation-error');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+    };
+
+
+   // ========== PRODUCT MANAGEMENT ========== (Updated section)
+const ProductManager = {
+    updatePrice: (row) => {
+        const productSelect = row.querySelector('.product-select');
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        
+        if (!productSelect.value) return;
+
+        const priceField = row.querySelector('.price');
+        const descriptionField = row.querySelector('.product-description');
+        const description = selectedOption.getAttribute('data-description') || '';
+        const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
+
+        priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
+        descriptionField.value = description;
+
+        ProductManager.updateRowTotal(row);
+        ProductManager.checkForProducts();
+    },
+
+    updateRowTotal: (row) => {
+        let price = parseFloat(row.querySelector('.price').value) || 0;
+        let discount = parseFloat(row.querySelector('.discount').value) || 0;
+
+        if (discount > price) {
+            discount = price;
+            row.querySelector('.discount').value = discount;
+        }
+
+        let subtotal = price - discount;
+        row.querySelector('.subtotal').value = subtotal.toFixed(2);
+        ProductManager.updateTotals();
+    },
+
+    checkForProducts: () => {
+        let hasProducts = false;
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            if (productSelect && productSelect.value !== "") {
+                hasProducts = true;
+            }
+        });
+
+        const deliveryFeeRow = document.getElementById('delivery_fee_row');
+        deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
+        
+        return hasProducts;
+    },
+
+    updateTotals: () => {
+        let subtotal = 0;
+        let totalDiscount = 0;
+
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
+            let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
+
+            if (rowDiscount > rowPrice) {
+                rowDiscount = rowPrice;
+                row.querySelector('.discount').value = rowDiscount;
+            }
+
+            let rowSubtotal = rowPrice - rowDiscount;
+            row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
+
+            subtotal += rowPrice;
+            totalDiscount += rowDiscount;
+        });
+
+        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
+        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
+        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
+        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
+
+        let subtotalAfterDiscount = subtotal - totalDiscount;
+        const hasProducts = ProductManager.checkForProducts();
+
+        // ===== NEW LOGIC: Free delivery for orders >= 5000 =====
+        let finalDeliveryFee = 0;
+        if (hasProducts) {
+            if (subtotalAfterDiscount >= 5000) {
+                finalDeliveryFee = 0; // Free delivery
+                // Add visual indicator for free delivery
+                document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
+            } else {
+                finalDeliveryFee = deliveryFee; // Normal delivery fee
+                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+            }
+        }
+
+        // Update delivery fee hidden input
+        document.getElementById('delivery_fee').value = finalDeliveryFee.toFixed(2);
+
+        // Calculate final total
+        let total = subtotalAfterDiscount + finalDeliveryFee;
+
+        document.getElementById('total_display').textContent = total.toFixed(2);
+        document.getElementById('total_amount').value = total.toFixed(2);
+        document.getElementById('lkr_total_amount').value = total.toFixed(2);
+    },
+
+    validate: () => {
+        ValidationUtils.clearErrors('product-validation-error');
+        let isValid = true;
+
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const descriptionInput = row.querySelector('.product-description');
+            const priceInput = row.querySelector('.price');
+
+            if (productSelect.value !== '') {
+                if (!descriptionInput.value.trim()) {
+                    ValidationUtils.showError(descriptionInput, 'Description required', 'product-validation-error');
+                    isValid = false;
+                }
+
+                const price = parseFloat(priceInput.value) || 0;
+                if (price <= 0) {
+                    ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
+                    isValid = false;
+                }
+            }
+        });
+
+        return isValid;
+    },
+
+    hasValidProduct: () => {
+        let hasValid = false;
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const descriptionInput = row.querySelector('.product-description');
+            const priceInput = row.querySelector('.price');
+            const price = parseFloat(priceInput.value) || 0;
+
+            if (productSelect.value !== '' && descriptionInput.value.trim() !== '' && price > 0) {
+                hasValid = true;
+            }
+        });
+        return hasValid;
+    },
+
+    addRow: () => {
+        let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('price')) {
+                input.value = '0.00';
+            } else if (input.classList.contains('discount')) {
+                input.value = '0';
+            } else if (input.classList.contains('subtotal')) {
+                input.value = '0.00';
+            } else {
+                input.value = '';
+            }
         });
         
-        if (empty($valid_products)) {
-            throw new Exception("Please select at least one valid product for the order.");
-        }
+        newRow.querySelector('.product-select').value = '';
+        document.querySelector('#order_table tbody').appendChild(newRow);
+    },
 
-        // Begin transaction
-        $conn->begin_transaction();
-        
-        // Get current user ID from session (default to 1 if not set)
-        $user_id = $_SESSION['user_id'] ?? 1;
-        
-        // Handle address fields according to actual database schema
-        $address_line1 = trim($_POST['address_line1'] ?? '');
-        $address_line2 = trim($_POST['address_line2'] ?? '');
-        $city_id = !empty($_POST['city_id']) ? intval($_POST['city_id']) : null;
-        
-        // Debug log for city_id from POST
-        error_log("DEBUG - POST city_id: " . ($_POST['city_id'] ?? 'NOT_SET'));
-        error_log("DEBUG - Processed city_id: " . ($city_id ?? 'NULL'));
-        
-        // ==========================================
-        // CUSTOMER MATCHING LOGIC - FIXED VERSION
-        // Business Rules:
-        // 1. Match by email OR phone (unique identifiers)
-        // 2. If match found: UPDATE existing customer
-        // 3. If NO match: CREATE new customer (even if name is same)
-        // 4. Multiple customers CAN have the same name
-        // ==========================================
-        
-        $customer_id = 0;
-        $existing_customer = null;
-        $is_new_customer = true;
-        
-        // STEP 1: Search for existing customer by email OR phone
-        // Only search if we have at least one unique identifier
-        if (!empty($customer_email) || !empty($customer_phone)) {
-            
-            $search_conditions = [];
-            $search_params = [];
-            $search_types = "";
-            
-            // Add email to search if provided
-            if (!empty($customer_email)) {
-                $search_conditions[] = "email = ?";
-                $search_params[] = $customer_email;
-                $search_types .= "s";
-            }
-            
-            // Add phone to search if provided
-            if (!empty($customer_phone)) {
-                $search_conditions[] = "phone = ?";
-                $search_params[] = $customer_phone;
-                $search_types .= "s";
-            }
-            
-            // Build query with OR condition (match either email OR phone)
-            $checkCustomerSql = "SELECT customer_id, name, email, phone, city_id, address_line1, address_line2 
-                                FROM customers 
-                                WHERE " . implode(" OR ", $search_conditions) . " 
-                                LIMIT 1";
-            
-            $stmt = $conn->prepare($checkCustomerSql);
-            
-            if (!$stmt) {
-                throw new Exception("Failed to prepare customer search query: " . $conn->error);
-            }
-            
-            // Bind parameters
-            if (count($search_params) > 0) {
-                $stmt->bind_param($search_types, ...$search_params);
-            }
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to execute customer search: " . $stmt->error);
-            }
-            
-            $result = $stmt->get_result();
-            
-            // Check if existing customer found
-            if ($result->num_rows > 0) {
-                $existing_customer = $result->fetch_assoc();
-                $customer_id = $existing_customer['customer_id'];
-                $is_new_customer = false;
-                
-                error_log("DEBUG - Existing customer found (ID: $customer_id)");
-                
-                // Log which field matched
-                $matched_by = [];
-                if (!empty($customer_email) && $existing_customer['email'] === $customer_email) {
-                    $matched_by[] = "email";
-                }
-                if (!empty($customer_phone) && $existing_customer['phone'] === $customer_phone) {
-                    $matched_by[] = "phone";
-                }
-                error_log("DEBUG - Matched by: " . implode(" and ", $matched_by));
-            } else {
-                error_log("DEBUG - No matching customer found, will create new");
-            }
-            
-            $stmt->close();
-            
+    removeRow: (button) => {
+        const tableBody = document.querySelector('#order_table tbody');
+        if (tableBody.children.length > 1) {
+            button.closest('tr').remove();
+            ProductManager.checkForProducts();
+            ProductManager.updateTotals();
         } else {
-            // No email or phone provided - this shouldn't happen with proper validation
-            error_log("WARNING - No email or phone provided for customer");
+            let row = button.closest('tr');
+            row.querySelector('.product-select').value = '';
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+            ProductManager.checkForProducts();
+            ProductManager.updateTotals();
         }
-        
-        // ==========================================
-        // STEP 2: UPDATE EXISTING OR INSERT NEW CUSTOMER
-        // ==========================================
-        
-        if (!$is_new_customer && $customer_id > 0) {
-            // ========== UPDATE EXISTING CUSTOMER ==========
-            error_log("DEBUG - Updating existing customer ID: $customer_id");
+        FormValidator.validateAndToggleSubmit();
+    }
+};
+
+    // ========== FORM VALIDATOR ==========
+    const FormValidator = {
+        validateAndToggleSubmit: () => {
+            const submitButton = document.getElementById('submit_order');
             
-            // Prepare UPDATE statement with ALL fields
-            $updateCustomerSql = "UPDATE customers 
-                                 SET name = ?, 
-                                     email = ?, 
-                                     phone = ?, 
-                                     address_line1 = ?, 
-                                     address_line2 = ?, 
-                                     city_id = ?, 
-                                     status = 'Active'
-                                 WHERE customer_id = ?";
-            
-            $stmt = $conn->prepare($updateCustomerSql);
-            
-            if (!$stmt) {
-                throw new Exception("Failed to prepare customer update query: " . $conn->error);
-            }
-            
-            // Use provided city_id, or fall back to existing if not provided
-            $final_city_id = !empty($city_id) ? $city_id : $existing_customer['city_id'];
-            
-            // Use provided values, or fall back to existing values if empty
-            $final_name = !empty($customer_name) ? $customer_name : $existing_customer['name'];
-            $final_email = !empty($customer_email) ? $customer_email : $existing_customer['email'];
-            $final_phone = !empty($customer_phone) ? $customer_phone : $existing_customer['phone'];
-            $final_address1 = !empty($address_line1) ? $address_line1 : $existing_customer['address_line1'];
-            $final_address2 = !empty($address_line2) ? $address_line2 : $existing_customer['address_line2'];
-            
-            $stmt->bind_param(
-                "sssssii", 
-                $final_name, 
-                $final_email, 
-                $final_phone, 
-                $final_address1, 
-                $final_address2, 
-                $final_city_id, 
-                $customer_id
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to update customer: " . $stmt->error);
-            }
-            
-            // Update city_id for later use
-            $city_id = $final_city_id;
-            
-            error_log("DEBUG - Customer updated successfully (ID: $customer_id)");
-            $stmt->close();
-            
-        } else {
-            // ========== INSERT NEW CUSTOMER ==========
-            error_log("DEBUG - Creating new customer: $customer_name");
-            
-            // Validate required fields for new customer
-            if (empty($customer_name)) {
-                throw new Exception("Customer name is required for new customer");
-            }
-            
-            if (empty($customer_email) && empty($customer_phone)) {
-                throw new Exception("Either email or phone is required for new customer");
-            }
-            
-            // Insert new customer
-            $insertCustomerSql = "INSERT INTO customers 
-                                 (name, email, phone, address_line1, address_line2, city_id, status) 
-                                 VALUES (?, ?, ?, ?, ?, ?, 'Active')";
-            
-            $stmt = $conn->prepare($insertCustomerSql);
-            
-            if (!$stmt) {
-                throw new Exception("Failed to prepare customer insert query: " . $conn->error);
-            }
-            
-            // Handle nullable fields properly
-            $email_value = !empty($customer_email) ? $customer_email : null;
-            $phone_value = !empty($customer_phone) ? $customer_phone : null;
-            $address1_value = !empty($address_line1) ? $address_line1 : null;
-            $address2_value = !empty($address_line2) ? $address_line2 : null;
-            $city_id_value = !empty($city_id) ? $city_id : null;
-            
-            $stmt->bind_param(
-                "sssssi", 
-                $customer_name, 
-                $email_value, 
-                $phone_value, 
-                $address1_value, 
-                $address2_value, 
-                $city_id_value
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to insert new customer: " . $stmt->error);
-            }
-            
-            $customer_id = $conn->insert_id;
-            
-            if (empty($customer_id) || $customer_id <= 0) {
-                throw new Exception("Failed to get customer ID after insert");
-            }
-            
-            error_log("DEBUG - New customer created successfully (ID: $customer_id)");
-            $stmt->close();
+            ValidationUtils.clearErrors();
+            ValidationUtils.clearErrors('date-validation-error');
+            ValidationUtils.clearErrors('product-validation-error');
+
+            const customerValid = CustomerManager.validate();
+            const datesValid = DateValidator.validate();
+            const productsValid = ProductManager.validate();
+            const hasValidProducts = ProductManager.hasValidProduct();
+
+            const isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
+
+            submitButton.disabled = !isFormValid;
+            submitButton.style.opacity = isFormValid ? '1' : '0.6';
+            submitButton.style.cursor = isFormValid ? 'pointer' : 'not-allowed';
+            submitButton.style.backgroundColor = isFormValid ? '#007bff' : '#6c757d';
+
+            return isFormValid;
         }
+    };
+
+    // ========== CITY AUTOCOMPLETE ==========
+    const CityAutocomplete = {
+        cities: [],
+        selectedIndex: -1,
         
-        // ==========================================
-        // STEP 3: VALIDATE CUSTOMER ID
-        // ==========================================
-        
-        if (empty($customer_id) || $customer_id <= 0) {
-            throw new Exception("Invalid customer ID. Customer creation/update failed.");
-        }
-        
-        // ==========================================
-        // STEP 4: ENSURE CITY_ID IS SET (FALLBACK)
-        // ==========================================
-        
-        if (empty($city_id)) {
-            // Try to get city_id from the customer record
-            $getCustomerCitySql = "SELECT city_id FROM customers WHERE customer_id = ?";
-            $customerCityStmt = $conn->prepare($getCustomerCitySql);
-            
-            if ($customerCityStmt) {
-                $customerCityStmt->bind_param("i", $customer_id);
-                $customerCityStmt->execute();
-                $customerCityResult = $customerCityStmt->get_result();
+        init: () => {
+            const cityInput = document.getElementById('city_autocomplete');
+            const cityIdInput = document.getElementById('city_id');
+            const suggestionsDiv = document.getElementById('city_suggestions');
+
+            // Fetch cities
+            fetch('get_cities.php')
+                .then(response => response.json())
+                .then(data => CityAutocomplete.cities = data)
+                .catch(error => console.error('Error loading cities:', error));
+
+            // Input event
+            cityInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim().toLowerCase();
                 
-                if ($customerCityResult && $customerCityResult->num_rows > 0) {
-                    $customerCityData = $customerCityResult->fetch_assoc();
-                    $city_id = $customerCityData['city_id'];
-                    error_log("DEBUG - Retrieved city_id from customer record: " . ($city_id ?? 'NULL'));
+                if (searchTerm.length === 0) {
+                    suggestionsDiv.style.display = 'none';
+                    cityIdInput.value = '';
+                    FormValidator.validateAndToggleSubmit();
+                    return;
                 }
-                $customerCityStmt->close();
-            }
-        }
-        
-        error_log("DEBUG - Final customer_id: $customer_id, city_id: " . ($city_id ?? 'NULL'));
-        
-        // ==========================================
-        // CONTINUE WITH ORDER CREATION
-        // ==========================================
-        
-        // Prepare order details
-        $order_date = $_POST['order_date'] ?? date('Y-m-d');
-        $due_date = $_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days'));
-        
-        // Get notes from form input
-        $notes = $_POST['notes'] ?? "";
-        
-        // Get currency from form input
-        $currency = isset($_POST['order_currency']) ? strtolower($_POST['order_currency']) : 'lkr';
-        
-        // Separate payment status from order status
-        $order_status = $_POST['order_status'] ?? 'Unpaid';
-        
-        // Payment status logic: only affects pay_status, not order status
-        $pay_status = $order_status === 'Paid' ? 'paid' : 'unpaid';
-        $pay_date = $order_status === 'Paid' ? date('Y-m-d') : null;
-        
-        // Order status should always start as 'pending' regardless of payment status
-        $status = 'pending';
-        
-        // Detailed calculation of totals
-        $products = $_POST['order_product'];
-        $product_prices = $_POST['order_product_price'];
-        $discounts = $_POST['order_product_discount'] ?? [];
-        $product_descriptions = $_POST['order_product_description'] ?? [];
-        
-        // Initialize subtotal to store the original price before discounts
-        $subtotal_before_discounts = 0;
-        $total_discount = 0;
-        
-        // Get delivery fee from form
-        $delivery_fee = isset($_POST['delivery_fee']) ? floatval($_POST['delivery_fee']) : 0.00;
-        
-        // Prepare an array to store order items
-        $order_items = [];
-        foreach ($products as $key => $product_id) {
-            // Skip empty product selections
-            if (empty($product_id)) continue;
-            
-            $original_price = floatval($product_prices[$key] ?? 0);
-            $discount = floatval($discounts[$key] ?? 0);
-            $description = $product_descriptions[$key] ?? '';
-            
-            // Ensure discount doesn't exceed price
-            $discount = min($discount, $original_price);
-            
-            // Calculate subtotal before discount
-            $subtotal_before_discounts += $original_price;
-            $total_discount += $discount;
-            
-            // Store item details for insertion
-            $order_items[] = [
-                'product_id' => $product_id,
-                'original_price' => $original_price,
-                'discount' => $discount,
-                'description' => $description
-            ];
-        }
-        
-        // Validate we have items to process
-        if (empty($order_items)) {
-            throw new Exception("No valid products to process in the order.");
-        }
-        
-        // Final total calculation with delivery fee
-            // ==========================================
-            // APPLY FREE DELIVERY LOGIC
-            // If order total >= 5000, delivery fee becomes 0
-            // ==========================================
-            $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
-            if ($subtotal_after_discount >= 5000) {
-                $delivery_fee = 0.00; // Free delivery for orders >= 5000
-                error_log("DEBUG - Free delivery applied. Order total: Rs. $subtotal_after_discount");
-            } else {
-                error_log("DEBUG - Standard delivery fee: Rs. $delivery_fee. Order total: Rs. $subtotal_after_discount");
-            }
+                const filteredCities = CityAutocomplete.cities.filter(city => 
+                    city.city_name.toLowerCase().includes(searchTerm)
+                );
 
-            // Final total calculation with delivery fee
-            $total_amount = $subtotal_after_discount + $delivery_fee;
-            
-        // Insert order_header
-        $insertOrderSql = "INSERT INTO order_header (
-            customer_id, user_id, issue_date, due_date, 
-            subtotal, discount, total_amount, delivery_fee,
-            notes, currency, status, pay_status, pay_date, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $conn->prepare($insertOrderSql);
-        
-        if (!$stmt) {
-            throw new Exception("Failed to prepare order header insert query: " . $conn->error);
-        }
-        
-        $stmt->bind_param(
-            "iissddddsssssi", 
-            $customer_id, $user_id, $order_date, $due_date, 
-            $subtotal_before_discounts, $total_discount, $total_amount, $delivery_fee,
-            $notes, $currency, $status, $pay_status, $pay_date, $user_id
-        );
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to insert order header: " . $stmt->error);
-        }
-        
-        $order_id = $conn->insert_id;
-        $stmt->close();
-        
-        if (empty($order_id) || $order_id <= 0) {
-            throw new Exception("Failed to create order ID.");
-        }
-        
-        error_log("DEBUG - Order created with ID: $order_id for customer ID: $customer_id");
-        
-        // Order items insertion
-        $insertItemSql = "INSERT INTO order_items (
-            order_id, product_id, unit_price, discount, 
-            total_amount, pay_status, status, description
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $conn->prepare($insertItemSql);
-        
-        if (!$stmt) {
-            throw new Exception("Failed to prepare order items insert query: " . $conn->error);
-        }
+                CityAutocomplete.displaySuggestions(filteredCities, suggestionsDiv);
+            });
 
-        foreach ($order_items as $item) {
-            // Calculate the price after discount
-            $item_price_after_discount = $item['original_price'] - $item['discount'];
-            
-            $stmt->bind_param(
-                "iiddssss", 
-                $order_id, 
-                $item['product_id'], 
-                $item['original_price'],      // unit_price (original price)
-                $item['discount'], 
-                $item_price_after_discount,   // total_amount (price after discount)
-                $pay_status, 
-                $status,     
-                $item['description']
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to insert order item: " . $stmt->error);
-            }
-        }
+            // Keyboard navigation
+            cityInput.addEventListener('keydown', function(e) {
+                const suggestions = document.querySelectorAll('.autocomplete-suggestion');
+                if (suggestions.length === 0) return;
 
-        // COURIER AND TRACKING ASSIGNMENT WITH ENHANCED FDE API
-        // Get default courier (can be is_default = 1, 2, or 3)
-        $getDefaultCourierSql = "SELECT courier_id, courier_name, api_key, client_id, origin_city_name, origin_state_name, is_default FROM couriers WHERE is_default IN (1, 2, 3) AND status = 'active' ORDER BY is_default ASC LIMIT 1";
-        $courierResult = $conn->query($getDefaultCourierSql);
-
-        $tracking_assigned = false;
-        $courier_warning = '';
-
-        if ($courierResult && $courierResult->num_rows > 0) {
-            $defaultCourier = $courierResult->fetch_assoc();
-            $default_courier_id = $defaultCourier['courier_id'];
-            $courier_type = $defaultCourier['is_default']; // 1 = internal tracking, 2 = FDE New API, 3 = FDE Existing API
-            $api_key = $defaultCourier['api_key'];
-            $client_id = $defaultCourier['client_id'];
-            $courier_name = $defaultCourier['courier_name'];
-            $origin_city_name = $defaultCourier['origin_city_name'];
-            $origin_state_name = $defaultCourier['origin_state_name'];
-            
-            // Fardar API start here
-            if ($default_courier_id == 11) {
-                if ($courier_type == 1) {
-                    // INTERNAL TRACKING SYSTEM
-                    // Get an unused tracking number for this courier
-                    $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                    $trackingStmt = $conn->prepare($getTrackingSql);
-                    $trackingStmt->bind_param("i", $default_courier_id);
-                    $trackingStmt->execute();
-                    $trackingResult = $trackingStmt->get_result();
-                    
-                    if ($trackingResult && $trackingResult->num_rows > 0) {
-                        $trackingData = $trackingResult->fetch_assoc();
-                        $tracking_number = $trackingData['tracking_id'];
-                        
-                        // Update the tracking record to 'used'
-                        $updateTrackingSql = "UPDATE tracking SET status = 'used' WHERE tracking_id = ? AND courier_id = ?";
-                        $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                        $updateTrackingStmt->bind_param("si", $tracking_number, $default_courier_id);
-                        $updateTrackingStmt->execute();
-                        
-                        // Update order_header with courier info and set status to 'dispatch'
-                        $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                courier_id = ?, 
-                                                tracking_number = ?, 
-                                                status = 'dispatch' 
-                                                WHERE order_id = ?";
-                        $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                        $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                        $updateOrderStmt->execute();
-                        
-                        // Update all order_items status to 'dispatch'
-                        $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                        $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                        $updateItemsStmt->bind_param("i", $order_id);
-                        $updateItemsStmt->execute();
-                        
-                        // Update the main status variable for later use
-                        $status = 'dispatch';
-                        $tracking_assigned = true;
-                        
-                    } else {
-                        $courier_warning = "No unused tracking numbers available for {$courier_name}";
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    CityAutocomplete.selectedIndex = (CityAutocomplete.selectedIndex + 1) % suggestions.length;
+                    CityAutocomplete.updateSelection(suggestions);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    CityAutocomplete.selectedIndex = CityAutocomplete.selectedIndex <= 0 ? suggestions.length - 1 : CityAutocomplete.selectedIndex - 1;
+                    CityAutocomplete.updateSelection(suggestions);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (CityAutocomplete.selectedIndex >= 0 && suggestions[CityAutocomplete.selectedIndex]) {
+                        const selected = suggestions[CityAutocomplete.selectedIndex];
+                        CityAutocomplete.selectCity(selected.dataset.cityId, selected.dataset.cityName, cityInput, cityIdInput, suggestionsDiv);
                     }
-                    
-                } elseif ($courier_type == 2) {
-                    // FDE NEW PARCEL API INTEGRATION
-                    
-                    // Include the FDE API function
-                    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/fde_new_parcel_api.php');
-                    
-                    // CITY HANDLING
-                    $city_name = '';
-                    $proceed_with_api = false;
-                    
-                    // Debug log before city processing
-                    error_log("DEBUG - About to process city for FDE New API - city_id: " . ($city_id ?? 'NULL'));
-                    
-                    if (!empty($city_id)) {
-                        $getCityNameSql = "SELECT city_name FROM city_table WHERE city_id = ? AND is_active = 1";
-                        $cityStmt = $conn->prepare($getCityNameSql);
-                        $cityStmt->bind_param("i", $city_id);
-                        $cityStmt->execute();
-                        $cityResult = $cityStmt->get_result();
-                        
-                        if ($cityResult && $cityResult->num_rows > 0) {
-                            $cityData = $cityResult->fetch_assoc();
-                            $city_name = $cityData['city_name'];
-                            $proceed_with_api = true; // Valid city found, proceed with API
-                            
-                            error_log("DEBUG - City found: " . $city_name);
-                        } else {
-                            $city_name = 'Unknown City'; // Fallback if city not found
-                            $proceed_with_api = false; // Don't proceed with API
-                            
-                            error_log("DEBUG - City ID exists but city not found in database");
-                        }
-                    } else {
-                        $city_name = 'City Not Specified'; // Fallback if city_id is empty
-                        $proceed_with_api = false; // Don't proceed with API
-                        
-                        error_log("DEBUG - No city_id provided");
-                    }
-                    
-                    // Only proceed with API call if we have a valid city
-                    if ($proceed_with_api) {
-                        // Prepare data for FDE New Parcel API
-                        $parcel_weight = '1'; // Default weight
-                        $parcel_description = 'Order #' . $order_id . ' - ' . count($order_items) . ' items';
-                        
-                        // Calculate API amount based on payment status
-                        // If order is marked as 'Paid', send 0 to API, otherwise send total_amount
-                        $api_amount = ($order_status === 'Paid') ? 0 : $total_amount;
-                        
-                        // Use customer data for API call
-                        $fde_api_data = array(
-                            'api_key' => $api_key,
-                            'client_id' => $client_id,
-                            'order_id' => $order_id,
-                            'parcel_weight' => $parcel_weight,
-                            'parcel_description' => $parcel_description,
-                            'recipient_name' => $customer_name,
-                            'recipient_contact_1' => $customer_phone,
-                            'recipient_contact_2' => '',
-                            'recipient_address' => trim($address_line1 . ' ' . $address_line2),
-                            'recipient_city' => $city_name,
-                            'amount' => $api_amount,
-                            'exchange' => '0'
-                        );
-                        
-                        // Call FDE New Parcel API
-                        $fde_response = callFdeApi($fde_api_data);
-                        
-                        // Parse FDE response - handle both JSON and error responses
-                        $fde_result = null;
-                        
-                        // Check if response starts with "Curl error:"
-                        if (strpos($fde_response, 'Curl error:') === 0) {
-                            // cURL error occurred
-                            $fde_result = [
-                                'success' => false,
-                                'error' => $fde_response
-                            ];
-                        } else {
-                            // Try to decode JSON response
-                            $fde_result = json_decode($fde_response, true);
-                            
-                            // If JSON decode failed, treat as error
-                            if (json_last_error() !== JSON_ERROR_NONE) {
-                                $fde_result = [
-                                    'success' => false,
-                                    'error' => 'Invalid JSON response',
-                                    'raw_response' => $fde_response
-                                ];
-                            }
-                        }
-                        
-                        // Check for successful API response
-                        if ($fde_result && (
-                            (isset($fde_result['status']) && $fde_result['status'] == 200) ||
-                            (isset($fde_result['success']) && $fde_result['success'] == true) ||
-                            (isset($fde_result['waybill_no']) && !empty($fde_result['waybill_no']))
-                        )) {
-                            // API call successful
-                            $tracking_number = $fde_result['waybill_no'] ?? ($fde_result['tracking_number'] ?? 'FDE' . $order_id);
-                            
-                            // Update order_header with courier info and set status to 'dispatch'
-                            $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                    courier_id = ?, 
-                                                    tracking_number = ?, 
-                                                    status = 'dispatch'
-                                                    WHERE order_id = ?";
-                            $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                            $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                            $updateOrderStmt->execute();
-                            
-                            // Update all order_items status to 'dispatch'
-                            $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                            $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                            $updateItemsStmt->bind_param("i", $order_id);
-                            $updateItemsStmt->execute();
-                            
-                            // Update the main status variable for later use
-                            $status = 'dispatch';
-                            $tracking_assigned = true;
-                            
-                        } else {
-                            // FDE API call failed - Enhanced error handling
-                            $error_status_code = null;
-                            $error_message = 'Unknown error occurred';
-                            
-                            // Extract status code and get user-friendly message
-                            if (isset($fde_result['status'])) {
-                                $error_status_code = $fde_result['status'];
-                                $error_message = getFdeStatusMessage($error_status_code, 'new'); // Updated with api_type
-                            } elseif (isset($fde_result['error'])) {
-                                $error_message = $fde_result['error'];
-                            } elseif (strpos($fde_response, 'Curl error:') === 0) {
-                                $error_message = 'Network connection error - Please check internet connectivity';
-                            }
-                            
-                            // UPDATED: Set user-friendly error message for session
-                            $courier_warning = $error_message; // This will show "Invalid City", "Invalid Phone", etc.
-                        }
-                        
-                    } else {
-                        // City not found or not specified - don't call API
-                        $city_error_reason = empty($city_id) ? 'City not specified in delivery address' : 'Invalid city selected';
-                        $courier_warning = $city_error_reason; // UPDATED: Remove extra text, just show the reason
-                    }
-                    
-                } elseif ($courier_type == 3) {
-                    // FDE EXISTING PARCEL API INTEGRATION
-                    
-                    // Include the FDE Existing Parcel API function
-                    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/fde_existing_parcel_api.php');
-                    
-                    // CITY HANDLING
-                    $city_name = '';
-                    $proceed_with_api = false;
-                    
-                    // Debug log before city processing
-                    error_log("DEBUG - About to process city for FDE Existing API - city_id: " . ($city_id ?? 'NULL'));
-                    
-                    if (!empty($city_id)) {
-                        $getCityNameSql = "SELECT city_name FROM city_table WHERE city_id = ? AND is_active = 1";
-                        $cityStmt = $conn->prepare($getCityNameSql);
-                        $cityStmt->bind_param("i", $city_id);
-                        $cityStmt->execute();
-                        $cityResult = $cityStmt->get_result();
-                        
-                        if ($cityResult && $cityResult->num_rows > 0) {
-                            $cityData = $cityResult->fetch_assoc();
-                            $city_name = $cityData['city_name'];
-                            $proceed_with_api = true; // Valid city found, proceed with API
-                            
-                            error_log("DEBUG - City found: " . $city_name);
-                        } else {
-                            $city_name = 'Unknown City'; // Fallback if city not found
-                            $proceed_with_api = false; // Don't proceed with API
-                            
-                            error_log("DEBUG - City ID exists but city not found in database");
-                        }
-                    } else {
-                        $city_name = 'City Not Specified'; // Fallback if city_id is empty
-                        $proceed_with_api = false; // Don't proceed with API
-                        
-                        error_log("DEBUG - No city_id provided");
-                    }
-                    
-                    // Only proceed with API call if we have a valid city
-                    if ($proceed_with_api) {
-                        // Get unused tracking ID for existing parcel API
-                        $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                        $trackingStmt = $conn->prepare($getTrackingSql);
-                        $trackingStmt->bind_param("i", $default_courier_id);
-                        $trackingStmt->execute();
-                        $trackingResult = $trackingStmt->get_result();
-                        
-                        if ($trackingResult && $trackingResult->num_rows > 0) {
-                            $trackingData = $trackingResult->fetch_assoc();
-                            $tracking_id = $trackingData['tracking_id'];
-                            
-                            // Prepare data for FDE Existing Parcel API
-                            $parcel_weight = '1'; // Default weight
-                            $parcel_description = 'Order #' . $order_id . ' - ' . count($order_items) . ' items';
-                            
-                            // Calculate API amount based on payment status
-                            // If order is marked as 'Paid', send 0 to API, otherwise send total_amount
-                            $api_amount = ($order_status === 'Paid') ? 0 : $total_amount;
-                            
-                            // Use customer data for API call
-                            $fde_existing_api_data = array(
-                                'api_key' => $api_key,
-                                'client_id' => $client_id,
-                                'waybill_id' => $tracking_id, // Using tracking_id as waybill_id for the API
-                                'order_id' => $order_id,
-                                'parcel_weight' => $parcel_weight,
-                                'parcel_description' => $parcel_description,
-                                'recipient_name' => $customer_name,
-                                'recipient_contact_1' => $customer_phone,
-                                'recipient_contact_2' => '',
-                                'recipient_address' => trim($address_line1 . ' ' . $address_line2),
-                                'recipient_city' => $city_name,
-                                'amount' => $api_amount,
-                                'exchange' => '0'
-                            );
-                            
-                            // Call FDE Existing Parcel API
-                            $fde_existing_response = callFdeExistingParcelApi($fde_existing_api_data);
-                            
-                            // Parse FDE response - handle both JSON and error responses
-                            $fde_existing_result = null;
-                            
-                            // Check if response starts with "Curl error:"
-                            if (strpos($fde_existing_response, 'Curl error:') === 0) {
-                                // cURL error occurred
-                                $fde_existing_result = [
-                                    'success' => false,
-                                    'error' => $fde_existing_response
-                                ];
-                            } else {
-                                // Try to decode JSON response
-                                $fde_existing_result = json_decode($fde_existing_response, true);
-                                
-                                // If JSON decode failed, treat as error
-                                if (json_last_error() !== JSON_ERROR_NONE) {
-                                    $fde_existing_result = [
-                                        'success' => false,
-                                        'error' => 'Invalid JSON response',
-                                        'raw_response' => $fde_existing_response
-                                    ];
-                                }
-                            }
-                            
-                            // Check for successful API response
-                            if ($fde_existing_result && (
-                                (isset($fde_existing_result['status']) && $fde_existing_result['status'] == 200) ||
-                                (isset($fde_existing_result['success']) && $fde_existing_result['success'] == true) ||
-                                (isset($fde_existing_result['waybill_no']) && !empty($fde_existing_result['waybill_no']))
-                            )) {
-                                // API call successful
-                                $tracking_number = $fde_existing_result['waybill_no'] ?? ($fde_existing_result['tracking_number'] ?? $tracking_id);
-                                
-                                // Update the tracking record to 'used'
-                                $updateTrackingSql = "UPDATE tracking SET status = 'used', updated_at = CURRENT_TIMESTAMP WHERE tracking_id = ? AND courier_id = ?";
-                                $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                                $updateTrackingStmt->bind_param("si", $tracking_id, $default_courier_id);
-                                $updateTrackingStmt->execute();
-                                
-                                // Update order_header with courier info and set status to 'dispatch'
-                                $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                        courier_id = ?, 
-                                                        tracking_number = ?, 
-                                                        status = 'dispatch'
-                                                        WHERE order_id = ?";
-                                $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                                $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                                $updateOrderStmt->execute();
-                                
-                                // Update all order_items status to 'dispatch'
-                                $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                                $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                                $updateItemsStmt->bind_param("i", $order_id);
-                                $updateItemsStmt->execute();
-                                
-                                // Update the main status variable for later use
-                                $status = 'dispatch';
-                                $tracking_assigned = true;
-                                
-                            } else {
-                                // FDE Existing API call failed - Enhanced error handling
-                                $error_status_code = null;
-                                $error_message = 'Invalid API key';
-                                
-                                // Extract status code and get user-friendly message
-                                if (isset($fde_existing_result['status'])) {
-                                    $error_status_code = $fde_existing_result['status'];
-                                    $error_message = getFdeStatusMessage($error_status_code, 'existing'); // Updated with api_type
-                                } elseif (isset($fde_existing_result['error'])) {
-                                    $error_message = $fde_existing_result['error'];
-                                } elseif (strpos($fde_existing_response, 'Curl error:') === 0) {
-                                    $error_message = 'Network connection error - Please check internet connectivity';
-                                }
-                                
-                                // UPDATED: Set user-friendly error message for session
-                                $courier_warning = $error_message; // This will show "Invalid City", "Invalid Phone", etc.
-                            }
-                            
-                        } else {
-                            // No unused tracking IDs available
-                            $courier_warning = "No unused tracking IDs available for {$courier_name}";
-                        }
-                        
-                    } else {
-                        // City not found or not specified - don't call API
-                        $city_error_reason = empty($city_id) ? 'City not specified in delivery address' : 'Invalid city selected';
-                        $courier_warning = $city_error_reason; // UPDATED: Remove extra text, just show the reason
-                    }
+                } else if (e.key === 'Escape') {
+                    suggestionsDiv.style.display = 'none';
+                    CityAutocomplete.selectedIndex = -1;
                 }
-                // Fardar API end here
-                
-            } elseif ($default_courier_id == 12) {
-                // Koombiyo API start here
-                if ($courier_type == 1) {
-                    // INTERNAL TRACKING SYSTEM for Koombiyo
-                    // Get an unused tracking number for this courier
-                    $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                    $trackingStmt = $conn->prepare($getTrackingSql);
-                    $trackingStmt->bind_param("i", $default_courier_id);
-                    $trackingStmt->execute();
-                    $trackingResult = $trackingStmt->get_result();
-                    
-                    if ($trackingResult && $trackingResult->num_rows > 0) {
-                        $trackingData = $trackingResult->fetch_assoc();
-                        $tracking_number = $trackingData['tracking_id'];
-                        
-                        // Update the tracking record to 'used'
-                        $updateTrackingSql = "UPDATE tracking SET status = 'used' WHERE tracking_id = ? AND courier_id = ?";
-                        $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                        $updateTrackingStmt->bind_param("si", $tracking_number, $default_courier_id);
-                        $updateTrackingStmt->execute();
-                        
-                        // Update order_header with courier info and set status to 'dispatch'
-                        $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                courier_id = ?, 
-                                                tracking_number = ?, 
-                                                status = 'dispatch' 
-                                                WHERE order_id = ?";
-                        $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                        $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                        $updateOrderStmt->execute();
-                        
-                        // Update all order_items status to 'dispatch'
-                        $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                        $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                        $updateItemsStmt->bind_param("i", $order_id);
-                        $updateItemsStmt->execute();
-                        
-                        // Update the main status variable for later use
-                        $status = 'dispatch';
-                        $tracking_assigned = true;
-                        
-                    } else {
-                        $courier_warning = "No unused tracking numbers available for {$courier_name}";
-                    }
-                    
-                } elseif ($courier_type == 2) {
-                    // KOOMBIYO NEW PARCEL API INTEGRATION (placeholder for future implementation)
-                    $courier_warning = "Koombiyo New Parcel API not yet implemented";
-                    
-                } elseif ($courier_type == 3) {
-                            // KOOMBIYO API INTEGRATION
-                            
-                            // Initialize error tracking
-                            $api_errors = [];
-                            $courier_warning = '';
-                            
-                            // Validate API file and function
-                            $api_file_path = $_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/koombiyo_delivery_api.php';
-                            
-                            if (!file_exists($api_file_path)) {
-                                $courier_warning = "Koombiyo API configuration error. Please contact support.";
-                                error_log("Koombiyo API Error: API file not found at $api_file_path");
-                                goto end_koombiyo_processing;
-                            }
-                            
-                            include($api_file_path);
-                            
-                            if (!function_exists('addKoombiyoOrder')) {
-                                $courier_warning = "Koombiyo API service unavailable. Please contact support.";
-                                error_log("Koombiyo API Error: addKoombiyoOrder function not found");
-                                goto end_koombiyo_processing;
-                            }
-                            
-                            // Validate API key
-                            if (empty($api_key)) {
-                                $courier_warning = "Courier service configuration error. Please contact support.";
-                                error_log("Koombiyo API Error: API key not configured");
-                                goto end_koombiyo_processing;
-                            }
-                            
-                            // CITY AND DISTRICT HANDLING
-                            $city_name = '';
-                            $district_name = '';
-                            $proceed_with_api = false;
-                            
-                            if (!empty($city_id)) {
-                                // Get both city and district information
-                                $getCityDistrictSql = "SELECT ct.city_name, dt.district_name 
-                                                    FROM city_table ct 
-                                                    LEFT JOIN district_table dt ON ct.district_id = dt.district_id 
-                                                    WHERE ct.city_id = ? AND ct.is_active = 1";
-                                
-                                $cityStmt = $conn->prepare($getCityDistrictSql);
-                                if (!$cityStmt) {
-                                    $courier_warning = "Database error occurred. Please try again.";
-                                    error_log("Koombiyo API Error: Failed to prepare city query - " . $conn->error);
-                                    goto end_koombiyo_processing;
-                                }
-                                
-                                $cityStmt->bind_param("i", $city_id);
-                                if (!$cityStmt->execute()) {
-                                    $courier_warning = "Database error occurred. Please try again.";
-                                    error_log("Koombiyo API Error: Failed to execute city query - " . $cityStmt->error);
-                                    goto end_koombiyo_processing;
-                                }
-                                
-                                $cityResult = $cityStmt->get_result();
-                                
-                                if ($cityResult && $cityResult->num_rows > 0) {
-                                    $locationData = $cityResult->fetch_assoc();
-                                    $city_name = $locationData['city_name'];
-                                    $district_name = $locationData['district_name'] ?? 'Unknown District';
-                                    $proceed_with_api = true;
-                                } else {
-                                    $courier_warning = "Invalid delivery location selected. Please check your address.";
-                                    error_log("Koombiyo API Error: City not found for city_id: $city_id");
-                                    goto end_koombiyo_processing;
-                                }
-                                $cityStmt->close();
-                            } else {
-                                $courier_warning = "Delivery city not specified. Please complete your address.";
-                                error_log("Koombiyo API Error: No city_id provided for order $order_id");
-                                goto end_koombiyo_processing;
-                            }
-                            
-                            // Only proceed with API call if we have valid city/district
-                            if ($proceed_with_api) {
-                                // Get unused tracking ID
-                                $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                                
-                                $trackingStmt = $conn->prepare($getTrackingSql);
-                                if (!$trackingStmt) {
-                                    $courier_warning = "System error occurred. Please try again.";
-                                    error_log("Koombiyo API Error: Failed to prepare tracking query - " . $conn->error);
-                                    goto end_koombiyo_processing;
-                                }
-                                
-                                $trackingStmt->bind_param("i", $default_courier_id);
-                                if (!$trackingStmt->execute()) {
-                                    $courier_warning = "System error occurred. Please try again.";
-                                    error_log("Koombiyo API Error: Failed to execute tracking query - " . $trackingStmt->error);
-                                    goto end_koombiyo_processing;
-                                }
-                                
-                                $trackingResult = $trackingStmt->get_result();
-                                
-                                if ($trackingResult && $trackingResult->num_rows > 0) {
-                                    $trackingData = $trackingResult->fetch_assoc();
-                                    $waybill_id = $trackingData['tracking_id'];
-                                    $trackingStmt->close();
-                                    
-                                    // Calculate API amount based on payment status
-                                    $api_amount = ($order_status === 'Paid') ? '0' : strval($total_amount);
-                                    
-                                    // Prepare parcel description
-                                    $parcel_description = 'Order #' . $order_id . ' - ' . count($order_items) . ' items';
-                                    
-                                    // Get delivery instructions from notes if available
-                                    $delivery_instructions = $notes ?? '';
-                                    
-                                    // Prepare data for Koombiyo API
-                                    $koombiyo_api_data = array(
-                                        'apikey' => $api_key,
-                                        'orderWaybillid' => $waybill_id,
-                                        'orderNo' => strval($order_id),
-                                        'receiverName' => $customer_name,
-                                        'receiverStreet' => trim($address_line1 . ' ' . $address_line2),
-                                        'receiverDistrict' => $district_name,
-                                        'receiverCity' => $city_name,
-                                        'receiverPhone' => $customer_phone,
-                                        'description' => $parcel_description,
-                                        'spclNote' => $delivery_instructions,
-                                        'getCod' => $api_amount
-                                    );
-                                    
-                                    // Call Koombiyo API
-                                    try {
-                                        $koombiyo_response = addKoombiyoOrder($koombiyo_api_data, $api_key);
-                                        
-                                        // Handle response
-                                        if (!$koombiyo_response || !is_array($koombiyo_response)) {
-                                            $courier_warning = "Courier service error. Please try again or contact support.";
-                                            error_log("Koombiyo API Error: Invalid response format for order $order_id");
-                                            
-                                        } elseif (!isset($koombiyo_response['success']) || !$koombiyo_response['success']) {
-                                            // API failed
-                                            $api_error = $koombiyo_response['error'] ?? 'Unknown API error';
-                                            $courier_warning = "Courier API failed: " . $api_error;
-                                            
-                                            // Log detailed error information
-                                            $error_details = isset($koombiyo_response['details']) ? json_encode($koombiyo_response['details']) : 'No additional details';
-                                            error_log("Koombiyo API Failed for order $order_id: $api_error | Details: $error_details");
-                                            
-                                        } else {
-                                            // API success - update database
-                                            $conn->autocommit(FALSE); // Start transaction
-                                            
-                                            try {
-                                                // Update tracking to used
-                                                $updateTrackingSql = "UPDATE tracking SET status = 'used', updated_at = CURRENT_TIMESTAMP WHERE tracking_id = ? AND courier_id = ?";
-                                                $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                                                if (!$updateTrackingStmt) {
-                                                    throw new Exception("Failed to prepare tracking update: " . $conn->error);
-                                                }
-                                                $updateTrackingStmt->bind_param("si", $waybill_id, $default_courier_id);
-                                                if (!$updateTrackingStmt->execute()) {
-                                                    throw new Exception("Failed to update tracking status: " . $updateTrackingStmt->error);
-                                                }
-                                                
-                                                // Update order header
-                                                $updateOrderHeaderSql = "UPDATE order_header SET courier_id = ?, tracking_number = ?, status = 'dispatch' WHERE order_id = ?";
-                                                $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                                                if (!$updateOrderStmt) {
-                                                    throw new Exception("Failed to prepare order header update: " . $conn->error);
-                                                }
-                                                $updateOrderStmt->bind_param("isi", $default_courier_id, $waybill_id, $order_id);
-                                                if (!$updateOrderStmt->execute()) {
-                                                    throw new Exception("Failed to update order header: " . $updateOrderStmt->error);
-                                                }
-                                                
-                                                // Update order items
-                                                $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                                                $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                                                if (!$updateItemsStmt) {
-                                                    throw new Exception("Failed to prepare order items update: " . $conn->error);
-                                                }
-                                                $updateItemsStmt->bind_param("i", $order_id);
-                                                if (!$updateItemsStmt->execute()) {
-                                                    throw new Exception("Failed to update order items: " . $updateItemsStmt->error);
-                                                }
-                                                
-                                                // Commit transaction
-                                                $conn->commit();
-                                                $conn->autocommit(TRUE);
-                                                
-                                                $status = 'dispatch';
-                                                $tracking_assigned = true;
-                                                
-                                                // Log success
-                                                error_log("Koombiyo API Success: Order $order_id dispatched with tracking $waybill_id");
-                                                
-                                                // Close prepared statements
-                                                $updateTrackingStmt->close();
-                                                $updateOrderStmt->close();
-                                                $updateItemsStmt->close();
-                                                
-                                            } catch (Exception $e) {
-                                                // Rollback transaction on database error
-                                                $conn->rollback();
-                                                $conn->autocommit(TRUE);
-                                                
-                                                $courier_warning = "Order processed but system update failed. Please contact support with order #$order_id.";
-                                                error_log("Koombiyo API Database Error for order $order_id after successful API call: " . $e->getMessage());
-                                                
-                                                // Close any open statements
-                                                if (isset($updateTrackingStmt)) $updateTrackingStmt->close();
-                                                if (isset($updateOrderStmt)) $updateOrderStmt->close();
-                                                if (isset($updateItemsStmt)) $updateItemsStmt->close();
-                                            }
-                                        }
-                                        
-                                    } catch (Exception $e) {
-                                        // API call exception
-                                        $courier_warning = "Courier service unavailable.";
-                                        error_log("Koombiyo API Exception for order $order_id: " . $e->getMessage());
-                                    }
-                                    
-                                } else {
-                                    // No tracking IDs available
-                                    $courier_warning = "No delivery tracking available for {$courier_name}.";
-                                    error_log("Koombiyo API Error: No unused tracking IDs available for courier $default_courier_id");
-                                    if (isset($trackingStmt)) $trackingStmt->close();
-                                }
-                            }
-                            
-                            end_koombiyo_processing:
-                            
-                            // If there were errors and tracking wasn't assigned, ensure proper status
-                            if (!$tracking_assigned && !empty($courier_warning)) {
-                                $status = 'confirmed'; // Keep as confirmed if courier assignment failed
-                            }
-                        }
-                        // Koombiyo API end here
+            });
 
-    
-            } elseif ($default_courier_id == 13) {
-                // Trans Express API start here
-                if ($courier_type == 1) {
-                    // INTERNAL TRACKING SYSTEM for Royal Express
-                    // Get an unused tracking number for this courier
-                    $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                    $trackingStmt = $conn->prepare($getTrackingSql);
-                    $trackingStmt->bind_param("i", $default_courier_id);
-                    $trackingStmt->execute();
-                    $trackingResult = $trackingStmt->get_result();
-                    
-                    if ($trackingResult && $trackingResult->num_rows > 0) {
-                        $trackingData = $trackingResult->fetch_assoc();
-                        $tracking_number = $trackingData['tracking_id'];
-                        
-                        // Update the tracking record to 'used'
-                        $updateTrackingSql = "UPDATE tracking SET status = 'used' WHERE tracking_id = ? AND courier_id = ?";
-                        $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                        $updateTrackingStmt->bind_param("si", $tracking_number, $default_courier_id);
-                        $updateTrackingStmt->execute();
-                        
-                        // Update order_header with courier info and set status to 'dispatch'
-                        $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                courier_id = ?, 
-                                                tracking_number = ?, 
-                                                status = 'dispatch' 
-                                                WHERE order_id = ?";
-                        $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                        $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                        $updateOrderStmt->execute();
-                        
-                        // Update all order_items status to 'dispatch'
-                        $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                        $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                        $updateItemsStmt->bind_param("i", $order_id);
-                        $updateItemsStmt->execute();
-                        
-                        // Update the main status variable for later use
-                        $status = 'dispatch';
-                        $tracking_assigned = true;
-                        
-                    } else {
-                        $courier_warning = "No unused tracking numbers available for {$courier_name}";
+            // Blur event
+            cityInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    if (this.value.trim() === '') {
+                        cityIdInput.value = '';
+                        FormValidator.validateAndToggleSubmit();
                     }
-                    
-// FIXED TransExpress New Parcel API Integration Section
-} elseif ($courier_type == 2) {
-    // TRANSEXPRESS API INTEGRATION - TEST VERSION
-    
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/transexpress_new_parcel_api.php');
-    
-    // Get city info only (try without district first)
-    $proceed_with_api = false;
-    
-    if (!empty($city_id)) {
-        $getCitySql = "SELECT city_name FROM city_table WHERE city_id = ? AND is_active = 1";
-        $cityStmt = $conn->prepare($getCitySql);
-        $cityStmt->bind_param("i", $city_id);
-        $cityStmt->execute();
-        $cityResult = $cityStmt->get_result();
-        
-        if ($cityResult && $cityResult->num_rows > 0) {
-            $proceed_with_api = true;
-        }
-    }
-    
-    if ($proceed_with_api) {
-        $api_amount = ($order_status === 'Paid') ? 0 : $total_amount;
-        $clean_phone = preg_replace('/[^0-9]/', '', $customer_phone);
-        
-        // VERSION 1: Try without district_id first
-        $transexpress_data = array(
-            'api_key' => $api_key,
-            'order_no' => $order_id,
-            'customer_name' => $customer_name,
-            'address' => trim($address_line1 . ' ' . $address_line2),
-            'description' => 'Order #' . $order_id,
-            'phone_no' => $clean_phone,
-            'phone_no2' => '',
-            'cod' => $api_amount,
-            'city_id' => (int)$city_id,
-            'note' => $notes ?? ''
-            // No district_id - testing if it's actually required
-        );
-        
-        $response = callTransExpressApi($transexpress_data);
-        $result = parseTransExpressResponse($response);
-        
-        if ($result['success']) {
-            $tracking_number = $result['waybill_id'];
-            
-            // Update database
-            $updateOrderHeaderSql = "UPDATE order_header SET 
-                                    courier_id = ?, tracking_number = ?, status = 'dispatch'
-                                    WHERE order_id = ?";
-            $updateStmt = $conn->prepare($updateOrderHeaderSql);
-            $updateStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-            $updateStmt->execute();
-            
-            $updateItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-            $itemsStmt = $conn->prepare($updateItemsSql);
-            $itemsStmt->bind_param("i", $order_id);
-            $itemsStmt->execute();
-            
-            $status = 'dispatch';
-            $tracking_assigned = true;
-            
-        } else {
-            $courier_warning = "TransExpress Error: " . $result['error'];
-        }
-        
-    } else {
-        $courier_warning = "Invalid city selected for TransExpress";
-    }
-          } elseif ($courier_type == 3) {
-    // Include the TransExpress Existing Parcel API function
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/transexpress_existing_parcel_api.php');
-    
-    // Initialize variables
-    $proceed_with_api = false;
-    $city_name = '';
-    
-    // STEP 1: Validate city
-    if (!empty($city_id)) {
-        $getCityNameSql = "SELECT city_name FROM city_table WHERE city_id = ? AND is_active = 1";
-        $cityStmt = $conn->prepare($getCityNameSql);
-        $cityStmt->bind_param("i", $city_id);
-        $cityStmt->execute();
-        $cityResult = $cityStmt->get_result();
-        
-        if ($cityResult && $cityResult->num_rows > 0) {
-            $cityData = $cityResult->fetch_assoc();
-            $city_name = $cityData['city_name'];
-            $proceed_with_api = true;
-        }
-        $cityStmt->close();
-    }
-    
-    if (!$proceed_with_api) {
-        $courier_warning = empty($city_id) ? 'City not specified in delivery address' : 'Invalid city selected';
-    } else {
-        // STEP 2: Get unused tracking ID
-        $getTrackingSql = "SELECT id, tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-        $trackingStmt = $conn->prepare($getTrackingSql);
-        $trackingStmt->bind_param("i", $default_courier_id);
-        $trackingStmt->execute();
-        $trackingResult = $trackingStmt->get_result();
-        
-        if ($trackingResult && $trackingResult->num_rows > 0) {
-            $trackingData = $trackingResult->fetch_assoc();
-            $tracking_record_id = $trackingData['id'];
-            $raw_waybill_id = $trackingData['tracking_id'];
-            $trackingStmt->close();
-            
-            // STEP 3: Format waybill ID (must be 8 digits for TransExpress)
-            $numeric_part = preg_replace('/[^0-9]/', '', $raw_waybill_id);
-            if (strlen($numeric_part) >= 8) {
-                $waybill_id = substr($numeric_part, -8);
-            } else {
-                $waybill_id = str_pad($numeric_part, 8, '0', STR_PAD_LEFT);
+                }, 200);
+            });
+
+            // Close on outside click
+            document.addEventListener('click', function(e) {
+                if (e.target !== cityInput && e.target !== suggestionsDiv) {
+                    suggestionsDiv.style.display = 'none';
+                    CityAutocomplete.selectedIndex = -1;
+                }
+            });
+        },
+
+        displaySuggestions: (filteredCities, suggestionsDiv) => {
+            if (filteredCities.length === 0) {
+                suggestionsDiv.innerHTML = '<div class="no-results">No cities found</div>';
+                suggestionsDiv.style.display = 'block';
+                return;
             }
-            
-            // STEP 4: Prepare API data
-            $api_amount = ($order_status === 'Paid') ? 0 : $total_amount;
-            $clean_phone = preg_replace('/[^0-9]/', '', $customer_phone);
-            
-            $transexpress_data = array(
-                'api_key' => $api_key,
-                'waybill_id' => $waybill_id,
-                'order_no' => $order_id,
-                'customer_name' => $customer_name,
-                'address' => trim($address_line1 . ' ' . $address_line2),
-                'description' => 'Order #' . $order_id . ' - ' . count($order_items) . ' items',
-                'phone_no' => $clean_phone,
-                'phone_no2' => '',
-                'cod' => $api_amount,
-                'city_id' => $city_id,
-                'note' => $notes ?? ''
-            );
-            
-            // STEP 5: Call API
-            $api_response = callTransExpressExistingParcelApi($transexpress_data);
-            $result = parseTransExpressExistingResponse($api_response);
-            
-            // STEP 6: Handle response - SIMPLIFIED
-            if ($result['success']) {
-                // API SUCCESS - Update database in simple steps
-                $tracking_number = $result['waybill_id'] ?? $waybill_id;
-                
-                // Update tracking status
-                $updateTrackingSql = "UPDATE tracking SET status = 'used', updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-                $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                $updateTrackingStmt->bind_param("i", $tracking_record_id);
-                $tracking_updated = $updateTrackingStmt->execute();
-                $updateTrackingStmt->close();
-                
-                // Update order_header
-                $updateOrderSql = "UPDATE order_header SET courier_id = ?, tracking_number = ?, status = 'dispatch' WHERE order_id = ?";
-                $updateOrderStmt = $conn->prepare($updateOrderSql);
-                $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                $order_updated = $updateOrderStmt->execute();
-                $updateOrderStmt->close();
-                
-                // Update order_items
-                $updateItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                $updateItemsStmt = $conn->prepare($updateItemsSql);
-                $updateItemsStmt->bind_param("i", $order_id);
-                $items_updated = $updateItemsStmt->execute();
-                $updateItemsStmt->close();
-                
-                // Check if all updates succeeded
-                if ($tracking_updated && $order_updated && $items_updated) {
-                    $status = 'dispatch';
-                    $tracking_assigned = true;
-                    error_log("TransExpress Success: Order $order_id dispatched with tracking $tracking_number");
+
+            let html = filteredCities.map((city, index) => 
+                `<div class="autocomplete-suggestion" data-city-id="${city.city_id}" data-city-name="${city.city_name}" data-index="${index}">
+                    ${city.city_name}
+                </div>`
+            ).join('');
+
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.style.display = 'block';
+            CityAutocomplete.selectedIndex = -1;
+
+            document.querySelectorAll('.autocomplete-suggestion').forEach(suggestion => {
+                suggestion.addEventListener('click', function() {
+                    const cityInput = document.getElementById('city_autocomplete');
+                    const cityIdInput = document.getElementById('city_id');
+                    CityAutocomplete.selectCity(this.dataset.cityId, this.dataset.cityName, cityInput, cityIdInput, suggestionsDiv);
+                });
+            });
+        },
+
+        selectCity: (cityId, cityName, cityInput, cityIdInput, suggestionsDiv) => {
+            cityInput.value = cityName;
+            cityIdInput.value = cityId;
+            suggestionsDiv.style.display = 'none';
+            CityAutocomplete.selectedIndex = -1;
+            FormValidator.validateAndToggleSubmit();
+        },
+
+        updateSelection: (suggestions) => {
+            suggestions.forEach((suggestion, index) => {
+                if (index === CityAutocomplete.selectedIndex) {
+                    suggestion.classList.add('active');
+                    suggestion.scrollIntoView({ block: 'nearest' });
                 } else {
-                    $courier_warning = "API succeeded but database update failed. Contact support.";
-                    error_log("TransExpress Database Update Failed: tracking=$tracking_updated, order=$order_updated, items=$items_updated");
+                    suggestion.classList.remove('active');
                 }
-                
-            } else {
-                // API FAILED
-                $courier_warning = $result['error'] ?? 'TransExpress API failed';
-                error_log("TransExpress API Failed: " . ($result['error'] ?? 'Unknown error'));
-            }
-            
-        } else {
-            // No tracking IDs available
-            $courier_warning = "No unused waybill numbers available for {$courier_name}";
-            if (isset($trackingStmt)) $trackingStmt->close();
+            });
         }
+    };
+
+  // ========== CUSTOMER MODAL ========== 
+// REPLACE the existing CustomerModal.init() section with this updated version
+const CustomerModal = {
+    init: () => {
+        const modal = document.getElementById("customerModal");
+        const selectBtn = document.getElementById("select_existing_customer");
+        const closeBtn = document.querySelector(".close-modal");
+        const searchInput = document.getElementById("customerSearch");
+
+        selectBtn.addEventListener('click', () => modal.style.display = "block");
+        closeBtn.addEventListener('click', () => modal.style.display = "none");
+        
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) modal.style.display = "none";
+        });
+
+        // Search functionality
+        searchInput.addEventListener('keyup', function() {
+            const value = this.value.toLowerCase();
+            document.querySelectorAll(".customer-row").forEach(row => {
+                const text = row.textContent || row.innerText;
+                row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
+            });
+        });
+
+        // Select customer - UPDATED TO INCLUDE PHONE_2
+        document.querySelectorAll(".select-customer-btn").forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('tr');
+                
+                document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
+                document.getElementById('customer_name').value = row.getAttribute('data-name');
+                document.getElementById('customer_email').value = row.getAttribute('data-email');
+                document.getElementById('customer_phone').value = row.getAttribute('data-phone');
+                document.getElementById('customer_phone_2').value = row.getAttribute('data-phone-2') || ''; // NEW: Set phone_2
+                document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
+                document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
+                document.getElementById('city_id').value = row.getAttribute('data-city-id');
+                document.getElementById('city_autocomplete').value = row.getAttribute('data-city-name');
+                
+                isExistingCustomer = true;
+                CustomerManager.toggleFields(true);
+                ValidationUtils.clearErrors();
+                
+                modal.style.display = "none";
+                alert('Customer selected: ' + row.getAttribute('data-name'));
+                FormValidator.validateAndToggleSubmit();
+            });
+        });
+
+        // Add clear selection button
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-outline-secondary ml-2';
+        clearBtn.innerHTML = '<i class="feather icon-x"></i> Clear Selection';
+        clearBtn.style.marginLeft = '10px';
+        clearBtn.addEventListener('click', CustomerManager.clearFields);
+        selectBtn.parentNode.appendChild(clearBtn);
     }
-}//Trans Express API end here
+};
 
-       } elseif ($default_courier_id == 14) {
-        // Royal Express API start here
-                if ($courier_type == 1) {
-                    // INTERNAL TRACKING SYSTEM for Royal exp
-                    // Get an unused tracking number for this courier
-                    $getTrackingSql = "SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' LIMIT 1";
-                    $trackingStmt = $conn->prepare($getTrackingSql);
-                    $trackingStmt->bind_param("i", $default_courier_id);
-                    $trackingStmt->execute();
-                    $trackingResult = $trackingStmt->get_result();
+    // ========== EVENT LISTENERS ==========
+    const EventListeners = {
+        init: () => {
+            // Customer field validation
+            ['customer_name', 'customer_email', 'customer_phone', 'address_line1', 'address_line2'].forEach(id => {
+                document.getElementById(id).addEventListener('input', FormValidator.validateAndToggleSubmit);
+            });
+
+            // Date validation
+            document.querySelector('input[name="order_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
+            document.querySelector('input[name="due_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
+
+            // Product events (event delegation)
+            document.addEventListener('change', (e) => {
+                if (e.target.classList.contains('product-select')) {
+                    ProductManager.updatePrice(e.target.closest('tr'));
+                    FormValidator.validateAndToggleSubmit();
+                }
+            });
+
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('discount')) {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                }
+                
+                if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
+                    ProductManager.updateRowTotal(e.target.closest('tr'));
+                    FormValidator.validateAndToggleSubmit();
+                }
+                
+                if (e.target.classList.contains('product-description')) {
+                    FormValidator.validateAndToggleSubmit();
+                }
+            });
+
+            // Add product row
+            document.getElementById('add_product').addEventListener('click', ProductManager.addRow);
+
+            // Remove product row
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove_product')) {
+                    ProductManager.removeRow(e.target);
+                }
+            });
+
+            // Form submission
+            document.getElementById('orderForm').addEventListener('submit', (e) => {
+                if (!FormValidator.validateAndToggleSubmit()) {
+                    e.preventDefault();
+                    let issues = [];
+                    if (!CustomerManager.validate()) issues.push('Customer information');
+                    if (!DateValidator.validate()) issues.push('Order dates');
+                    if (!ProductManager.validate()) issues.push('Product information');
+                    if (!ProductManager.hasValidProduct()) issues.push('At least one complete product');
                     
-                    if ($trackingResult && $trackingResult->num_rows > 0) {
-                        $trackingData = $trackingResult->fetch_assoc();
-                        $tracking_number = $trackingData['tracking_id'];
-                        
-                        // Update the tracking record to 'used'
-                        $updateTrackingSql = "UPDATE tracking SET status = 'used' WHERE tracking_id = ? AND courier_id = ?";
-                        $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                        $updateTrackingStmt->bind_param("si", $tracking_number, $default_courier_id);
-                        $updateTrackingStmt->execute();
-                        
-                        // Update order_header with courier info and set status to 'dispatch'
-                        $updateOrderHeaderSql = "UPDATE order_header SET 
-                                                courier_id = ?, 
-                                                tracking_number = ?, 
-                                                status = 'dispatch' 
-                                                WHERE order_id = ?";
-                        $updateOrderStmt = $conn->prepare($updateOrderHeaderSql);
-                        $updateOrderStmt->bind_param("isi", $default_courier_id, $tracking_number, $order_id);
-                        $updateOrderStmt->execute();
-                        
-                        // Update all order_items status to 'dispatch'
-                        $updateOrderItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                        $updateItemsStmt = $conn->prepare($updateOrderItemsSql);
-                        $updateItemsStmt->bind_param("i", $order_id);
-                        $updateItemsStmt->execute();
-                        
-                        // Update the main status variable for later use
-                        $status = 'dispatch';
-                        $tracking_assigned = true;
-                        
-                    } else {
-                        $courier_warning = "No unused tracking numbers available for {$courier_name}";
-                    }
-                    
-                } elseif ($courier_type == 2) {
-                    // Royal express NEW PARCEL API INTEGRATION (placeholder for future implementation)
-                    $courier_warning = "Royal Express New Parcel API not yet implemented";
-
-                } elseif ($courier_type == 3) {
-
-                    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/api/royal_express_existing_parcel_api.php');
-
-                    // STEP 1: Validate city and state
-                    $proceed_with_api = false;
-                    $city_name = '';
-                    $state_name = '';
-
-                    if (!empty($city_id)) {
-                        // Fetch city name and its state_id
-                        $getCityNameSql = "SELECT city_name, state_id FROM city_table WHERE city_id = ? AND is_active = 1";
-                        $cityStmt = $conn->prepare($getCityNameSql);
-                        $cityStmt->bind_param("i", $city_id);
-                        $cityStmt->execute();
-                        $cityResult = $cityStmt->get_result();
-
-                        if ($cityResult && $cityResult->num_rows > 0) {
-                            $cityData = $cityResult->fetch_assoc();
-                            $city_name = $cityData['city_name'];
-                            $state_id = $cityData['state_id'];
-
-                            // Fetch state name from state_table
-                            if (!empty($state_id)) {
-                                $getStateSql = "SELECT name FROM state_table WHERE id = ?";
-                                $stateStmt = $conn->prepare($getStateSql);
-                                $stateStmt->bind_param("i", $state_id);
-                                $stateStmt->execute();
-                                $stateResult = $stateStmt->get_result();
-                                if ($stateResult && $stateResult->num_rows > 0) {
-                                    $stateData = $stateResult->fetch_assoc();
-                                    $state_name = $stateData['name'];
-                                }
-                                $stateStmt->close();
-                            }
-
-                            $proceed_with_api = true;
-                        }
-                        $cityStmt->close();
-                    } else {
-                        // If city_id is empty, try using customer's state_name if available
-                        if (!empty($customer_state_name)) {
-                            $state_name = $customer_state_name;
-                            $proceed_with_api = true;
-                        }
-                    }
-
-                    if (!$proceed_with_api) {
-                        $courier_warning = empty($city_id) ? 'City not specified in delivery address' : 'Invalid city selected';
-                    } else {
-                        // STEP 2: Get unused tracking ID
-                        $getTrackingSql = "SELECT id, tracking_id FROM tracking WHERE courier_id = 14 AND status = 'unused' LIMIT 1";
-                        $trackingStmt = $conn->prepare($getTrackingSql);
-                        $trackingStmt->execute();
-                        $trackingResult = $trackingStmt->get_result();
-
-                        if ($trackingResult && $trackingResult->num_rows > 0) {
-                            $trackingData = $trackingResult->fetch_assoc();
-                            $tracking_record_id = $trackingData['id'];
-                            $waybill_number = trim($trackingData['tracking_id']);
-                            $trackingStmt->close();
-
-                            // STEP 3: Prepare payload
-                            $api_amount = ($order_status === 'Paid') ? 0 : $total_amount;
-                            $clean_phone = preg_replace('/[^0-9]/', '', $customer_phone);
-                            $clean_phone2 = preg_replace('/[^0-9]/', '', $customer_secondary_phone ?? '');
-
-                            $royal_data = [
-                                "general_data" => [
-                                    "merchant_business_id" => $client_id,
-                                    "origin_city_name" => $origin_city_name,
-                                    "origin_state_name" => $origin_state_name
-                                ],
-                                "order_data" => [
-                                    [
-                                        "waybill_number" => $waybill_number,
-                                        "order_no" => (string)$order_id,
-                                        "customer_name" => $customer_name,
-                                        "customer_address" => trim($address_line1 . ' ' . $address_line2),
-                                        "customer_phone" => $clean_phone,
-                                        "customer_secondary_phone" => $clean_phone2,
-                                        "destination_city_name" => $city_name,
-                                        "destination_state_name" => $state_name,
-                                        "cod" => floatval($api_amount),
-                                        "description" => 'Order #' . $order_id . ' - ' . count($order_items) . ' items',
-                                        "weight" => floatval($weight ?? 1),
-                                        "remark" => $notes ?? ''
-                                    ]
-                                ]
-                            ];
-
-                            // STEP 4: Call Royal Express API
-                            $api_response = callRoyalExpressSingleOrderApi($royal_data, $default_courier_id, $conn);
-                            $result = parseRoyalExpressResponse($api_response);
-
-                            // STEP 5: Handle response
-                            if ($result['success'] == true) {
-
-                                
-                                $tracking_number = $result['tracking_number'] ?? $waybill_number;
-
-                                // Update tracking
-                                $updateTrackingSql = "UPDATE tracking SET status = 'used', updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-                                $updateTrackingStmt = $conn->prepare($updateTrackingSql);
-                                $updateTrackingStmt->bind_param("i", $tracking_record_id);
-                                $tracking_updated = $updateTrackingStmt->execute();
-                                $updateTrackingStmt->close();
-
-                                // Update order header
-                                $updateOrderSql = "UPDATE order_header SET courier_id = 14, tracking_number = ?, status = 'dispatch' WHERE order_id = ?";
-                                $updateOrderStmt = $conn->prepare($updateOrderSql);
-                                $updateOrderStmt->bind_param("si", $tracking_number, $order_id);
-                                $order_updated = $updateOrderStmt->execute();
-                                $updateOrderStmt->close();
-
-                                // Update order items
-                                $updateItemsSql = "UPDATE order_items SET status = 'dispatch' WHERE order_id = ?";
-                                $updateItemsStmt = $conn->prepare($updateItemsSql);
-                                $updateItemsStmt->bind_param("i", $order_id);
-                                $items_updated = $updateItemsStmt->execute();
-                                $updateItemsStmt->close();
-
-                                if ($tracking_updated && $order_updated && $items_updated) {
-                                    $status = 'dispatch';
-                                    $tracking_assigned = true;
-                                    error_log("RoyalExpress Success: Order $order_id dispatched with tracking $tracking_number");
-                                } else {
-                                    $courier_warning = "API succeeded but DB update failed.";
-                                }
-                            } else {
-                                $courier_warning = $result['error_message'] ?? 'Royal Express API failed';
-                            }
-                        } else {
-                            $courier_warning = "No unused waybill numbers available for Royal Express.";
-                            if (isset($trackingStmt)) $trackingStmt->close();
-                        }
-                    }
+                    alert('Please fix the following issues:\n- ' + issues.join('\n- '));
+                    return false;
                 }
-
-
-             } else {
-                // OTHER COURIER TYPES - Default internal tracking   
-            }
-
-        } else {
-            // No courier configured
-            $courier_warning = "No courier configured";
+                return true;
+            });
         }
-        
-        // If order is marked as Paid, insert into payments table
-        if ($order_status === 'Paid') {
-            // Default payment method to 'Cash'
-            $payment_method = 'Cash';
-            
-            // Insert payment record
-            $insertPaymentSql = "INSERT INTO payments (
-                order_id, 
-                amount_paid, 
-                payment_method, 
-                payment_date, 
-                pay_by
-            ) VALUES (?, ?, ?, ?, ?)";
+    };
 
-            $current_datetime = date('Y-m-d H:i:s');
-
-            $stmt = $conn->prepare($insertPaymentSql);
-            $stmt->bind_param(
-                "idssi", 
-                $order_id, 
-                $total_amount, 
-                $payment_method, 
-                $current_datetime, 
-                $user_id
-            );
-            $stmt->execute();
-        }
-        
-        // SINGLE USER LOG - CREATE ONLY ONE LOG ENTRY FOR ORDER CREATION
-        $log_details = "Add a " . ($tracking_assigned ? 'dispatch' : 'pending') . " " . ($order_status === 'Paid' ? 'paid' : 'unpaid') . " order($order_id)" . 
-                       ($total_discount > 0 ? " with discount" : "") . 
-                       ($tracking_assigned && isset($tracking_number) ? " with tracking($tracking_number)" : "");
-        
-        // Log the order creation action - SINGLE LOG ENTRY
-        $log_success = logUserAction($conn, $user_id, 'CREATE_ORDER', $order_id, $log_details);
-        
-        // Optional: Log any errors (but don't stop the process)
-        if (!$log_success) {
-            error_log("Failed to log user action for order creation: Order ID $order_id, User ID $user_id");
-        }
-        
-        // Commit transaction
-        $conn->commit();
-        
-        // UPDATED: Determine success message and redirect logic
-        if ($tracking_assigned) {
-            // Order created successfully with tracking
-            $success_message = "Order #" . $order_id . " created successfully with tracking number assigned!";
-            setMessageAndRedirect('success', $success_message, "download_order.php?id=" . $order_id);
-        } else {
-            // Order created but tracking assignment failed or skipped
-            $success_message = "Order #" . $order_id . " created successfully!";
-            
-            if (!empty($courier_warning)) {
-                // Set both success and warning messages
-                $_SESSION['order_success'] = $success_message;
-                $_SESSION['order_warning'] = $courier_warning;
-                
-                // Additional context for specific FDE errors
-                if (strpos($courier_warning, 'Invalid City') !== false || strpos($courier_warning, 'Invalid city') !== false) {
-                    $_SESSION['order_info'] = "Please ensure a valid delivery city is selected for automatic tracking assignment.";
-                } elseif (strpos($courier_warning, 'Contact number') !== false || strpos($courier_warning, 'Invalid contact number') !== false) {
-                    $_SESSION['order_info'] = "Please verify the customer's phone number format for FDE courier integration.";
-                } elseif (strpos($courier_warning, 'Invalid or inactive client') !== false || strpos($courier_warning, 'Inactive Client') !== false) {
-                    $_SESSION['order_info'] = "Courier API client configuration needs to be updated. Contact system administrator.";
-                }
-                
-                // Clear any output buffers before redirect
-                while (ob_get_level()) {
-                    ob_end_clean();
-                }
-                
-                header("Location: download_order.php?id=" . $order_id);
-                exit();
-            } else {
-                setMessageAndRedirect('success', $success_message, "download_order.php?id=" . $order_id);
-            }
-        }
-        
-    } catch (Exception $e) {
-        // Rollback transaction
-        if ($conn->inTransaction()) {
-            $conn->rollback();
-        }
-        
-        // Log the error for debugging
-        error_log("Order creation error: " . $e->getMessage());
-        error_log("Error trace: " . $e->getTraceAsString());
-        
-        // Set error message and redirect
-        setMessageAndRedirect('error', $e->getMessage());
-    }
-} else {
-    // Not a POST request - redirect with info message
-    setMessageAndRedirect('info', 'Invalid request method. Please use the order form to create orders.');
-}
-?>
+    // ========== INITIALIZATION ==========
+    CityAutocomplete.init();
+    CustomerModal.init();
+    EventListeners.init();
+    
+    document.getElementById('delivery_fee_row').style.display = 'none';
+    ProductManager.updateTotals();
+    FormValidator.validateAndToggleSubmit();
+});
+</script>
+</body>
+</html>

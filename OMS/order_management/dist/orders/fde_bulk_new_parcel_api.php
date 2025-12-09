@@ -1,8 +1,13 @@
 <?php
 /**
- * FDE Bulk New Parcel API Handler - FIXED VERSION
- * @version 2.3
+ * FDE Bulk New Parcel API Handler - FIXED VERSION with Phone 2 Support
+ * @version 2.4
  * @date 2025
+ * 
+ * CHANGES:
+ * - Added phone_2 field to SQL query
+ * - Added phone_2 to API data payload
+ * - Added fallback logic for empty phone_2
  */
 
 session_start();
@@ -139,10 +144,19 @@ try {
         throw new Exception('Invalid courier or missing API credentials');
     }
     
-    // Get orders
+    // ==========================================
+    // ✅ CHANGE 1: Added phone_2 to SELECT query
+    // ==========================================
     $placeholders = str_repeat('?,', count($orderIds) - 1) . '?';
     $stmt = $conn->prepare("
-        SELECT oh.*, c.name as customer_name, c.phone as customer_phone, c.address_line1 as customer_address1, c.address_line2 as customer_address2, ct.city_name
+        SELECT 
+            oh.*, 
+            c.name as customer_name, 
+            c.phone as customer_phone, 
+            c.phone_2 as customer_phone_2,
+            c.address_line1 as customer_address1, 
+            c.address_line2 as customer_address2, 
+            ct.city_name
         FROM order_header oh 
         LEFT JOIN customers c ON oh.customer_id = c.customer_id 
         LEFT JOIN city_table ct ON c.city_id = ct.city_id
@@ -169,6 +183,18 @@ try {
             // Determine amount based on pay_status
             $apiAmount = ($order['pay_status'] === 'paid') ? 0 : $order['total_amount'];
             
+            // ==========================================
+            // ✅ CHANGE 2: Prepare phone numbers with proper fallback
+            // ==========================================
+            // Primary phone (required)
+            $recipientPhone1 = $order['mobile'] ?: $order['customer_phone'];
+            
+            // Secondary phone (optional) - use customer_phone_2 if available
+            $recipientPhone2 = !empty($order['customer_phone_2']) ? $order['customer_phone_2'] : '';
+            
+            // ==========================================
+            // ✅ CHANGE 3: Updated API data array with phone_2
+            // ==========================================
             $apiData = [
                 'api_key' => $courier['api_key'],
                 'client_id' => $courier['client_id'],
@@ -176,13 +202,18 @@ try {
                 'parcel_weight' => $parcelData['weight'],
                 'parcel_description' => $parcelData['description'],
                 'recipient_name' => $order['full_name'] ?: $order['customer_name'],
-                'recipient_contact_1' => $order['mobile'] ?: $order['customer_phone'],
-                'recipient_contact_2' => '',
+                'recipient_contact_1' => $recipientPhone1,
+                'recipient_contact_2' => $recipientPhone2,  // ✅ Now includes phone_2
                 'recipient_address' => trim(($order['address_line1'] ?? $order['customer_address1'] ?? '') . ' ' . ($order['address_line2'] ?? $order['customer_address2'] ?? '')),
                 'recipient_city' => $order['city_name'] ?: '',
                 'amount' => $apiAmount,
                 'exchange' => '0'
             ];
+            
+            // ==========================================
+            // ✅ CHANGE 4: Added debug logging for phone numbers
+            // ==========================================
+            error_log("DEBUG - Order $orderId API Data: Phone1={$recipientPhone1}, Phone2={$recipientPhone2}");
             
             $result = callFdeApi($apiData);
             
@@ -213,15 +244,20 @@ try {
                     throw new Exception("Order items update failed: " . $stmt->error);
                 }
                 
+                // ==========================================
+                // ✅ CHANGE 5: Enhanced logging with phone info
+                // ==========================================
                 logAction($conn, $userId, 'api_new_dispatch', $orderId, 
-                    "Order $orderId dispatched - Tracking: $trackingNumberToStore, Status: {$result['message']}");
+                    "Order $orderId dispatched - Tracking: $trackingNumberToStore, Phone1: $recipientPhone1, Phone2: " . ($recipientPhone2 ?: 'N/A') . ", Status: {$result['message']}");
                 
                 $successCount++;
                 $processedOrders[] = [
                     'order_id' => $orderId, 
                     'tracking_number' => $trackingNumberToStore,
                     'api_tracking' => $trackingNumber,
-                    'generated_tracking' => empty($trackingNumber)
+                    'generated_tracking' => empty($trackingNumber),
+                    'phone_1' => $recipientPhone1,
+                    'phone_2' => $recipientPhone2
                 ];
                 
             } else {

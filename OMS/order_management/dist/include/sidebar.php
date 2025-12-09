@@ -4,19 +4,20 @@
 // =========================================================================
 if (!function_exists('get_logo_with_fallback')) {
     /**
-     * Fetches logo URL and company name from the branding table with fallbacks.
+     * Fetches logo URL and company name from the branding table.
+     * Always returns database values or null if not found.
      * Assumes $conn is a valid mysqli link.
      */
-    function get_logo_with_fallback($conn, $default_logo = '../assets/images/lily.jpeg', $default_name = 'order_management') {
+    function get_logo_with_fallback($conn) {
         $result = [
-            'logo_url' => $default_logo,
-            'company_name' => $default_name,
+            'logo_url' => null,
+            'company_name' => null,
             'debug' => []
         ];
         
         try {
             if (!isset($conn) || !$conn) {
-                $result['debug'][] = "No database connection available, using defaults.";
+                $result['debug'][] = "No database connection available.";
                 return $result;
             }
             
@@ -35,24 +36,19 @@ if (!function_exists('get_logo_with_fallback')) {
                 if (!empty($data['company_name'])) {
                     $result['company_name'] = trim($data['company_name']);
                     $result['debug'][] = "DB Company name set: " . $result['company_name'];
+                } else {
+                    $result['debug'][] = "Company name is empty in database.";
                 }
                 
-                // Set logo URL with basic validation (more complex path checking removed for simplicity)
+                // Set logo URL
                 if (!empty($data['logo_url'])) {
-                    $logo_path = trim($data['logo_url']);
-                    
-                    // Simple check if the file path (relative/absolute) or URL is provided
-                    if (filter_var($logo_path, FILTER_VALIDATE_URL) || (file_exists($logo_path) || file_exists('../' . $logo_path) || file_exists('../../' . $logo_path))) {
-                        $result['logo_url'] = $logo_path;
-                        $result['debug'][] = "DB Logo URL set: " . $result['logo_url'];
-                    } else {
-                        $result['debug'][] = "DB logo path inaccessible or invalid, using default: " . $logo_path;
-                    }
+                    $result['logo_url'] = trim($data['logo_url']);
+                    $result['debug'][] = "DB Logo URL set: " . $result['logo_url'];
                 } else {
-                    $result['debug'][] = "No logo URL found in database, using default.";
+                    $result['debug'][] = "Logo URL is empty in database.";
                 }
             } else {
-                $result['debug'][] = "No active branding data found, using defaults.";
+                $result['debug'][] = "No active branding data found in database.";
             }
             
             mysqli_free_result($db_result);
@@ -73,37 +69,50 @@ if (!function_exists('get_logo_with_fallback')) {
       <a href="../dashboard/index.php" class="b-brand flex items-center gap-3">
         
         <?php
-        // Define default logo/name for the function
-        $default_logo_path = '../assets/images/lily.jpeg'; // Default fallback image
-        $default_company_name = 'order_management';
-
+        // Fetch branding info from database
         // Assuming $conn is available for database connection
-        // Pass $conn, or null if it's not guaranteed to be set, to avoid PHP warnings
-        $branding_info = get_logo_with_fallback(
-            isset($conn) ? $conn : null, 
-            $default_logo_path, 
-            $default_company_name
-        );
+        $branding_info = get_logo_with_fallback(isset($conn) ? $conn : null);
         
-        // Sanitize output
-        $logo_url = htmlspecialchars($branding_info['logo_url'], ENT_QUOTES, 'UTF-8');
-        $company_name = htmlspecialchars($branding_info['company_name'], ENT_QUOTES, 'UTF-8');
+        // Get values from database
+        $logo_url = $branding_info['logo_url'];
+        $company_name = $branding_info['company_name'] ?? 'Company';
 
-        // Output debug info as HTML comments (remove in production by commenting out or removing the check for DEBUG_MODE)
+        // Output debug info as HTML comments (remove in production)
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
-            echo "";
+            echo "<!-- Debug Info:\n";
+            foreach ($branding_info['debug'] as $debug_msg) {
+                echo "  - " . htmlspecialchars($debug_msg) . "\n";
+            }
+            echo "-->\n";
         }
         
-        // Fallback data URI SVG for the onerror attribute (generic LOGO placeholder)
+        // Fallback SVG placeholder if no logo in database
         $fallback_svg = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPC9zdmc+';
-        ?>
         
-        <img src="<?php echo $logo_url; ?>" 
-          alt="<?php echo $company_name; ?> logo" 
-          class="img-fluid logo logo-lg" 
-          style="max-height: 40px;" 
-          onerror="this.onerror=null; this.src='<?php echo $fallback_svg; ?>';" 
-          onload="console.log('Logo loaded successfully: <?php echo addslashes($logo_url); ?>');" />
+        // Sanitize output for security
+        $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
+        
+        // Display logo if available
+        if ($logo_url): 
+            $safe_logo_url = htmlspecialchars($logo_url, ENT_QUOTES, 'UTF-8');
+        ?>
+          <img src="<?php echo $safe_logo_url; ?>" 
+            alt="<?php echo $safe_company_name; ?> logo" 
+            class="img-fluid logo logo-lg" 
+            style="max-height: 40px; margin-right: 10px;" 
+            onerror="this.onerror=null; this.src='<?php echo $fallback_svg; ?>';" />
+        <?php else: ?>
+          <!-- No logo in database, showing fallback -->
+          <img src="<?php echo $fallback_svg; ?>" 
+            alt="<?php echo $safe_company_name; ?> logo" 
+            class="img-fluid logo logo-lg" 
+            style="max-height: 40px; margin-right: 10px;" />
+        <?php endif; ?>
+        
+        <!-- Company Name -->
+        <span class="text-lg font-semibold  dark:text-white">
+          <?php echo $safe_company_name; ?>
+        </span>
       </a>
     </div>
     
@@ -140,7 +149,7 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../orders/dispatch_order_list.php">Dispatch Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/couriers.php">Courier Management</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/cancel_order_list.php">Cancel Orders</a></li>
-               <li class="pc-item"><a class="pc-link" href="../orders/complete_mark_upload.php">Completed Mark Upload</a></li>
+            <li class="pc-item"><a class="pc-link" href="../orders/complete_mark_upload.php">Completed Mark Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/payment_report.php"> Payment Report</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/return_csv_upload.php">Return CSV Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/return_complete_order_list.php">Return Complete Orders</a></li>
@@ -161,16 +170,15 @@ if (!function_exists('get_logo_with_fallback')) {
         </li>
         
         <?php 
-        // Check if user has admin privileges (multiple possible scenarios)
+        // Check if user has admin privileges
         $is_admin = false;
         
-        // Option 1: Check if role_id exists in session
+        // Check if role_id exists in session
         if (isset($_SESSION['user_role_id'])) {
-            // Admin might be role_id 1, or check role name
             $is_admin = ($_SESSION['user_role_id'] == 1);
         }
         
-        // Option 2: If no role in session, check database directly
+        // If no role in session, check database directly
         if (!$is_admin && isset($_SESSION['user_id']) && isset($conn) && $conn) {
             $user_id = mysqli_real_escape_string($conn, $_SESSION['user_id']);
             $role_check_query = "SELECT u.role_id, r.name as role_name 
@@ -180,7 +188,6 @@ if (!function_exists('get_logo_with_fallback')) {
             $role_result = mysqli_query($conn, $role_check_query);
             
             if ($role_result && $role_data = mysqli_fetch_assoc($role_result)) {
-                // Check if role is admin (by ID or name)
                 $is_admin = ($role_data['role_id'] == 1 || 
                              strtolower($role_data['role_name']) == 'admin' || 
                              strtolower($role_data['role_name']) == 'administrator' ||
@@ -201,7 +208,6 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../users/user_logs.php">User Activity Log</a></li>
           </ul>
         </li>
-        <?php else: ?>
         <?php endif; ?>
         
         <li class="pc-item pc-hasmenu">
@@ -242,7 +248,7 @@ if (!function_exists('get_logo_with_fallback')) {
           <ul class="pc-submenu">
             <li class="pc-item"><a class="pc-link" href="../leads/lead_upload.php">Lead Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../leads/lead_list.php">Lead List</a></li>
-               <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">My Leads </a></li>
+            <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">My Leads </a></li>
             <li class="pc-item"><a class="pc-link" href="../leads/city_list.php">City List</a></li>
           </ul>
         </li>
