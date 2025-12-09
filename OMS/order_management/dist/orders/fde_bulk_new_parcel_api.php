@@ -73,8 +73,8 @@ function getParcelData($orderId, $conn) {
     $totalItems = $result['total_qty'] ?? 0;
     $desc = "Order #$orderId - $totalItems items";
 
-    // Calculate weight
-    $weight = max(0.5, min(10, $totalItems * 0.5));
+    // Always use 1 kg as default weight
+    $weight = 1.0;
 
     return [
         'description' => $desc,

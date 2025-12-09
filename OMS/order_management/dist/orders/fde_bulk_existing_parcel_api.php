@@ -63,18 +63,23 @@ function callFdeApi($apiData) {
 
 // Get parcel description and weight
 function getParcelData($orderId, $conn) {
-    $stmt = $conn->prepare("SELECT GROUP_CONCAT(description SEPARATOR ', ') as description_text, SUM(quantity) as total_qty FROM order_items WHERE order_id = ?");
+    $stmt = $conn->prepare("SELECT SUM(quantity) as total_qty FROM order_items WHERE order_id = ?");
     $stmt->bind_param("i", $orderId);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
-    
-    $desc = $result['description_text'] ?? 'General Items';
-    $desc = strlen($desc) > 100 ? substr($desc, 0, 97) . '...' : $desc;
-    $weight = max(0.5, min(10, ($result['total_qty'] ?? 1) * 0.5));
-    
-    return ['description' => $desc, 'weight' => number_format($weight, 1)];
-}
 
+    // Create your custom description
+    $totalItems = $result['total_qty'] ?? 0;
+    $desc = "Order #$orderId - $totalItems items";
+
+    // Always use 1 kg as default weight
+    $weight = 1.0;
+
+    return [
+        'description' => $desc,
+        'weight' => number_format($weight, 1)
+    ];
+}
 try {
     include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
     
