@@ -185,10 +185,10 @@ if (!empty($order_ids)) {
 
 // Company information
 $company = [
-    'name' => 'FE IT Solutions pvt (Ltd)',
-    'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
-    'email' => 'info@feitsolutions.com',
-    'phone' => '011-2824524'
+    'name' => 'Lily Collection',
+    'address' => 'No: 67 ganegoda junction,dompe',
+    'email' => 'lilycollectionkidszone@gmail.com',
+    'phone' => '071-998-6333'
 ];
 
 /**
@@ -352,7 +352,7 @@ foreach ($orders as $order) {
                             <tr>
                                 <td class="header-section" colspan="2">
                                     <div class="company-logo">
-                                        <img src="../assets/images/lily_collection.png" alt="Company Logo">
+                                        <img src="../assets/images/lily.jpeg" alt="Company Logo">
                                     </div>
                                     <div class="company-name"><?php echo htmlspecialchars($company['name']); ?></div>
                                     <div class="company-info">Address: <?php echo htmlspecialchars($company['address']); ?></div>
