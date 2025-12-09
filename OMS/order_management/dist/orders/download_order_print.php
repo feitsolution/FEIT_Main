@@ -7,12 +7,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /OMS/order_management/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
 // Include the database connection filea
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 
 // =============================================================
@@ -27,7 +27,7 @@ $company_name = !empty($branding['company_name']) ? $branding['company_name'] : 
 $company_address = !empty($branding['address']) ? $branding['address'] : "";
 $company_email = !empty($branding['email']) ? $branding['email'] : "";
 $company_hotline = !empty($branding['hotline']) ? $branding['hotline'] : "";
-$company_logo = "/OMS/order_management/dist/assets/images/lily.jpeg";
+$company_logo = "/order_management/dist/assets/images/lily.jpeg";
 
 
 // =============================================================

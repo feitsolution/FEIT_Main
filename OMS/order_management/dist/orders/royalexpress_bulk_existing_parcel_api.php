@@ -147,7 +147,7 @@ function getParcelData($orderId, $conn) {
 
 // Main execution
 try {
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
     if (!isset($conn) || $conn->connect_error) {
         throw new Exception('Database connection failed');
     }

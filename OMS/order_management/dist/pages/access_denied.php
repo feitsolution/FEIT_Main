@@ -2,8 +2,8 @@
 // Start session at the very beginning
 session_start();
 
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -14,7 +14,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
     <title>Access Denied - Order Management Admin Portal</title>
 
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php');
     ?>
     
     <!-- [Template CSS Files] -->
@@ -25,7 +25,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 <body>
     <!-- LOADER -->
     <?php
-        include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php');
     ?>
     <!-- END LOADER -->
 
@@ -59,7 +59,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
                             <a href="javascript:history.back()" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Go Back
                             </a>
-                            <a href='/OMS/order_management/dist/dashboard/index.php' class="btn btn-primary">
+                            <a href='/order_management/dist/dashboard/index.php' class="btn btn-primary">
                                 <i class="fas fa-home"></i> Go to Dashboard
                             </a>
                         </div>
@@ -72,13 +72,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 
     <!-- FOOTER -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/footer.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php');
     ?>
     <!-- END FOOTER -->
 
     <!-- SCRIPTS -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php');
     ?>
     <!-- END SCRIPTS -->
 

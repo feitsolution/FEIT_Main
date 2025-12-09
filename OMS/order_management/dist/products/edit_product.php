@@ -8,12 +8,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /OMS/order_management/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 // Function to generate CSRF token
 function generateCSRFToken() {
@@ -52,8 +52,8 @@ try {
     exit();
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -64,7 +64,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
     <title>Order Management Admin Portal - Edit Product</title>
 
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php');
     ?>
     
     <!-- [Template CSS Files] -->
@@ -146,7 +146,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 <body>
     <!-- LOADER -->
     <?php
-        include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php');
     ?>
     <!-- END LOADER -->
 
@@ -271,13 +271,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 
     <!-- FOOTER -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/footer.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php');
     ?>
     <!-- END FOOTER -->
 
     <!-- SCRIPTS -->
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php');
     ?>
     <!-- END SCRIPTS -->
 

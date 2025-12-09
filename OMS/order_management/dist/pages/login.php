@@ -2,8 +2,8 @@
 session_start(); // Start the session at the very beginning
 
 // Include both database connection files
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/fe_it_db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/fe_it_db_connection.php');
 
 // Check connections
 if ($conn->connect_error) {
@@ -142,7 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             case 2: // Regular user
                             case 3: // Other roles
                             default:
-                                header("Location: /OMS/order_management/dist/dashboard/index.php");
+                                header("Location: /order_management/dist/dashboard/index.php");
                         }
                         exit();
                     }
@@ -171,7 +171,7 @@ $fe_conn->close();
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 <head>
     <title>Login | Order Management Admin Portal</title>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
 </head>
   <link rel="stylesheet" href="../assets/css/login.css" id="main-style-link" />
 
@@ -263,7 +263,7 @@ $fe_conn->close();
     <!-- END FOOTER -->
 
     <!-- SCRIPTS -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
     <!-- END SCRIPTS -->
 
     <!-- Password Toggle Script -->

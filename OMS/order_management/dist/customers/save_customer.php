@@ -16,13 +16,13 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     echo json_encode([
         'success' => false,
         'message' => 'Unauthorized access. Please login again.',
-        'redirect' => '/OMS/order_management/dist/pages/login.php'
+        'redirect' => '/order_management/dist/pages/login.php'
     ]);
     exit();
 }
 
 // DB Connection
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 if (!$conn || $conn->connect_error) {
     http_response_code(500);

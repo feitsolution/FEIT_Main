@@ -1,7 +1,7 @@
 <?php
 /**
  * FIXED VERSION - FDE API Integration
- * File: /OMS/order_management/dist/api/fde_new_parcel_api.php
+ * File: /order_management/dist/api/fde_new_parcel_api.php
  */
 
 /**

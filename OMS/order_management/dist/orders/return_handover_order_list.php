@@ -14,15 +14,15 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /OMS/order_management/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 // NEW: Get current user's role information
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
@@ -56,7 +56,7 @@ if ($current_user_id == 0 || $current_user_role == 0) {
 
 // If still no user data, redirect to login
 if ($current_user_id == 0) {
-    header("Location: /OMS/order_management/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
@@ -192,8 +192,8 @@ $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
 // Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 
 ?>
 
@@ -203,7 +203,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 <head>
     <title>Return Handover Orders - Lily Collection Admin Portal</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -213,7 +213,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -461,9 +461,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
     </div>
 
        <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/order_view_modal.php'); ?>
+      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
     <!-- Include JavaScript files -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
     
     <script>
 
@@ -623,7 +623,7 @@ function viewPaymentSlip() {
     }
     
     // Construct the payment slip URL
-    const slipUrl = '/OMS/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
+    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
     
     // Open payment slip in new tab
     window.open(slipUrl, '_blank');

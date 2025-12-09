@@ -7,7 +7,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /OMS/order_management/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 // Check if user is admin (ID = 1)
@@ -16,11 +16,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] != 1) {
         ob_end_clean();
     }
     // Redirect to access denied page or dashboard
-    header("Location: /OMS/order_management/dist/pages/access_denied.php");
+    header("Location: /order_management/dist/pages/access_denied.php");
     exit();
 }
 // Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 // Function to generate CSRF token
 function generateCSRFToken() {
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
         
         if (in_array(strtolower($ext), $allowed)) {
-            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/uploads/';
+            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/uploads/';
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $destination = $upload_dir . $new_name;
             
             if (move_uploaded_file($_FILES['logo']['tmp_name'], $destination)) {
-                $logo_url = '/OMS/order_management/dist/uploads/' . $new_name;
+                $logo_url = '/order_management/dist/uploads/' . $new_name;
             } else {
                 $_SESSION['error_message'] = "Error uploading logo file.";
                 header("Location: " . $_SERVER['PHP_SELF']);
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
         
         if (in_array(strtolower($ext), $allowed)) {
-            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/uploads/';
+            $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/uploads/';
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $destination = $upload_dir . $new_name;
             
             if (move_uploaded_file($_FILES['fav_icon']['tmp_name'], $destination)) {
-                $fav_icon_url = '/OMS/order_management/dist/uploads/' . $new_name;
+                $fav_icon_url = '/order_management/dist/uploads/' . $new_name;
             } else {
                 $_SESSION['error_message'] = "Error uploading favicon file.";
                 header("Location: " . $_SERVER['PHP_SELF']);
@@ -247,8 +247,8 @@ if ($result && $result->num_rows > 0) {
 }
 
 // Include navbar and sidebar
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -258,7 +258,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
     <!-- TITLE -->
     <title>Branding Settings - Order Management Admin Portal</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     
     <!-- [Template CSS Files] - Assuming this loads your styling -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -305,7 +305,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
         }
     </style>
 
-    <link rel="icon" href="<?php echo !empty($branding['fav_icon_url']) ? $branding['fav_icon_url'] : '/OMS/order_management/dist/assets/images/favicon.ico'; ?>" type="image/x-icon">
+    <link rel="icon" href="<?php echo !empty($branding['fav_icon_url']) ? $branding['fav_icon_url'] : '/order_management/dist/assets/images/favicon.ico'; ?>" type="image/x-icon">
 </head>
 
 <body>
@@ -442,8 +442,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/sidebar.
     </div>
     <!-- [ Main Content ] end -->
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/footer.php'); ?>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 </body>
 </html>
 
