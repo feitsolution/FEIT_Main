@@ -34,19 +34,24 @@ body {
 }
 
 .label-wrapper {
-    width: 10.2cm;
-    height: 15.2cm;
+    width: 101.6mm;  /* 4 inches WIDTH */
+    height: 152.4mm; /* 6 inches HEIGHT */
     break-inside: avoid;
     page-break-inside: avoid;
     margin: 0;
-    display: inline-block;
+    display: block;
     vertical-align: top;
+    page-break-after: always;
+}
+
+.label-wrapper:last-child {
+    page-break-after: avoid;
 }
 
 .receipt-container {
-    width: 10.2cm;
-    height: 15.2cm;
-    max-width: 10.2cm;
+    width: 101.6mm;  /* 4 inches WIDTH */
+    height: 152.4mm; /* 6 inches HEIGHT */
+    max-width: 101.6mm;
     background: white;
     position: relative;
 }
@@ -350,11 +355,11 @@ body {
         page-break-after: avoid;
     }
     
-    /* ONE LABEL PER PAGE - Full 6x4 inch */
+    /* ONE LABEL PER PAGE - 4" width × 6" height (Portrait) */
     .label-wrapper {
         display: block;
-        width: 152.4mm;  /* Exact 6 inches */
-        height: 101.6mm; /* Exact 4 inches */
+        width: 101.6mm;  /* 4 inches WIDTH */
+        height: 152.4mm; /* 6 inches HEIGHT */
         margin: 0 !important;
         padding: 0 !important;
         page-break-after: always;
@@ -366,9 +371,9 @@ body {
     }
     
     .receipt-container {
-        width: 152.4mm;  /* Exact 6 inches */
-        height: 101.6mm; /* Exact 4 inches */
-        max-width: 152.4mm;
+        width: 101.6mm;  /* 4 inches WIDTH */
+        height: 152.4mm; /* 6 inches HEIGHT */
+        max-width: 101.6mm;
         box-sizing: border-box;
         margin: 0;
         padding: 0;
@@ -391,9 +396,9 @@ body {
         -webkit-print-color-adjust: exact;
     }
     
-    /* CRITICAL: Zero margin page setup for 6x4 labels */
+    /* CRITICAL: Zero margin page setup for 4x6 labels (Portrait) */
     @page {
-        size: 6in 4in;  /* Exact 6x4 inch label size */
+        size: 4in 6in;  /* 4 inches WIDTH × 6 inches HEIGHT */
         margin: 0;      /* Zero margins for edge-to-edge printing */
     }
 }
