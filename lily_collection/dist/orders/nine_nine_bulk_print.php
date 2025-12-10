@@ -342,8 +342,11 @@ window.onload = function() {
 
         <hr>
 
-        <!-- Total Amount -->
-        <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
+        <!-- Total Amount - Only show if NOT paid -->
+        <?php if ($o['pay_status'] !== 'paid'): ?>
+            <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
+        <?php endif; ?>
+
 
         <br>
 
