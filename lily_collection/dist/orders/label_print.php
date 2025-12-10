@@ -2,7 +2,7 @@
 /**
  * Label Print Page
  * Displays orders for label printing with date filters
- * Includes three print format options: 9x9, 2x5, and regular print
+ * Includes three print format options: 10x10, 4x13, and 4x6
  */
 
 // Start session management
@@ -22,27 +22,72 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connect
 
 /**
  * SEARCH AND FILTER PARAMETERS
+ * Default: Today's date, Updated Date filter, Dispatch status
  */
 $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d'); // Default to today
 $time_from = isset($_GET['time_from']) ? trim($_GET['time_from']) : '';
 $time_to = isset($_GET['time_to']) ? trim($_GET['time_to']) : '';
-$status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 'all';
+$status_filter = 'dispatch'; // Always dispatch status
+$date_filter = 'updated_at'; // Always filter by updated_at
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 /**
- * DATABASE QUERIES
- * Fetch orders for label printing based on filters
+ * SANITIZE AND VALIDATE INPUTS
  */
-// Base SQL for counting total records
+$date = $conn->real_escape_string($date);
+$time_from = $conn->real_escape_string($time_from);
+$time_to = $conn->real_escape_string($time_to);
+
+// Normalize time inputs (HH:MM format)
+$time_from = preg_match('/^\d{1,2}:\d{2}$/', $time_from) ? $time_from : "";
+$time_to = preg_match('/^\d{1,2}:\d{2}$/', $time_to) ? $time_to : "";
+
+/**
+ * BUILD WHERE CONDITIONS
+ */
+$where = [];
+$where[] = "o.interface IN ('individual', 'leads')";
+$where[] = "o.status = 'dispatch'"; // Always dispatch status
+
+// Date and time range filter
+$startDateTime = $date . " 00:00:00";
+$endDateTime = $date . " 23:59:59";
+
+// Apply time range if provided
+if ($time_from !== "" && $time_to !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime = $date . " $time_to:59";
+} elseif ($time_from !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime = $date . " 23:59:59";
+} elseif ($time_to !== "") {
+    $startDateTime = $date . " 00:00:00";
+    $endDateTime = $date . " $time_to:59";
+}
+
+// Always filter by updated_at
+$where[] = "o.updated_at BETWEEN '$startDateTime' AND '$endDateTime'";
+
+// Always include only orders with tracking numbers
+$where[] = "o.tracking_number IS NOT NULL AND o.tracking_number != ''";
+
+$whereClause = implode(" AND ", $where);
+
+/**
+ * DATABASE QUERIES
+ */
+// Count query
 $countSql = "SELECT COUNT(*) as total FROM order_header o 
              LEFT JOIN customers c ON o.customer_id = c.customer_id
-             WHERE o.interface IN ('individual', 'leads')";
-// Main query - Fixed column references
+             WHERE $whereClause";
+
+// Main query
 $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
-               o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
+               o.status, o.updated_at, o.created_at, o.issue_date, o.interface, o.tracking_number, 
+               o.total_amount, o.currency,
                c.name as customer_name, c.phone as customer_phone, 
                CONCAT_WS(', ', c.address_line1, c.address_line2) as customer_address,
                COALESCE(o.full_name, c.name) as display_name,
@@ -51,42 +96,9 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
                        CONCAT_WS(', ', c.address_line1, c.address_line2)) as display_address
         FROM order_header o 
         LEFT JOIN customers c ON o.customer_id = c.customer_id
-        WHERE o.interface IN ('individual', 'leads')";
-
-// Build search conditions
-$searchConditions = [];
-// Date filter (single date)
-if (!empty($date)) {
-    $dateTerm = $conn->real_escape_string($date);
-    $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
-}
-
-// Time range filter
-if (!empty($time_from)) {
-    $timeFromTerm = $conn->real_escape_string($time_from);
-    $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
-}
-
-if (!empty($time_to)) {
-    $timeToTerm = $conn->real_escape_string($time_to);
-    $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
-}
-
-// Status filter
-if (!empty($status_filter) && $status_filter !== 'all') {
-    $statusTerm = $conn->real_escape_string($status_filter);
-    $searchConditions[] = "o.status = '$statusTerm'";
-}
-
-// Apply search conditions
-if (!empty($searchConditions)) {
-    $finalSearchCondition = " AND " . implode(' AND ', $searchConditions);
-    $countSql .= $finalSearchCondition;
-    $sql .= $finalSearchCondition;
-}
-
-// Add ordering and pagination
-$sql .= " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT $limit OFFSET $offset";
+        WHERE $whereClause
+        ORDER BY o.updated_at DESC, o.order_id DESC 
+        LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
@@ -125,7 +137,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             <div class="page-header">
                 <div class="page-block">
                     <div class="page-header-title">
-                        <h5 class="mb-0 font-medium">Label Print</h5>
+                        <h5 class="mb-0 font-medium">Label Print - Dispatch Orders</h5>
                     </div>
                 </div>
             </div>
@@ -138,30 +150,40 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             <div class="filter-group">
                                 <label for="date">Date</label>
                                 <input type="date" id="date" name="date" 
-                                       value="<?php echo htmlspecialchars($date); ?>">
+                                       value="<?php echo htmlspecialchars($date); ?>" required>
                             </div>
+                            
+                            <div class="filter-group">
+                                <label for="date_filter">Filter By</label>
+                                <input type="text" id="date_filter_display" value="Updated Date" 
+                                       readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                                <input type="hidden" name="date_filter" value="updated_at">
+                            </div>
+                            
                             <div class="filter-group">
                                 <label for="time_from">Time From</label>
                                 <input type="time" id="time_from" name="time_from" 
-                                       value="<?php echo htmlspecialchars($time_from); ?>">
+                                       value="<?php echo htmlspecialchars($time_from); ?>" placeholder="HH:MM">
                             </div>
                             
                             <div class="filter-group">
                                 <label for="time_to">Time To</label>
                                 <input type="time" id="time_to" name="time_to" 
-                                       value="<?php echo htmlspecialchars($time_to); ?>">
+                                       value="<?php echo htmlspecialchars($time_to); ?>" placeholder="HH:MM">
                             </div>
                             
                             <div class="filter-group">
                                 <label for="status_filter">Status</label>
-                                <select id="status_filter" name="status_filter">
-                                   
-                                    <option value="dispatch" <?php echo ($status_filter == 'dispatch') ? 'selected' : ''; ?>>Dispatch</option>
-                    
-                                </select>
+                                <input type="text" id="status_filter_display" value="Dispatch" 
+                                       readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                                <input type="hidden" name="status_filter" value="dispatch">
                             </div>
 
                             <div class="filter-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i>
+                                    Filter
+                                </button>
                                 <button type="button" class="clear-btn" onclick="clearFilters()">
                                     <i class="fas fa-times"></i>
                                     Clear
@@ -172,15 +194,23 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 </div>
 
                 <!-- Results Info -->
-                <!-- <div class="results-info">
-                    Total orders found: <?php echo $totalRows; ?>
-                </div> -->
+                <div class="results-info">
+                    <strong>Total orders found:</strong> <?php echo $totalRows; ?>
+                    <?php if (!empty($time_from) || !empty($time_to)): ?>
+                        <span style="color: #666;">
+                            (Time range: <?php echo $time_from ?: '00:00'; ?> - <?php echo $time_to ?: '23:59'; ?>)
+                        </span>
+                    <?php endif; ?>
+                    <span style="color: #666; margin-left: 15px;">
+                        Status: <strong>Dispatch</strong> | Filtering by: <strong>Updated Date</strong>
+                    </span>
+                </div>
 
                 <!-- Print Buttons -->
                 <div class="print-buttons">
                     <button class="print-btn" onclick="printLabels('9x9')">
                         <i class="fas fa-print"></i>
-                        Print 9×9 Labels
+                        Print 10×10 Labels
                     </button>
                     <button class="print-btn" onclick="printLabels('4x13')">
                         <i class="fas fa-print"></i>
@@ -188,7 +218,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     </button>
                     <button class="print-btn" onclick="printLabels('regular')">
                         <i class="fas fa-print"></i>
-                       Print 10×14 Labels
+                       Print 4×6 Labels
                     </button>
                 </div>
             </div>
@@ -202,6 +232,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             const params = new URLSearchParams(window.location.search);
             params.set('format', format);
             params.delete('page'); // Remove pagination for print
+            params.delete('limit'); // Remove limit for print
 
             // Open print page in new window
             const printUrl = 'bulk_print.php?' + params.toString();
@@ -213,20 +244,25 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
         // Clear filters function
         function clearFilters() {
-            // Reset all form fields to their default values
+            // Reset date and time fields only
             document.getElementById('date').value = '<?php echo date('Y-m-d'); ?>';
             document.getElementById('time_from').value = '';
             document.getElementById('time_to').value = '';
-            document.getElementById('status_filter').value = 'all';
             
             // Submit the form to apply the cleared filters
             document.getElementById('filterForm').submit();
         }
         
-        // Initialize page
+        // Auto-submit form on date change
         document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('date');
+            dateInput.addEventListener('change', function() {
+                document.getElementById('filterForm').submit();
+            });
+            
             console.log('Label print page loaded');
             console.log('Total orders found: <?php echo $totalRows; ?>');
+            console.log('Filter: Updated Date | Status: Dispatch');
         });
     </script>
 
