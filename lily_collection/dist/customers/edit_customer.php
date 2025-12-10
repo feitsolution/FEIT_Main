@@ -306,16 +306,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <div class="error-feedback" id="name-error"></div>
                                 </div>
 
-                               <div class="customer-form-group">
-                                            <label for="email" class="form-label">
-                                                <i class="fas fa-envelope"></i> Email Address
-                                            </label>
-                                            <input type="email" class="form-control" id="email" name="email"
-                                                placeholder="customer@example.com (optional)" 
-                                                value="<?= htmlspecialchars($customer['email']) ?>">
-                                            <div class="error-feedback" id="email-error"></div>
-                                            <div class="email-suggestions" id="email-suggestions"></div>
-                                        </div>
+                                <div class="customer-form-group">
+                                    <label for="email" class="form-label">
+                                        <i class="fas fa-envelope"></i> Email Address
+                                    </label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                        placeholder="customer@example.com (optional)" 
+                                        value="<?= htmlspecialchars($customer['email']) ?>">
+                                    <div class="error-feedback" id="email-error"></div>
+                                    <div class="email-suggestions" id="email-suggestions"></div>
+                                </div>
                             </div>
 
                             <div class="form-row">
@@ -330,6 +330,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <div class="phone-hint">Enter 10-digit Sri Lankan mobile number</div>
                                 </div>
 
+                                <div class="customer-form-group">
+                                    <label for="phone_2" class="form-label">
+                                        <i class="fas fa-phone-alt"></i> Phone Number 2
+                                    </label>
+                                    <input type="tel" class="form-control" id="phone_2" name="phone_2"
+                                        placeholder="0771234567 (optional)" 
+                                        value="<?= htmlspecialchars($customer['phone_2'] ?? '') ?>">
+                                    <div class="error-feedback" id="phone_2-error"></div>
+                                    <div class="phone-hint">Additional contact number (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
                                 <div class="customer-form-group">
                                     <label for="status" class="form-label">
                                         <i class="fas fa-toggle-on"></i> Status<span class="required">*</span>
@@ -594,6 +607,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 name: $('#name').val(),
                 email: $('#email').val(),
                 phone: $('#phone').val(),
+                phone_2: $('#phone_2').val(),
                 status: $('#status').val(),
                 address_line1: $('#address_line1').val(),
                 address_line2: $('#address_line2').val(),
@@ -718,7 +732,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         function initializeForm() {
             $('#name').focus();
             
-            $('#phone').on('input', function() {
+            // Format both phone fields
+            $('#phone, #phone_2').on('input', function() {
                 let value = this.value.replace(/\D/g, '');
                 if (value.length > 10) {
                     value = value.substring(0, 10);
@@ -732,7 +747,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
 
-       // Setup real-time validation
+        // Setup real-time validation
         function setupRealTimeValidation() {
             $('#name').on('blur', function() {
                 const validation = validateName($(this).val());
@@ -743,10 +758,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 }
             });
             
-        $('#email').on('blur', function() {
+            $('#email').on('blur', function() {
                 const emailValue = $(this).val().trim();
                 
-                // Only validate if email is provided
                 if (emailValue !== '') {
                     const validation = validateEmail(emailValue);
                     if (!validation.valid) {
@@ -754,7 +768,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     } else {
                         showSuccess('email');
                         
-                        // Show email suggestions only when valid email format
                         const suggestion = suggestEmail(emailValue);
                         if (suggestion && suggestion !== emailValue.toLowerCase()) {
                             $('#email-suggestions').html(`Did you mean <a href="#" onclick="$('#email').val('${suggestion}'); $('#email-suggestions').html(''); $('#email').focus(); return false;">${suggestion}</a>?`);
@@ -763,7 +776,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                         }
                     }
                 } else {
-                    // Clear validation for empty optional field
                     clearValidation('email');
                     $('#email-suggestions').html('');
                 }
@@ -778,7 +790,38 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 }
             });
             
-            $('#address_line1').on('blur', function() {
+            // Validation for optional phone_2
+            $('#phone_2').on('blur', function() {
+                const phoneValue = $(this).val().trim();
+                
+                if (phoneValue !== '') {
+                    const validation = validatePhone(phoneValue);
+                    if (!validation.valid) {
+                        showError('phone_2', validation.message);
+                    } else {
+                        showSuccess('phone_2');
+                    }
+                } else {
+                    clearValidation('phone_2');
+                }
+            });
+            
+            // Validation for optional phone_2
+            $('#phone_2').on('blur', function() {
+                const phoneValue = $(this).val().trim();
+                
+                if (phoneValue !== '') {
+                    const validation = validatePhone(phoneValue);
+                    if (!validation.valid) {
+                        showError('phone_2', validation.message);
+                    } else {
+                        showSuccess('phone_2');
+                    }
+                } else {
+                    clearValidation('phone_2');
+                }
+            });
+           $('#address_line1').on('blur', function() {
                 const validation = validateAddressLine1($(this).val());
                 if (!validation.valid) {
                     showError('address_line1', validation.message);
@@ -810,7 +853,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
 
-        // Validation functions (same as add customer page)
+         // Validation functions (same as add customer page)
         function validateName(name) {
             if (name.trim() === '') {
                 return { valid: false, message: 'Customer name is required' };
@@ -994,6 +1037,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             showSuccess('email');
         }
     }
+
+    // Optional phone_2 validation
+const phone2 = $('#phone_2').val();
+if (phone2.trim() !== '') {
+    const phone2Validation = validatePhone(phone2);
+    if (!phone2Validation.valid) {
+        showError('phone_2', phone2Validation.message);
+        isValid = false;
+    } else {
+        showSuccess('phone_2');
+    }
+}
     
     // Optional address line 2 validation
     const addressLine2 = $('#address_line2').val();

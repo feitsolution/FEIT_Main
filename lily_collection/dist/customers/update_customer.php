@@ -101,6 +101,7 @@ try {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
+    $phone_2 = trim($_POST['phone_2'] ?? '');
     $status = trim($_POST['status'] ?? 'Active');
     $address_line1 = trim($_POST['address_line1'] ?? '');
     $address_line2 = trim($_POST['address_line2'] ?? '');
@@ -118,7 +119,7 @@ try {
 
     // Check if customer exists and get all current data including city name for comparison
     $customerCheckStmt = $conn->prepare("
-        SELECT c.customer_id, c.name, c.email, c.phone, c.status, 
+        SELECT c.customer_id, c.name, c.email, c.phone, c.phone_2, c.status, 
                c.address_line1, c.address_line2, c.city_id, ct.city_name 
         FROM customers c
         LEFT JOIN city_table ct ON c.city_id = ct.city_id
@@ -182,6 +183,29 @@ try {
         }
     }
 
+    // Phone 2 validation (OPTIONAL - only validate if provided)
+    if (!empty($phone_2)) {
+        if (strlen($phone_2) > 20) {
+            $errors['phone_2'] = 'Phone number 2 is too long (maximum 20 characters)';
+        } else {
+            // Validate Sri Lankan phone format
+            $cleanPhone2 = preg_replace('/\s+/', '', $phone_2);
+            $digitsOnly2 = preg_replace('/[^0-9]/', '', $cleanPhone2);
+            
+            if (strlen($digitsOnly2) !== 10) {
+                $errors['phone_2'] = 'Phone number 2 must be exactly 10 digits';
+            } elseif (!preg_match('/^0[1-9][0-9]{8}$/', $cleanPhone2) && 
+                      !preg_match('/^(\+94|94)[1-9][0-9]{8}$/', $cleanPhone2)) {
+                $errors['phone_2'] = 'Please enter a valid Sri Lankan phone number (e.g., 0771234567)';
+            }
+        }
+        
+        // Check if phone_2 is the same as phone
+        if (!empty($phone) && $phone === $phone_2) {
+            $errors['phone_2'] = 'Phone number 2 cannot be the same as the primary phone number';
+        }
+    }
+
     // Address Line 1 validation (required)
     if (empty($address_line1)) {
         $errors['address_line1'] = 'Address Line 1 is required';
@@ -227,6 +251,25 @@ try {
         $phoneCheckStmt->close();
     }
 
+    // Check for duplicate phone_2 (only if provided and changed)
+    if (!empty($phone_2) && $phone_2 !== ($existingCustomer['phone_2'] ?? '')) {
+        // Check against both phone and phone_2 fields in other customers
+        $phone2CheckStmt = $conn->prepare("
+            SELECT customer_id 
+            FROM customers 
+            WHERE (phone = ? OR phone_2 = ?) 
+            AND customer_id != ?
+        ");
+        $phone2CheckStmt->bind_param("ssi", $phone_2, $phone_2, $customer_id);
+        $phone2CheckStmt->execute();
+        $phone2CheckResult = $phone2CheckStmt->get_result();
+        
+        if ($phone2CheckResult->num_rows > 0) {
+            $errors['phone_2'] = 'Phone number 2 already exists. Please use a different phone number.';
+        }
+        $phone2CheckStmt->close();
+    }
+
     // Validate city exists and is active - ENHANCED validation for autocomplete
     if ($city_id > 0) {
         $cityCheckStmt = $conn->prepare("
@@ -264,7 +307,7 @@ try {
         exit();
     }
 
-    // Check if any data has actually changed - ENHANCED to include city name
+    // Check if any data has actually changed - ENHANCED to include city name and phone_2
     $hasChanges = false;
     $changes = [];
 
@@ -285,6 +328,15 @@ try {
     if ($phone !== $existingCustomer['phone']) {
         $hasChanges = true;
         $changes[] = "Phone: '{$existingCustomer['phone']}' → '{$phone}'";
+    }
+    
+    // Handle phone_2 change (including empty to value or value to empty)
+    $existingPhone2 = $existingCustomer['phone_2'] ?? '';
+    if ($phone_2 !== $existingPhone2) {
+        $hasChanges = true;
+        $oldPhone2Display = empty($existingPhone2) ? '(empty)' : $existingPhone2;
+        $newPhone2Display = empty($phone_2) ? '(empty)' : $phone_2;
+        $changes[] = "Phone 2: '{$oldPhone2Display}' → '{$newPhone2Display}'";
     }
     
     if ($status !== $existingCustomer['status']) {
@@ -330,6 +382,7 @@ try {
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
+            'phone_2' => $phone_2,
             'status' => $status,
             'city_id' => $city_id
         ];
@@ -340,8 +393,9 @@ try {
     // Start transaction
     $conn->begin_transaction();
 
-    // Prepare email value - use NULL if empty (optional field best practice)
+    // Prepare values - use NULL if empty (optional field best practice)
     $emailValue = !empty($email) ? $email : null;
+    $phone2Value = !empty($phone_2) ? $phone_2 : null;
     $address2Value = !empty($address_line2) ? $address_line2 : null;
 
     // Prepare and execute customer update
@@ -350,6 +404,7 @@ try {
         SET name = ?, 
             email = ?, 
             phone = ?, 
+            phone_2 = ?,
             status = ?, 
             address_line1 = ?, 
             address_line2 = ?, 
@@ -358,7 +413,7 @@ try {
         WHERE customer_id = ?
     ");
 
-    $updateStmt->bind_param("ssssssii", $name, $emailValue, $phone, $status, $address_line1, $address2Value, $city_id, $customer_id);
+    $updateStmt->bind_param("sssssssii", $name, $emailValue, $phone, $phone2Value, $status, $address_line1, $address2Value, $city_id, $customer_id);
 
     if ($updateStmt->execute()) {
         // Check if any rows were affected
@@ -392,13 +447,14 @@ try {
                 'name' => $name,
                 'email' => $email,
                 'phone' => $phone,
+                'phone_2' => $phone_2,
                 'status' => $status,
                 'city_id' => $city_id,
                 'city_name' => $cityName
             ];
             
             // Log success
-            error_log("Customer updated successfully - ID: $customer_id, Name: $name, Email: " . ($email ?: 'empty') . ", City ID: $city_id, Updated by User ID: $currentUserId");
+            error_log("Customer updated successfully - ID: $customer_id, Name: $name, Email: " . ($email ?: 'empty') . ", Phone 2: " . ($phone_2 ?: 'empty') . ", City ID: $city_id, Updated by User ID: $currentUserId");
         } else {
             // No changes were made (this should not happen since we checked above, but keep as fallback)
             $conn->commit();

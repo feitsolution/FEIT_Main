@@ -329,7 +329,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
             <!-- [ Main Content ] start -->
             <div class="order-container">
-                <form method="post" action="process_order.php" id="orderForm" target="_blank">
+                <form method="post" action="process_order.php" id="orderForm" >
                     <!-- Order Details Section -->
                     <div class="order-details-section">
                         <div class="order-details-grid">
@@ -361,55 +361,68 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                         <input type="hidden" name="order_currency" id="order_currency" value="lkr">
                     </div>
 
-                    <!-- Customer Information Section -->
-                    <div class="section-card">
-                        <div class="section-header" style="display:flex; align-items:center; width:100%;">
-                            <h5 class="section-title" >Customer Information</h5>
+                                <!-- Customer Information Section -->
+                <div class="section-card">
+                    <div class="section-header" style="display:flex; align-items:center; width:100%;">
+                        <h5 class="section-title">Customer Information</h5>
 
-                            <button type="button" 
-                                    class="btn-outline-primary" 
-                                    id="select_existing_customer"
-                                    style="margin-left:auto;">
-                                <i class="feather icon-users"></i> Select Customer
-                            </button>
-                        </div>
+                        <button type="button" 
+                                class="btn-outline-primary" 
+                                id="select_existing_customer"
+                                style="margin-left:auto;">
+                            <i class="feather icon-users"></i> Select Customer
+                        </button>
+                    </div>
 
-                        <div class="section-body">
-                            <div class="customer-info-grid">
-                                <input type="hidden" name="customer_id" id="customer_id" value="">
-                                <div class="form-group">
-                                    <label class="form-label">Name <span style="color: #dc3545;">*</span></label>
-                                    <input type="text" class="form-control" name="customer_name" id="customer_name" required placeholder="Enter Full Name">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" name="customer_email" id="customer_email" placeholder="example@email.com">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Phone</label>
-                                    <input type="text" class="form-control" name="customer_phone" id="customer_phone" placeholder="(07) xxxx xxxx">
-                                </div>
-                                    <div class="form-group">
-                                        <label class="form-label">City</label>
-                                        <input type="text" 
-                                            class="form-control" 
-                                            id="city_autocomplete" 
-                                            placeholder="Start typing city name..."
-                                            autocomplete="off">
-                                        <input type="hidden" name="city_id" id="city_id">
-                                        <div id="city_suggestions" class="autocomplete-suggestions"></div>
-                                    </div>
-                                <div class="form-group">
-                                    <label class="form-label">Address Line 1</label>
-                                    <input type="text" class="form-control" name="address_line1" id="address_line1">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Address Line 2</label>
-                                    <input type="text" class="form-control" name="address_line2" id="address_line2">
-                                </div>
+                    <div class="section-body">
+                        <div class="customer-info-grid">
+                            <input type="hidden" name="customer_id" id="customer_id" value="">
+                            
+                            <div class="form-group">
+                                <label class="form-label">Name <span style="color: #dc3545;">*</span></label>
+                                <input type="text" class="form-control" name="customer_name" id="customer_name" required placeholder="Enter Full Name">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="customer_email" id="customer_email" placeholder="example@email.com">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" name="customer_phone" id="customer_phone" placeholder="(07) xxxx xxxx">
+                            </div>
+
+                            <!-- NEW Phone 2 Field -->
+                            <div class="form-group">
+                                <label class="form-label">Phone 2</label>
+                                <input type="text" class="form-control" name="customer_phone_2" id="customer_phone_2" placeholder="(07) xxxx xxxx">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">City</label>
+                                <input type="text" 
+                                    class="form-control" 
+                                    id="city_autocomplete" 
+                                    placeholder="Start typing city name..."
+                                    autocomplete="off">
+                                <input type="hidden" name="city_id" id="city_id">
+                                <div id="city_suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" name="address_line1" id="address_line1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control" name="address_line2" id="address_line2">
                             </div>
                         </div>
                     </div>
+                </div>
+
 
                     <!-- Products Section -->
                     <div class="section-card">
@@ -573,8 +586,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         </div>
     </div>
     <!-- [ Main Content ] end -->
-     
-<!-- Customer Selection Modal -->
+
+
+  <!-- Customer Selection Modal -->
 <div id="customerModal" class="customer-modal">
     <div class="customer-modal-content">
         <div class="modal-header">
@@ -587,7 +601,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         <div class="modal-body">
             <div class="input-group" style="margin-bottom: 20px;">
                 <span class="input-group-text"><i class="feather icon-search"></i></span>
-                <input type="text" id="customerSearch" class="form-control" placeholder="Search : Customer id | Customer Name | Email | Phone Number |city ">
+                <input type="text" id="customerSearch" class="form-control" placeholder="Search : Customer id | Customer Name | Email | Phone Number | city ">
             </div>
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -610,6 +624,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 data-name="<?= htmlspecialchars($customer['name'] ?? '') ?>"
                                 data-email="<?= htmlspecialchars($customer['email'] ?? '') ?>"
                                 data-phone="<?= htmlspecialchars($customer['phone'] ?? '') ?>"
+                                data-phone-2="<?= htmlspecialchars($customer['phone_2'] ?? '') ?>"
                                 data-address-line1="<?= htmlspecialchars($customer['address_line1'] ?? '') ?>"
                                 data-address-line2="<?= htmlspecialchars($customer['address_line2'] ?? '') ?>"
                                 data-city-name="<?= htmlspecialchars($customer['city_name'] ?? '') ?>"
@@ -624,6 +639,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <td>
                                     <div class="contact-info">
                                         <div class="phone-number"><?= htmlspecialchars($customer['phone'] ?? '') ?></div>
+                                        <?php if (!empty($customer['phone_2'])): ?>
+                                            <div class="phone-number-2" style="color: #6c757d; font-size: 0.9em;">
+                                                <?= htmlspecialchars($customer['phone_2']) ?>
+                                            </div>
+                                        <?php endif; ?>
                                         <div class="email-address"><?= htmlspecialchars($customer['email'] ?? '') ?></div>
                                     </div>
                                 </td>
@@ -687,82 +707,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== CUSTOMER MANAGEMENT ==========
-    const CustomerManager = {
-        toggleFields: (readonly = false) => {
-            const fields = ['customer_name', 'customer_email', 'customer_phone', 'city_autocomplete', 'address_line1', 'address_line2'];
-            fields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                if (field) {
-                    field.readOnly = readonly;
-                    field.style.backgroundColor = readonly ? '#f8f9fa' : '';
-                    field.style.cursor = readonly ? 'not-allowed' : '';
-                }
-            });
-        },
-        
-        clearFields: () => {
-            document.getElementById('customer_id').value = '';
-            document.getElementById('customer_name').value = '';
-            document.getElementById('customer_email').value = '';
-            document.getElementById('customer_phone').value = '';
-            document.getElementById('city_id').value = '';
-            document.getElementById('city_autocomplete').value = '';
-            document.getElementById('address_line1').value = '';
-            document.getElementById('address_line2').value = '';
-            ValidationUtils.clearErrors();
-            isExistingCustomer = false;
-            CustomerManager.toggleFields(false);
-            FormValidator.validateAndToggleSubmit();
-        },
-        
-        validate: () => {
-            const name = document.getElementById('customer_name').value.trim();
-            const email = document.getElementById('customer_email').value.trim();
-            const phone = document.getElementById('customer_phone').value.trim();
-            const cityId = document.getElementById('city_id').value;
-            const address = document.getElementById('address_line1').value.trim();
+// ========== CUSTOMER MANAGEMENT ==========
+const CustomerManager = {
+    toggleFields: (readonly = false) => {
+        const fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_phone_2', 'city_autocomplete', 'address_line1', 'address_line2'];
+        fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = readonly;
+                field.style.backgroundColor = readonly ? '#f8f9fa' : '';
+                field.style.cursor = readonly ? 'not-allowed' : '';
+            }
+        });
+    },
 
-            let isValid = true;
+    clearFields: () => {
+        document.getElementById('customer_id').value = '';
+        document.getElementById('customer_name').value = '';
+        document.getElementById('customer_email').value = '';
+        document.getElementById('customer_phone').value = '';
+        document.getElementById('customer_phone_2').value = '';
+        document.getElementById('city_id').value = '';
+        document.getElementById('city_autocomplete').value = '';
+        document.getElementById('address_line1').value = '';
+        document.getElementById('address_line2').value = '';
+        ValidationUtils.clearErrors();
+        isExistingCustomer = false;
+        CustomerManager.toggleFields(false);
+        FormValidator.validateAndToggleSubmit();
+    },
 
-            // Name is always required
-            if (!name) {
-                ValidationUtils.showError(document.getElementById('customer_name'), 'Customer name is required');
+    validate: () => {
+        const name = document.getElementById('customer_name').value.trim();
+        const email = document.getElementById('customer_email').value.trim();
+        const phone = document.getElementById('customer_phone').value.trim();
+        const phone2 = document.getElementById('customer_phone_2').value.trim();
+        const cityId = document.getElementById('city_id').value;
+        const address = document.getElementById('address_line1').value.trim();
+
+        let isValid = true;
+
+        // Name is always required
+        if (!name) {
+            ValidationUtils.showError(document.getElementById('customer_name'), 'Customer name is required');
+            isValid = false;
+        }
+
+        // For new customers, all fields required
+        if (!isExistingCustomer) {
+            if (!phone) {
+                ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number is required');
+                isValid = false;
+            } else if (!ValidationUtils.isValidPhone(phone)) {
+                ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number must be 10 digits');
                 isValid = false;
             }
 
-            // For new customers, all fields required
-            if (!isExistingCustomer) {
-                // if (!email) {
-                //     ValidationUtils.showError(document.getElementById('customer_email'), 'Email is required');
-                //     isValid = false;
-                // } else if (!ValidationUtils.isValidEmail(email)) {
-                //     ValidationUtils.showError(document.getElementById('customer_email'), 'Invalid email format');
-                //     isValid = false;
-                // }
-
-                if (!phone) {
-                    ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number is required');
-                    isValid = false;
-                } else if (!ValidationUtils.isValidPhone(phone)) {
-                    ValidationUtils.showError(document.getElementById('customer_phone'), 'Phone number must be 10 digits');
-                    isValid = false;
-                }
-
-                if (!cityId) {
-                    ValidationUtils.showError(document.getElementById('city_autocomplete'), 'City is required');
-                    isValid = false;
-                }
-
-                if (!address) {
-                    ValidationUtils.showError(document.getElementById('address_line1'), 'Address Line 1 is required');
-                    isValid = false;
-                }
+            // NEW: Validate phone_2 ONLY if value is entered
+            if (phone2 && !ValidationUtils.isValidPhone(phone2)) {
+                ValidationUtils.showError(document.getElementById('customer_phone_2'), 'Phone 2 must be 10 digits');
+                isValid = false;
             }
 
-            return isValid;
+            if (!cityId) {
+                ValidationUtils.showError(document.getElementById('city_autocomplete'), 'City is required');
+                isValid = false;
+            }
+
+            if (!address) {
+                ValidationUtils.showError(document.getElementById('address_line1'), 'Address Line 1 is required');
+                isValid = false;
+            }
         }
-    };
+
+        return isValid;
+    }
+};
+// Helper function to allow only digits and max 10 characters
+function enforcePhoneInput(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.addEventListener('input', (e) => {
+        // Remove any non-digit characters
+        let digits = e.target.value.replace(/\D/g, '');
+
+        // Limit to 10 digits
+        if (digits.length > 10) {
+            digits = digits.slice(0, 10);
+        }
+
+        // Set the cleaned value back
+        e.target.value = digits;
+    });
+}
+
+// Apply to both phone fields
+enforcePhoneInput('customer_phone');
+enforcePhoneInput('customer_phone_2');
+
 
     // ========== DATE VALIDATION ==========
     const DateValidator = {
@@ -800,171 +843,187 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== PRODUCT MANAGEMENT ==========
-    const ProductManager = {
-        updatePrice: (row) => {
-            const productSelect = row.querySelector('.product-select');
-            const selectedOption = productSelect.options[productSelect.selectedIndex];
-            
-            if (!productSelect.value) return;
 
-            const priceField = row.querySelector('.price');
-            const descriptionField = row.querySelector('.product-description');
-            const description = selectedOption.getAttribute('data-description') || '';
-            const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
+   // ========== PRODUCT MANAGEMENT ========== (Updated section)
+const ProductManager = {
+    updatePrice: (row) => {
+        const productSelect = row.querySelector('.product-select');
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        
+        if (!productSelect.value) return;
 
-            priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
-            descriptionField.value = description;
+        const priceField = row.querySelector('.price');
+        const descriptionField = row.querySelector('.product-description');
+        const description = selectedOption.getAttribute('data-description') || '';
+        const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
 
-            ProductManager.updateRowTotal(row);
-            ProductManager.checkForProducts();
-        },
+        priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
+        descriptionField.value = description;
 
-        updateRowTotal: (row) => {
-            let price = parseFloat(row.querySelector('.price').value) || 0;
-            let discount = parseFloat(row.querySelector('.discount').value) || 0;
+        ProductManager.updateRowTotal(row);
+        ProductManager.checkForProducts();
+    },
 
-            if (discount > price) {
-                discount = price;
-                row.querySelector('.discount').value = discount;
-            }
+    updateRowTotal: (row) => {
+        let price = parseFloat(row.querySelector('.price').value) || 0;
+        let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
-            let subtotal = price - discount;
-            row.querySelector('.subtotal').value = subtotal.toFixed(2);
-            ProductManager.updateTotals();
-        },
-
-        checkForProducts: () => {
-            let hasProducts = false;
-            document.querySelectorAll('#order_table tbody tr').forEach(row => {
-                const productSelect = row.querySelector('.product-select');
-                if (productSelect && productSelect.value !== "") {
-                    hasProducts = true;
-                }
-            });
-
-            const deliveryFeeRow = document.getElementById('delivery_fee_row');
-            deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
-            
-            return hasProducts;
-        },
-
-        updateTotals: () => {
-            let subtotal = 0;
-            let totalDiscount = 0;
-
-            document.querySelectorAll('#order_table tbody tr').forEach(row => {
-                let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
-                let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
-
-                if (rowDiscount > rowPrice) {
-                    rowDiscount = rowPrice;
-                    row.querySelector('.discount').value = rowDiscount;
-                }
-
-                let rowSubtotal = rowPrice - rowDiscount;
-                row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
-
-                subtotal += rowPrice;
-                totalDiscount += rowDiscount;
-            });
-
-            document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-            document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-            document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-            document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-            let total = subtotal - totalDiscount;
-            const hasProducts = ProductManager.checkForProducts();
-
-            if (hasProducts) {
-                total += deliveryFee;
-            }
-
-            document.getElementById('total_display').textContent = total.toFixed(2);
-            document.getElementById('total_amount').value = total.toFixed(2);
-            document.getElementById('lkr_total_amount').value = total.toFixed(2);
-        },
-
-        validate: () => {
-            ValidationUtils.clearErrors('product-validation-error');
-            let isValid = true;
-
-            document.querySelectorAll('#order_table tbody tr').forEach(row => {
-                const productSelect = row.querySelector('.product-select');
-                const descriptionInput = row.querySelector('.product-description');
-                const priceInput = row.querySelector('.price');
-
-                if (productSelect.value !== '') {
-                    if (!descriptionInput.value.trim()) {
-                        ValidationUtils.showError(descriptionInput, 'Description required', 'product-validation-error');
-                        isValid = false;
-                    }
-
-                    const price = parseFloat(priceInput.value) || 0;
-                    if (price <= 0) {
-                        ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
-                        isValid = false;
-                    }
-                }
-            });
-
-            return isValid;
-        },
-
-        hasValidProduct: () => {
-            let hasValid = false;
-            document.querySelectorAll('#order_table tbody tr').forEach(row => {
-                const productSelect = row.querySelector('.product-select');
-                const descriptionInput = row.querySelector('.product-description');
-                const priceInput = row.querySelector('.price');
-                const price = parseFloat(priceInput.value) || 0;
-
-                if (productSelect.value !== '' && descriptionInput.value.trim() !== '' && price > 0) {
-                    hasValid = true;
-                }
-            });
-            return hasValid;
-        },
-
-        addRow: () => {
-            let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
-            
-            newRow.querySelectorAll('input').forEach(input => {
-                if (input.classList.contains('price')) {
-                    input.value = '0.00';
-                } else if (input.classList.contains('discount')) {
-                    input.value = '0';
-                } else if (input.classList.contains('subtotal')) {
-                    input.value = '0.00';
-                } else {
-                    input.value = '';
-                }
-            });
-            
-            newRow.querySelector('.product-select').value = '';
-            document.querySelector('#order_table tbody').appendChild(newRow);
-        },
-
-        removeRow: (button) => {
-            const tableBody = document.querySelector('#order_table tbody');
-            if (tableBody.children.length > 1) {
-                button.closest('tr').remove();
-                ProductManager.checkForProducts();
-                ProductManager.updateTotals();
-            } else {
-                let row = button.closest('tr');
-                row.querySelector('.product-select').value = '';
-                row.querySelector('.product-description').value = '';
-                row.querySelector('.price').value = '0.00';
-                row.querySelector('.discount').value = '0';
-                row.querySelector('.subtotal').value = '0.00';
-                ProductManager.checkForProducts();
-                ProductManager.updateTotals();
-            }
-            FormValidator.validateAndToggleSubmit();
+        if (discount > price) {
+            discount = price;
+            row.querySelector('.discount').value = discount;
         }
-    };
+
+        let subtotal = price - discount;
+        row.querySelector('.subtotal').value = subtotal.toFixed(2);
+        ProductManager.updateTotals();
+    },
+
+    checkForProducts: () => {
+        let hasProducts = false;
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            if (productSelect && productSelect.value !== "") {
+                hasProducts = true;
+            }
+        });
+
+        const deliveryFeeRow = document.getElementById('delivery_fee_row');
+        deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
+        
+        return hasProducts;
+    },
+
+    updateTotals: () => {
+        let subtotal = 0;
+        let totalDiscount = 0;
+
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
+            let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
+
+            if (rowDiscount > rowPrice) {
+                rowDiscount = rowPrice;
+                row.querySelector('.discount').value = rowDiscount;
+            }
+
+            let rowSubtotal = rowPrice - rowDiscount;
+            row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
+
+            subtotal += rowPrice;
+            totalDiscount += rowDiscount;
+        });
+
+        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
+        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
+        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
+        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
+
+        let subtotalAfterDiscount = subtotal - totalDiscount;
+        const hasProducts = ProductManager.checkForProducts();
+
+        // ===== NEW LOGIC: Free delivery for orders >= 5000 =====
+        let finalDeliveryFee = 0;
+        if (hasProducts) {
+            if (subtotalAfterDiscount >= 5000) {
+                finalDeliveryFee = 0; // Free delivery
+                // Add visual indicator for free delivery
+                document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
+            } else {
+                finalDeliveryFee = deliveryFee; // Normal delivery fee
+                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+            }
+        }
+
+        // Update delivery fee hidden input
+        document.getElementById('delivery_fee').value = finalDeliveryFee.toFixed(2);
+
+        // Calculate final total
+        let total = subtotalAfterDiscount + finalDeliveryFee;
+
+        document.getElementById('total_display').textContent = total.toFixed(2);
+        document.getElementById('total_amount').value = total.toFixed(2);
+        document.getElementById('lkr_total_amount').value = total.toFixed(2);
+    },
+
+    validate: () => {
+        ValidationUtils.clearErrors('product-validation-error');
+        let isValid = true;
+
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const descriptionInput = row.querySelector('.product-description');
+            const priceInput = row.querySelector('.price');
+
+            if (productSelect.value !== '') {
+                if (!descriptionInput.value.trim()) {
+                    ValidationUtils.showError(descriptionInput, 'Description required', 'product-validation-error');
+                    isValid = false;
+                }
+
+                const price = parseFloat(priceInput.value) || 0;
+                if (price <= 0) {
+                    ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
+                    isValid = false;
+                }
+            }
+        });
+
+        return isValid;
+    },
+
+    hasValidProduct: () => {
+        let hasValid = false;
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const descriptionInput = row.querySelector('.product-description');
+            const priceInput = row.querySelector('.price');
+            const price = parseFloat(priceInput.value) || 0;
+
+            if (productSelect.value !== '' && descriptionInput.value.trim() !== '' && price > 0) {
+                hasValid = true;
+            }
+        });
+        return hasValid;
+    },
+
+    addRow: () => {
+        let newRow = document.querySelector('#order_table tbody tr').cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('price')) {
+                input.value = '0.00';
+            } else if (input.classList.contains('discount')) {
+                input.value = '0';
+            } else if (input.classList.contains('subtotal')) {
+                input.value = '0.00';
+            } else {
+                input.value = '';
+            }
+        });
+        
+        newRow.querySelector('.product-select').value = '';
+        document.querySelector('#order_table tbody').appendChild(newRow);
+    },
+
+    removeRow: (button) => {
+        const tableBody = document.querySelector('#order_table tbody');
+        if (tableBody.children.length > 1) {
+            button.closest('tr').remove();
+            ProductManager.checkForProducts();
+            ProductManager.updateTotals();
+        } else {
+            let row = button.closest('tr');
+            row.querySelector('.product-select').value = '';
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+            ProductManager.checkForProducts();
+            ProductManager.updateTotals();
+        }
+        FormValidator.validateAndToggleSubmit();
+    }
+};
 
     // ========== FORM VALIDATOR ==========
     const FormValidator = {
@@ -1115,64 +1174,66 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== CUSTOMER MODAL ==========
-    const CustomerModal = {
-        init: () => {
-            const modal = document.getElementById("customerModal");
-            const selectBtn = document.getElementById("select_existing_customer");
-            const closeBtn = document.querySelector(".close-modal");
-            const searchInput = document.getElementById("customerSearch");
+  // ========== CUSTOMER MODAL ========== 
+// REPLACE the existing CustomerModal.init() section with this updated version
+const CustomerModal = {
+    init: () => {
+        const modal = document.getElementById("customerModal");
+        const selectBtn = document.getElementById("select_existing_customer");
+        const closeBtn = document.querySelector(".close-modal");
+        const searchInput = document.getElementById("customerSearch");
 
-            selectBtn.addEventListener('click', () => modal.style.display = "block");
-            closeBtn.addEventListener('click', () => modal.style.display = "none");
-            
-            window.addEventListener('click', (event) => {
-                if (event.target == modal) modal.style.display = "none";
+        selectBtn.addEventListener('click', () => modal.style.display = "block");
+        closeBtn.addEventListener('click', () => modal.style.display = "none");
+        
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) modal.style.display = "none";
+        });
+
+        // Search functionality
+        searchInput.addEventListener('keyup', function() {
+            const value = this.value.toLowerCase();
+            document.querySelectorAll(".customer-row").forEach(row => {
+                const text = row.textContent || row.innerText;
+                row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
             });
+        });
 
-            // Search functionality
-            searchInput.addEventListener('keyup', function() {
-                const value = this.value.toLowerCase();
-                document.querySelectorAll(".customer-row").forEach(row => {
-                    const text = row.textContent || row.innerText;
-                    row.style.display = text.toLowerCase().indexOf(value) > -1 ? "" : "none";
-                });
+        // Select customer - UPDATED TO INCLUDE PHONE_2
+        document.querySelectorAll(".select-customer-btn").forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('tr');
+                
+                document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
+                document.getElementById('customer_name').value = row.getAttribute('data-name');
+                document.getElementById('customer_email').value = row.getAttribute('data-email');
+                document.getElementById('customer_phone').value = row.getAttribute('data-phone');
+                document.getElementById('customer_phone_2').value = row.getAttribute('data-phone-2') || ''; // NEW: Set phone_2
+                document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
+                document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
+                document.getElementById('city_id').value = row.getAttribute('data-city-id');
+                document.getElementById('city_autocomplete').value = row.getAttribute('data-city-name');
+                
+                isExistingCustomer = true;
+                CustomerManager.toggleFields(true);
+                ValidationUtils.clearErrors();
+                
+                modal.style.display = "none";
+                alert('Customer selected: ' + row.getAttribute('data-name'));
+                FormValidator.validateAndToggleSubmit();
             });
+        });
 
-            // Select customer
-            document.querySelectorAll(".select-customer-btn").forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const row = this.closest('tr');
-                    
-                    document.getElementById('customer_id').value = row.getAttribute('data-customer-id');
-                    document.getElementById('customer_name').value = row.getAttribute('data-name');
-                    document.getElementById('customer_email').value = row.getAttribute('data-email');
-                    document.getElementById('customer_phone').value = row.getAttribute('data-phone');
-                    document.getElementById('address_line1').value = row.getAttribute('data-address-line1');
-                    document.getElementById('address_line2').value = row.getAttribute('data-address-line2');
-                    document.getElementById('city_id').value = row.getAttribute('data-city-id');
-                    document.getElementById('city_autocomplete').value = row.getAttribute('data-city-name');
-                    
-                    isExistingCustomer = true;
-                    CustomerManager.toggleFields(true);
-                    ValidationUtils.clearErrors();
-                    
-                    modal.style.display = "none";
-                    alert('Customer selected: ' + row.getAttribute('data-name'));
-                    FormValidator.validateAndToggleSubmit();
-                });
-            });
-
-            // Add clear selection button
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'btn btn-outline-secondary ml-2';
-            clearBtn.innerHTML = '<i class="feather icon-x"></i> Clear Selection';
-            clearBtn.style.marginLeft = '10px';
-            clearBtn.addEventListener('click', CustomerManager.clearFields);
-            selectBtn.parentNode.appendChild(clearBtn);
-        }
-    };
+        // Add clear selection button
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-outline-secondary ml-2';
+        clearBtn.innerHTML = '<i class="feather icon-x"></i> Clear Selection';
+        clearBtn.style.marginLeft = '10px';
+        clearBtn.addEventListener('click', CustomerManager.clearFields);
+        selectBtn.parentNode.appendChild(clearBtn);
+    }
+};
 
     // ========== EVENT LISTENERS ==========
     const EventListeners = {

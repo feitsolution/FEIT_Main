@@ -68,36 +68,46 @@ if (!function_exists('get_logo_with_fallback')) {
     <div class="m-header flex items-center py-4 px-6 h-header-height">
       <a href="../dashboard/index.php" class="b-brand flex items-center gap-3">
         
-         <?php
-          // Fetch branding info from database
-          $branding_info = get_logo_with_fallback(isset($conn) ? $conn : null);
+        <?php
+        // Fetch branding info from database
+        // Assuming $conn is available for database connection
+        $branding_info = get_logo_with_fallback(isset($conn) ? $conn : null);
+        
+        // Get values from database
+        $logo_url = $branding_info['logo_url'];
+        $company_name = $branding_info['company_name'] ?? 'Company';
 
-          // Get logo URL + company name
-          $logo_url = $branding_info['logo_url'] ?? '';
-          $company_name = $branding_info['company_name'] ?? 'Company';
-
-          // Debug (optional)
-          if (defined('DEBUG_MODE') && DEBUG_MODE) {
-              echo "<!-- Debug Info:\n";
-              foreach ($branding_info['debug'] as $debug_msg) {
-                  echo "  - " . htmlspecialchars($debug_msg) . "\n";
-              }
-              echo "-->\n";
-          }
-
-          // Sanitize output
-          $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
-          $safe_logo_url = htmlspecialchars($logo_url, ENT_QUOTES, 'UTF-8');
-
-          // Display logo from DB only (NO fallback)
-          ?>
-          <?php if (!empty($safe_logo_url)): ?>
-              <img src="<?php echo $safe_logo_url; ?>"
-                  alt="<?php echo $safe_company_name; ?> logo"
-                  class="img-fluid logo logo-lg"
-                  style="max-height: 40px; margin-right: 10px;" />
-          <?php endif; ?>
-
+        // Output debug info as HTML comments (remove in production)
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            echo "<!-- Debug Info:\n";
+            foreach ($branding_info['debug'] as $debug_msg) {
+                echo "  - " . htmlspecialchars($debug_msg) . "\n";
+            }
+            echo "-->\n";
+        }
+        
+        // Fallback SVG placeholder if no logo in database
+        $fallback_svg = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPC9zdmc+';
+        
+        // Sanitize output for security
+        $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
+        
+        // Display logo if available
+        if ($logo_url): 
+            $safe_logo_url = htmlspecialchars($logo_url, ENT_QUOTES, 'UTF-8');
+        ?>
+          <img src="<?php echo $safe_logo_url; ?>" 
+            alt="<?php echo $safe_company_name; ?> logo" 
+            class="img-fluid logo logo-lg" 
+            style="max-height: 40px; margin-right: 10px;" 
+            onerror="this.onerror=null; this.src='<?php echo $fallback_svg; ?>';" />
+        <?php else: ?>
+          <!-- No logo in database, showing fallback -->
+          <img src="<?php echo $fallback_svg; ?>" 
+            alt="<?php echo $safe_company_name; ?> logo" 
+            class="img-fluid logo logo-lg" 
+            style="max-height: 40px; margin-right: 10px;" />
+        <?php endif; ?>
         
         <!-- Company Name -->
         <span class="text-lg font-semibold  dark:text-white">

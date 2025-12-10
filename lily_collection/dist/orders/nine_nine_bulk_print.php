@@ -86,6 +86,7 @@ $sql = "
     o.pay_date,
     COALESCE(NULLIF(o.full_name,''), NULLIF(c.name,''), 'Unknown Customer') AS name,
     COALESCE(NULLIF(o.mobile,''), NULLIF(c.phone,''), 'No phone') AS phone,
+    NULLIF(c.phone_2,'') AS phone_2,
     NULLIF(o.address_line1,'') AS o_addr1,
     NULLIF(o.address_line2,'') AS o_addr2,
     NULLIF(c.address_line1,'') AS c_addr1,
@@ -324,6 +325,9 @@ window.onload = function() {
         <!-- Customer Details -->
         <b><?php echo htmlspecialchars($o['name']); ?></b><br>
         Phone: <?php echo htmlspecialchars($o['phone']); ?><br>
+        <?php if (!empty($o['phone_2'])): ?>
+            Phone 2: <?php echo htmlspecialchars($o['phone_2']); ?><br>
+        <?php endif; ?>
 
         <?php
             $addr = $o['o_addr1'] ?: $o['c_addr1'];
@@ -342,11 +346,8 @@ window.onload = function() {
 
         <hr>
 
-        <!-- Total Amount - Only show if NOT paid -->
-        <?php if ($o['pay_status'] !== 'paid'): ?>
-            <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
-        <?php endif; ?>
-
+        <!-- Total Amount -->
+        <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
 
         <br>
 

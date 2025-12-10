@@ -198,11 +198,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
         #city_input {
             position: relative;
             z-index: 1;
@@ -295,11 +290,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
                                 <div class="customer-form-group">
                                     <label for="email" class="form-label">
-                                        <i class="fas fa-envelope"></i> Email Address<span class="required">*</span>
+                                        <i class="fas fa-envelope"></i> Email Address
                                     </label>
-                                   <input type="email" class="form-control" id="email" name="email"
-                          placeholder="customer@example.com">
-
+                                    <input type="email" class="form-control" id="email" name="email"
+                                        placeholder="customer@example.com">
                                     <div class="error-feedback" id="email-error"></div>
                                     <div class="email-suggestions" id="email-suggestions"></div>
                                 </div>
@@ -316,6 +310,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <div class="phone-hint">Enter 10-digit Sri Lankan mobile number</div>
                                 </div>
 
+                                <div class="customer-form-group">
+                                    <label for="phone_2" class="form-label">
+                                        <i class="fas fa-phone"></i> Phone Number 2 (Optional)
+                                    </label>
+                                    <input type="tel" class="form-control" id="phone_2" name="phone_2"
+                                        placeholder="0771234567">
+                                    <div class="error-feedback" id="phone_2-error"></div>
+                                    <div class="phone-hint">Enter 10-digit Sri Lankan mobile number (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
                                 <div class="customer-form-group">
                                     <label for="status" class="form-label">
                                         <i class="fas fa-toggle-on"></i> Status<span class="required">*</span>
@@ -471,12 +477,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     currentFocusIndex = -1;
                 }
             });
-
-            // Handle blur validation - only validate on form submit
-            $cityInput.on('blur', function() {
-                // Don't validate on blur, only on form submit
-                // This allows users to click dropdown items
-            });
         }
 
         function setActiveItem($items) {
@@ -487,7 +487,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         }
 
         function searchCities(searchTerm) {
-            console.log('Searching for:', searchTerm); // Debug
+            console.log('Searching for:', searchTerm);
             
             $.ajax({
                 url: 'fetch_cities.php',
@@ -495,14 +495,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 data: { term: searchTerm },
                 dataType: 'json',
                 success: function(response) {
-                    console.log('Search results:', response); // Debug
+                    console.log('Search results:', response);
                     $('#city_input').removeClass('loading');
                     displayCityResults(response);
                 },
                 error: function(xhr, status, error) {
                     $('#city_input').removeClass('loading');
                     console.error('City search error:', error);
-                    console.error('Response:', xhr.responseText); // Debug
+                    console.error('Response:', xhr.responseText);
                     
                     const $dropdown = $('#cityDropdown');
                     $dropdown.html('<div class="autocomplete-no-results">Error loading cities. Please try again.</div>');
@@ -517,7 +517,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             $dropdown.empty();
             currentFocusIndex = -1;
 
-            console.log('Displaying results, count:', cities ? cities.length : 0); // Debug
+            console.log('Displaying results, count:', cities ? cities.length : 0);
 
             if (!cities || cities.length === 0) {
                 $dropdown.html('<div class="autocomplete-no-results"><i class="fas fa-search"></i><br>No cities found</div>');
@@ -540,7 +540,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     .data('city-name', city.city_name);
 
                 $item.on('mousedown', function(e) {
-                    e.preventDefault(); // Prevent blur event
+                    e.preventDefault();
                     selectCity($(this).data('city-id'), $(this).data('city-name'));
                 });
 
@@ -549,10 +549,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
             positionDropdown();
             $dropdown.addClass('show');
-            console.log('Dropdown shown'); // Debug
+            console.log('Dropdown shown');
         }
 
-        // Function to position dropdown relative to input
         function positionDropdown() {
             const $input = $('#city_input');
             const $dropdown = $('#cityDropdown');
@@ -567,7 +566,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
 
-        // Reposition on window resize or scroll
         $(window).on('resize scroll', function() {
             if ($('#cityDropdown').hasClass('show')) {
                 positionDropdown();
@@ -581,7 +579,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             $('#cityDropdown').removeClass('show').empty();
             currentFocusIndex = -1;
             
-            // Validate after selection
             showSuccess('city_id');
             clearError('city_id');
         }
@@ -597,7 +594,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        // Form submission
         function submitFormAjax() {
             showLoading();
             
@@ -727,7 +723,17 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         function initializeForm() {
             $('#name').focus();
             
+            // Format phone 1
             $('#phone').on('input', function() {
+                let value = this.value.replace(/\D/g, '');
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+                this.value = value;
+            });
+            
+            // Format phone 2
+            $('#phone_2').on('input', function() {
                 let value = this.value.replace(/\D/g, '');
                 if (value.length > 10) {
                     value = value.substring(0, 10);
@@ -757,6 +763,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 validation.valid ? showSuccess('phone') : showError('phone', validation.message);
             });
             
+            $('#phone_2').on('blur', function() {
+                const validation = validatePhone2($(this).val());
+                if ($(this).val().trim()) {
+                    validation.valid ? showSuccess('phone_2') : showError('phone_2', validation.message);
+                } else {
+                    clearError('phone_2');
+                }
+            });
+            
             $('#address_line1').on('blur', function() {
                 const validation = validateAddressLine1($(this).val());
                 validation.valid ? showSuccess('address_line1') : showError('address_line1', validation.message);
@@ -770,6 +785,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 { field: 'name', validator: validateName, value: $('#name').val() },
                 { field: 'email', validator: validateEmail, value: $('#email').val() },
                 { field: 'phone', validator: validatePhone, value: $('#phone').val() },
+                { field: 'phone_2', validator: validatePhone2, value: $('#phone_2').val() },
                 { field: 'address_line1', validator: validateAddressLine1, value: $('#address_line1').val() },
                 { field: 'city_id', validator: validateCity, value: $('#city_id').val() }
             ];
@@ -794,50 +810,65 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             if (!/^[a-zA-Z\s.\-']+$/.test(name)) return { valid: false, message: 'Invalid characters in name' };
             return { valid: true };
         }
+   // Complete validation functions - add these to your script section
 
-     function validateEmail(email) {
-    if (!email.trim()) return { valid: true }; // empty is allowed now
+function validateEmail(email) {
+    if (!email.trim()) return { valid: true }; // Optional field
     if (email.length > 100) return { valid: false, message: 'Email is too long' };
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!regex.test(email)) return { valid: false, message: 'Invalid email format' };
     return { valid: true };
 }
 
+function validatePhone(phone) {
+    if (!phone.trim()) return { valid: false, message: 'Phone is required' };
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) return { valid: false, message: 'Phone must be 10 digits' };
+    if (!/^0[1-9][0-9]{8}$/.test(digits)) return { valid: false, message: 'Invalid phone format' };
+    return { valid: true };
+}
 
-        function validatePhone(phone) {
-            if (!phone.trim()) return { valid: false, message: 'Phone is required' };
-            const digits = phone.replace(/\D/g, '');
-            if (digits.length !== 10) return { valid: false, message: 'Phone must be 10 digits' };
-            if (!/^0[1-9][0-9]{8}$/.test(digits)) return { valid: false, message: 'Invalid phone format' };
-            return { valid: true };
-        }
+function validatePhone2(phone) {
+    // If empty, it's valid (optional field)
+    if (!phone || !phone.trim()) return { valid: true };
+    
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) return { valid: false, message: 'Phone 2 must be 10 digits' };
+    if (!/^0[1-9][0-9]{8}$/.test(digits)) return { valid: false, message: 'Invalid phone 2 format' };
+    
+    // Check if same as phone 1
+    const phone1 = $('#phone').val().replace(/\D/g, '');
+    if (digits === phone1) return { valid: false, message: 'Phone 2 cannot be same as Phone 1' };
+    
+    return { valid: true };
+}
 
-        function validateAddressLine1(address) {
-            if (!address.trim()) return { valid: false, message: 'Address Line 1 is required' };
-            if (address.trim().length < 3) return { valid: false, message: 'Address too short' };
-            if (address.length > 255) return { valid: false, message: 'Address is too long' };
-            return { valid: true };
-        }
+function validateAddressLine1(address) {
+    if (!address.trim()) return { valid: false, message: 'Address Line 1 is required' };
+    if (address.trim().length < 3) return { valid: false, message: 'Address too short' };
+    if (address.length > 255) return { valid: false, message: 'Address is too long' };
+    return { valid: true };
+}
 
-        function validateCity(cityId) {
-            if (!cityId || cityId.trim() === '') return { valid: false, message: 'Please select a city' };
-            return { valid: true };
-        }
+function validateCity(cityId) {
+    if (!cityId || cityId.trim() === '') return { valid: false, message: 'Please select a city' };
+    return { valid: true };
+}
 
-        function showError(fieldId, message) {
-            $('#' + fieldId).addClass('is-invalid').removeClass('is-valid');
-            $('#' + fieldId + '-error').text(message).show();
-        }
+function showError(fieldId, message) {
+    $('#' + fieldId).addClass('is-invalid').removeClass('is-valid');
+    $('#' + fieldId + '-error').text(message).show();
+}
 
-        function showSuccess(fieldId) {
-            $('#' + fieldId).addClass('is-valid').removeClass('is-invalid');
-            $('#' + fieldId + '-error').hide();
-        }
+function showSuccess(fieldId) {
+    $('#' + fieldId).addClass('is-valid').removeClass('is-invalid');
+    $('#' + fieldId + '-error').hide();
+}
 
-        function clearError(fieldId) {
-            $('#' + fieldId).removeClass('is-invalid');
-            $('#' + fieldId + '-error').hide();
-        }
+function clearError(fieldId) {
+    $('#' + fieldId).removeClass('is-invalid');
+    $('#' + fieldId + '-error').hide();
+}
     </script>
 </body>
 </html>

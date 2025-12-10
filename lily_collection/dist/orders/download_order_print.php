@@ -15,6 +15,9 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 
+// =============================================================
+//  BRANDING DATA - GET FROM DB
+// =============================================================
 $branding_sql = "SELECT * FROM branding WHERE active = 1 LIMIT 1";
 $branding_result = $conn->query($branding_sql);
 $branding = $branding_result->fetch_assoc();
@@ -24,9 +27,8 @@ $company_name = !empty($branding['company_name']) ? $branding['company_name'] : 
 $company_address = !empty($branding['address']) ? $branding['address'] : "";
 $company_email = !empty($branding['email']) ? $branding['email'] : "";
 $company_hotline = !empty($branding['hotline']) ? $branding['hotline'] : "";
+$company_logo = "/lily_collection/dist/assets/images/lily.jpeg";
 
-// Logo ONLY from DB 
-$company_logo = $branding['logo_url'];
 
 // =============================================================
 //  ORDER VALIDATION
@@ -43,6 +45,7 @@ $order_id = $_GET['id'];
 // =============================================================
 // ✅ ADDED: pay_status, pay_by, pay_date fields to query
 $order_query = "SELECT o.*, c.name as customer_name, c.phone as customer_phone, 
+                c.phone_2 as customer_phone_2,
                 c.email as customer_email, c.city_id,
                 CONCAT_WS(', ', c.address_line1, c.address_line2) as customer_address,
                 o.delivery_fee, o.discount, o.total_amount, o.issue_date, o.tracking_number,
@@ -52,6 +55,7 @@ $order_query = "SELECT o.*, c.name as customer_name, c.phone as customer_phone,
 
                 COALESCE(NULLIF(o.full_name, ''), c.name, 'Unknown Customer') as display_name,
                 COALESCE(NULLIF(o.mobile, ''), c.phone, 'No phone') as display_mobile,
+                c.phone_2 as display_mobile_2,
 
                 COALESCE(
                     NULLIF(CONCAT_WS(', ', NULLIF(o.address_line1, ''), NULLIF(o.address_line2, '')), ''),

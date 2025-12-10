@@ -3,7 +3,7 @@
  * Six by Four Bulk Print (6 inch × 4 inch Labels)
  * Prints multiple orders based on filters from label print page
  * Each order is printed as a 6x4 inch label - ONE LABEL PER PAGE
-
+ * Includes customer phone_2 field and payment status
  * Updated to use external print.css stylesheet
  */
 
@@ -47,7 +47,7 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
                o.delivery_fee, o.discount, o.issue_date,
                o.pay_status, o.pay_by, o.pay_date,
                c.name as customer_name, c.phone as customer_phone, 
-               
+               c.phone_2 as customer_phone_2,
                c.email as customer_email, c.city_id,
                
                c.address_line1 as customer_address_line1,
@@ -302,9 +302,9 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                 // Get items for this order
                 $order_items = isset($items_by_order[$order_id]) ? $items_by_order[$order_id] : [];
                 
-          
+                // Get phone numbers - ADDED phone_2 support
                 $phone_1 = htmlspecialchars($order['display_mobile']);
-                
+                $phone_2 = !empty($order['customer_phone_2']) ? htmlspecialchars($order['customer_phone_2']) : '';
                 ?>
                 
                 <div class="label-wrapper">
@@ -413,7 +413,9 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                                <td class="customer-info" width="50%"> 
                                    <strong>Name:</strong> <?php echo htmlspecialchars(substr($order['display_name'], 0, 20)); ?><br>
                                    <strong>Phone 1:</strong> <?php echo $phone_1; ?><br>
-                                  
+                                   <?php if ($phone_2): ?>
+                                   <strong>Phone 2:</strong> <?php echo $phone_2; ?><br>
+                                   <?php endif; ?>
                                    <strong>Address:</strong> <?php echo htmlspecialchars(substr($order['display_address'], 0, 60)) . (strlen($order['display_address']) > 60 ? '...' : ''); ?>
                                </td>
                                 <td class="totals-cell">
@@ -461,7 +463,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
         // Log loaded orders for debugging
         console.log('Six by Four bulk print loaded: <?php echo count($orders); ?> orders');
         console.log('ONE LABEL PER PAGE - 6x4 inch format');
-
+        console.log('Customer phone_2 included in labels');
         console.log('Using external print.css stylesheet');
     </script>
 </body>

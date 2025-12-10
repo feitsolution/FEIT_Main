@@ -22,7 +22,10 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $order_id = $_GET['id'];
 $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] === 'true';
 
-// Updated query to include payment slip information
+// ==========================================
+// ✅ CHANGE 1: Added c.phone_2 to SELECT query
+// ==========================================
+// Updated query to include payment slip information and phone_2
 $order_query = "SELECT 
                 i.*, 
                 i.pay_status AS order_pay_status, 
@@ -30,6 +33,7 @@ $order_query = "SELECT
                 CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
                 c.email AS customer_email, 
                 c.phone AS customer_phone,
+                c.phone_2 AS customer_phone_2,
                 city.city_name AS customer_city,
                 p.payment_id, 
                 p.amount_paid, 
@@ -125,14 +129,28 @@ if (isset($order['order_pay_status']) && !empty($order['order_pay_status'])) {
     }
 }
 
-// Fetch company information from branding table
-$branding_query = "SELECT company_name, address, hotline, email FROM branding WHERE active = 1 LIMIT 1";
+// Fetch company information from branding table (UPDATED TO INCLUDE LOGO)
+$branding_query = "SELECT company_name, address, hotline, email, logo_url FROM branding WHERE active = 1 LIMIT 1";
 $branding_result = $conn->query($branding_query);
 
 if ($branding_result && $branding_result->num_rows > 0) {
     $company = $branding_result->fetch_assoc();
     // Clean up the address - remove extra backslashes and format properly
     $company['address'] = str_replace(['\\\\r\\\\n', '\\r\\n', '\\n'], "\n", $company['address']);
+    
+    // Set logo URL - use from database if available, otherwise use default
+    if (!empty($company['logo_url'])) {
+        // If logo_url is a full path, use it directly; otherwise prepend the base path
+        if (strpos($company['logo_url'], 'http') === 0) {
+            $logo_url = $company['logo_url'];
+        } else {
+            // Assuming logo_url stores relative path like 'uploads/logos/logo.png'
+            $logo_url = '/lily_collection/dist/' . $company['logo_url'];
+        }
+    } else {
+        // Fallback to default logo
+        $logo_url = '../assets/images/lily.jpeg';
+    }
 } else {
     // Fallback to default company info if branding not found
     $company = [
@@ -141,6 +159,7 @@ if ($branding_result && $branding_result->num_rows > 0) {
         'email' => 'info@feitsolutions.com',
         'hotline' => '011-2824524'
     ];
+    $logo_url = '../assets/images/lily.jpeg';
 }
 
 // Function to get the color for payment status
@@ -296,6 +315,21 @@ $column_count = $has_any_discount ? 5 : 4;
             margin-top: 5px;
         }
 
+        /* Style for logo with fallback */
+        .company-logo img {
+            max-height: 80px;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        /* ==========================================
+           ✅ CHANGE 2: Added styling for secondary phone
+           ========================================== */
+        .phone-secondary {
+            color: #666;
+            font-size: 0.95em;
+        }
+
         /* Make alerts responsive */
         @media (max-width: 768px) {
             .alert {
@@ -431,7 +465,9 @@ $column_count = $has_any_discount ? 5 : 4;
 
         <div class="order-header">
             <div class="company-logo">
-            <img src="../assets/images/lily_collection.png" alt="Company Logo">
+                <img src="<?php echo htmlspecialchars($logo_url); ?>" 
+                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo"
+                     onerror="this.onerror=null; this.src='../assets/images/lily.jpeg';">
             </div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>
@@ -478,7 +514,16 @@ $column_count = $has_any_discount ? 5 : 4;
                     <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong><br>
                     <?php echo nl2br(htmlspecialchars($order['customer_address'])); ?><br>
                     City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
-                    Phone: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    
+                    <?php 
+                    // ==========================================
+                    // ✅ CHANGE 3: Display phone numbers with phone_2 support
+                    // ==========================================
+                    ?>
+                    PhoneNumber 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    <?php if (!empty($order['customer_phone_2'])): ?>
+                        <br><span class="phone-secondary">Phone Number 2: <?php echo htmlspecialchars($order['customer_phone_2']); ?></span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

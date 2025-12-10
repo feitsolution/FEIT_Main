@@ -104,6 +104,7 @@ function setMessageAndRedirect($type, $message, $redirect_url = null) {
         exit();
     }
 }
+
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
@@ -116,6 +117,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $customer_name = trim($_POST['customer_name']);
         $customer_email = trim($_POST['customer_email'] ?? '');
         $customer_phone = trim($_POST['customer_phone'] ?? '');
+        $customer_phone_2 = trim($_POST['customer_phone_2'] ?? '');
         
         // Additional customer validation (optional but recommended)
         if (!empty($customer_email) && !filter_var($customer_email, FILTER_VALIDATE_EMAIL)) {
@@ -191,10 +193,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             
             // Build query with OR condition (match either email OR phone)
-            $checkCustomerSql = "SELECT customer_id, name, email, phone, city_id, address_line1, address_line2 
-                                FROM customers 
-                                WHERE " . implode(" OR ", $search_conditions) . " 
-                                LIMIT 1";
+            // ✅ FIXED: Added phone_2 to SELECT
+            $checkCustomerSql = "SELECT customer_id, name, email, phone, phone_2, city_id, address_line1, address_line2 
+                    FROM customers 
+                    WHERE " . implode(" OR ", $search_conditions) . " 
+                    LIMIT 1";
             
             $stmt = $conn->prepare($checkCustomerSql);
             
@@ -246,19 +249,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // ==========================================
         
         if (!$is_new_customer && $customer_id > 0) {
-            // ========== UPDATE EXISTING CUSTOMER ==========
+            // ========== UPDATE EXISTING CUSTOMER - FIXED ==========
             error_log("DEBUG - Updating existing customer ID: $customer_id");
             
             // Prepare UPDATE statement with ALL fields
             $updateCustomerSql = "UPDATE customers 
-                                 SET name = ?, 
-                                     email = ?, 
-                                     phone = ?, 
-                                     address_line1 = ?, 
-                                     address_line2 = ?, 
-                                     city_id = ?, 
-                                     status = 'Active'
-                                 WHERE customer_id = ?";
+                SET name = ?, 
+                    email = ?, 
+                    phone = ?, 
+                    phone_2 = ?,
+                    address_line1 = ?, 
+                    address_line2 = ?, 
+                    city_id = ?, 
+                    status = 'Active'
+                WHERE customer_id = ?";
             
             $stmt = $conn->prepare($updateCustomerSql);
             
@@ -266,21 +270,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 throw new Exception("Failed to prepare customer update query: " . $conn->error);
             }
             
-            // Use provided city_id, or fall back to existing if not provided
-            $final_city_id = !empty($city_id) ? $city_id : $existing_customer['city_id'];
+            // ✅ FIXED: Proper fallback logic for ALL fields
+            $final_name = !empty($customer_name) ? $customer_name : ($existing_customer['name'] ?? '');
+            $final_email = !empty($customer_email) ? $customer_email : ($existing_customer['email'] ?? null);
+            $final_phone = !empty($customer_phone) ? $customer_phone : ($existing_customer['phone'] ?? null);
+            $final_phone2 = !empty($customer_phone_2) ? $customer_phone_2 : ($existing_customer['phone_2'] ?? null);
+            $final_address1 = !empty($address_line1) ? $address_line1 : ($existing_customer['address_line1'] ?? null);
+            $final_address2 = !empty($address_line2) ? $address_line2 : ($existing_customer['address_line2'] ?? null);
+            $final_city_id = !empty($city_id) ? $city_id : ($existing_customer['city_id'] ?? null);
             
-            // Use provided values, or fall back to existing values if empty
-            $final_name = !empty($customer_name) ? $customer_name : $existing_customer['name'];
-            $final_email = !empty($customer_email) ? $customer_email : $existing_customer['email'];
-            $final_phone = !empty($customer_phone) ? $customer_phone : $existing_customer['phone'];
-            $final_address1 = !empty($address_line1) ? $address_line1 : $existing_customer['address_line1'];
-            $final_address2 = !empty($address_line2) ? $address_line2 : $existing_customer['address_line2'];
-            
+            // ✅ FIXED: Correct parameter binding (8 parameters total)
             $stmt->bind_param(
-                "sssssii", 
+                "ssssssii",  // 6 strings + 2 integers
                 $final_name, 
                 $final_email, 
-                $final_phone, 
+                $final_phone,
+                $final_phone2,
                 $final_address1, 
                 $final_address2, 
                 $final_city_id, 
@@ -295,10 +300,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $city_id = $final_city_id;
             
             error_log("DEBUG - Customer updated successfully (ID: $customer_id)");
+            error_log("DEBUG - Rows affected: " . $stmt->affected_rows);
+            error_log("DEBUG - Updated values - Name: $final_name, Email: $final_email, Phone: $final_phone, Phone2: " . ($final_phone2 ?? 'NULL') . ", City: " . ($final_city_id ?? 'NULL'));
+            
             $stmt->close();
             
+            // ✅ ADDED: Verification query for debugging
+            $verifyStmt = $conn->prepare("SELECT * FROM customers WHERE customer_id = ?");
+            if ($verifyStmt) {
+                $verifyStmt->bind_param("i", $customer_id);
+                $verifyStmt->execute();
+                $verifyResult = $verifyStmt->get_result()->fetch_assoc();
+                error_log("DEBUG - Customer after update: " . json_encode($verifyResult));
+                $verifyStmt->close();
+            }
+            
         } else {
-            // ========== INSERT NEW CUSTOMER ==========
+            // ========== INSERT NEW CUSTOMER - FIXED ==========
             error_log("DEBUG - Creating new customer: $customer_name");
             
             // Validate required fields for new customer
@@ -312,8 +330,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             // Insert new customer
             $insertCustomerSql = "INSERT INTO customers 
-                                 (name, email, phone, address_line1, address_line2, city_id, status) 
-                                 VALUES (?, ?, ?, ?, ?, ?, 'Active')";
+                (name, email, phone, phone_2, address_line1, address_line2, city_id, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')";
             
             $stmt = $conn->prepare($insertCustomerSql);
             
@@ -321,18 +339,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 throw new Exception("Failed to prepare customer insert query: " . $conn->error);
             }
             
-            // Handle nullable fields properly
+            // ✅ FIXED: Handle nullable fields properly
             $email_value = !empty($customer_email) ? $customer_email : null;
             $phone_value = !empty($customer_phone) ? $customer_phone : null;
+            $phone2_value = !empty($customer_phone_2) ? $customer_phone_2 : null;
             $address1_value = !empty($address_line1) ? $address_line1 : null;
             $address2_value = !empty($address_line2) ? $address_line2 : null;
             $city_id_value = !empty($city_id) ? $city_id : null;
             
+            // ✅ FIXED: Correct parameter binding (7 parameters)
             $stmt->bind_param(
-                "sssssi", 
+                "ssssssi", // 6 strings + 1 integer
                 $customer_name, 
                 $email_value, 
-                $phone_value, 
+                $phone_value,
+                $phone2_value,
                 $address1_value, 
                 $address2_value, 
                 $city_id_value
@@ -453,8 +474,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("No valid products to process in the order.");
         }
         
+        // ==========================================
+        // APPLY FREE DELIVERY LOGIC
+        // If order total >= 5000, delivery fee becomes 0
+        // ==========================================
+        $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
+
+        if ($subtotal_after_discount >= 5000) {
+            $delivery_fee = 0.00; // Free delivery for orders >= 5000
+            error_log("DEBUG - Free delivery applied. Order total: Rs. $subtotal_after_discount");
+        } else {
+            error_log("DEBUG - Standard delivery fee: Rs. $delivery_fee. Order total: Rs. $subtotal_after_discount");
+        }
+
         // Final total calculation with delivery fee
-        $total_amount = $subtotal_before_discounts - $total_discount + $delivery_fee;
+        $total_amount = $subtotal_after_discount + $delivery_fee;
         
         // Insert order_header
         $insertOrderSql = "INSERT INTO order_header (
@@ -643,7 +677,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             'parcel_description' => $parcel_description,
                             'recipient_name' => $customer_name,
                             'recipient_contact_1' => $customer_phone,
-                            'recipient_contact_2' => '',
+                            'recipient_contact_2' => !empty($customer_phone_2) ? $customer_phone_2 : '',
                             'recipient_address' => trim($address_line1 . ' ' . $address_line2),
                             'recipient_city' => $city_name,
                             'amount' => $api_amount,
@@ -801,7 +835,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 'parcel_description' => $parcel_description,
                                 'recipient_name' => $customer_name,
                                 'recipient_contact_1' => $customer_phone,
-                                'recipient_contact_2' => '',
+                                'recipient_contact_2' => !empty($customer_phone_2) ? $customer_phone_2 : '',
                                 'recipient_address' => trim($address_line1 . ' ' . $address_line2),
                                 'recipient_city' => $city_name,
                                 'amount' => $api_amount,
