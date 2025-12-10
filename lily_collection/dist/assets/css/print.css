@@ -37,12 +37,11 @@ body {
     vertical-align: top;
 }
 
-/* Header Sections */
 .header-section {
-    background-color: #f8f8f8;
-    /* font-weight: bold; */
+    height: 40mm; /* Fixed height for company info/logo */
+    padding: 5px;
     text-align: center;
-    padding: 10px;
+    vertical-align: top;
 }
 
 .company-name {
@@ -57,7 +56,7 @@ body {
 }
 
 .company-logo img {
-    max-height: 19px;
+    max-height: 55px;
     width: auto;
 }
 
@@ -357,25 +356,22 @@ body {
         }
         
         .label-wrapper {
-            width: 10cm;
-            height: 13.9cm;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            margin: 0;
-            display: inline-block;
-            vertical-align: top;
-        }
+    width: 10.2cm;
+    height: 15.2cm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 0;
+    display: inline-block;
+    vertical-align: top;
+}
         
-        .receipt-container {
-            width: 10cm;
-            height: 13.9cm;
-            max-width: 10cm;
-            margin: 0;
-            /* border: 2px solid #000; */
-            background: white;
-            position: relative;
-        }
-        
+    .receipt-container {
+    width: 10.2cm;
+    height: 15.2cm;
+    max-width: 10.2cm;
+    background: white;
+    position: relative;
+}
         .main-table {
             width: 100%;
             height: 100%;
@@ -384,7 +380,7 @@ body {
         
         .main-table td {
             padding: 2mm;
-            font-size: 11px;
+            font-size: 12px;
         }
         
         .header-section {
@@ -428,16 +424,27 @@ body {
         }
         
         .product-header, .customer-header, .totals-header {
-            font-size: 8px;
+            font-size: 10px;
             padding: 1mm;
         }
         
-        .customer-info, .totals-cell {
-            font-size: 8px;
-            line-height: 1.2;
-            padding: 2mm;
-        }
-        
+     .customer-info, .totals-cell {
+    font-size: 8px;
+    line-height: 1.3;
+    padding: 2mm;
+}
+
+/* Add a specific width for the customer info cell */
+.customer-info {
+    width: 100%; /* Make it take up 50% of the row */
+    /* Or use a fixed width: width: 80mm; */
+}
+
+/* Optionally, you can set a smaller width for the totals cells */
+.totals-cell {
+    width: 10%; /* Give each totals column 25% of the remaining width */
+    /* Adjust these percentages so they add up to 100% with .customer-info */
+}
         .total-payable {
             font-size: 9px;
             padding: 2mm;

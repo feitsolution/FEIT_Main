@@ -236,7 +236,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
     <title>Six by Four Bulk Print - 6x4 inch Labels (<?php echo count($orders); ?> orders)</title>
     
     <!-- Link to external CSS file -->
-    <link rel="stylesheet" href="../assets/css/print_6.css">
+    <link rel="stylesheet" href="../assets/css/print.css">
     
     <style>
         /* Additional styling for payment badge */
