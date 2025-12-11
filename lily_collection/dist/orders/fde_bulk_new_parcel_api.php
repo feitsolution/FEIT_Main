@@ -120,7 +120,7 @@ function extractTrackingNumber($apiResponse) {
 }
 
 try {
-    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
     
     // Validations
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) throw new Exception('Authentication required');
