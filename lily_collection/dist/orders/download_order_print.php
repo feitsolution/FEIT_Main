@@ -82,6 +82,7 @@ if ($result->num_rows === 0) {
     die("Order not found");
 }
 
+
 $order = $result->fetch_assoc();
 
 
@@ -134,6 +135,13 @@ function getQRCodeUrl($data) {
 
 $barcode_url = $has_tracking ? getBarcodeUrl($tracking_number) : '';
 $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Order: " . $order_id) : '';
+
+
+$totalPayable = 0;
+
+if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
+    $totalPayable = $total_payable; // original amount
+}
 
 ?>
 <!DOCTYPE html>
@@ -292,12 +300,13 @@ $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Ord
 
 
             <!-- TOTAL PAYABLE -->
-            <tr>
-                <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
-                <td class="total-payable amount">
-                    <?php echo $currencySymbol . " " . number_format($total_payable, 2); ?>
-                </td>
-            </tr>
+         <tr>
+    <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
+    <td class="total-payable amount">
+        <?php echo $currencySymbol . " " . number_format($totalPayable, 2); ?>
+    </td>
+</tr>
+
 
         </table>
 
