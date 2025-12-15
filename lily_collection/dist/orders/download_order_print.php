@@ -43,7 +43,6 @@ $order_id = $_GET['id'];
 // =============================================================
 //  ORDER HEADER QUERY
 // =============================================================
-// ✅ ADDED: pay_status, pay_by, pay_date fields to query
 $order_query = "SELECT o.*, c.name as customer_name, c.phone as customer_phone, 
                 c.phone_2 as customer_phone_2,
                 c.email as customer_email, c.city_id,
@@ -122,7 +121,6 @@ $total_payable = floatval($order['total_amount']);
 $tracking_number = !empty($order['tracking_number']) ? $order['tracking_number'] : '';
 $has_tracking = !empty($tracking_number);
 
-// ✅ ADDED: Payment status check
 $is_paid = !empty($order['pay_status']) && $order['pay_status'] === 'paid';
 
 function getBarcodeUrl($data) {
@@ -136,11 +134,10 @@ function getQRCodeUrl($data) {
 $barcode_url = $has_tracking ? getBarcodeUrl($tracking_number) : '';
 $qr_url = $has_tracking ? getQRCodeUrl("Tracking: " . $tracking_number . " | Order: " . $order_id) : '';
 
-
 $totalPayable = 0;
 
 if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
-    $totalPayable = $total_payable; // original amount
+    $totalPayable = $total_payable;
 }
 
 ?>
@@ -152,7 +149,6 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
     <title>Order Print - <?php echo $order_id; ?></title>
     <link rel="stylesheet" href="../assets/css/print.css" id="main-style-link" />
     <style>
-        /* Additional styling for payment badge */
         .payment-badge {
             display: inline-block;
             color: #155724;
@@ -176,12 +172,10 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             <!-- HEADER SECTION WITH BRANDING -->
             <tr>
                 <td class="header-section" colspan="2">
-
                     <div class="company-logo">
                       <img src="<?php echo htmlspecialchars($company_logo); ?>" alt="Company Logo">
                     </div>
                     
-
                     <div class="company-name">
                         <?php echo htmlspecialchars($company_name); ?>
                     </div>
@@ -196,13 +190,11 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                             | Email: <?php echo htmlspecialchars($company_email); ?>
                         <?php endif; ?>
                     </div>
-
                 </td>
 
                 <!-- ORDER ID + BARCODE -->
                 <td class="order-id-cell">
-
-                    <div style="font-weight:bold; ">
+                    <div style="font-weight:bold;">
                         Order ID: <?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?>
                     </div>
 
@@ -225,24 +217,31 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                             NO BARCODE<br><span style="font-size:8px;">Tracking not available</span>
                         </div>
                     <?php endif; ?>
-
                 </td>
             </tr>
 
 
             <!-- DELIVERY SERVICE -->
             <tr>
-                <td class="delivery-service-cell">
-                    <strong>Delivery Service:</strong><br>
-                    <?php echo htmlspecialchars($order['delivery_service']); ?>
-                </td>
-
-                <td class="tracking-cell" colspan="2">
-                    <strong>Tracking:</strong> 
-                    <?php echo $has_tracking ? htmlspecialchars($tracking_number) : "<span style='color:#dc2626;'>No Tracking Assigned</span>"; ?>
-                    <br>
-                    <strong>Date:</strong> 
-                    <?php echo !empty($order['issue_date']) ? date('Y-m-d', strtotime($order['issue_date'])) : date('Y-m-d'); ?>
+                <td class="delivery-service-cell" colspan="3" style="padding: 2mm; border: 1px solid #ddd;">
+                    <div style="margin-bottom: 2mm;">
+                        <strong>Delivery Service:</strong> 
+                        <?php echo !empty($order['delivery_service']) ? htmlspecialchars($order['delivery_service']) : 'Standard Delivery'; ?>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                        <div>
+                            <strong>Tracking:</strong> 
+                            <?php if ($has_tracking): ?>
+                                <span style="color: #2563eb;"><?php echo htmlspecialchars(substr($tracking_number, 0, 20)); ?></span>
+                            <?php else: ?>
+                                <span style="color: #dc2626;">No Tracking</span>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <strong>Date:</strong> 
+                            <?php echo !empty($order['issue_date']) ? date('Y-m-d', strtotime($order['issue_date'])) : date('Y-m-d'); ?>
+                        </div>
+                    </div>
                 </td>
             </tr>
 
@@ -251,7 +250,7 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             <tr>
                 <td class="product-header" colspan="3">
                     <strong>Products :</strong>
-                    <div style="margin-top:1mm; font-size:9px;">
+                    <div style="margin-top:1mm; font-size:11px; line-height:1.2;">
                         <?php 
                         $product_list = [];
                         foreach ($items as $item) {
@@ -266,47 +265,55 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             </tr>
 
 
-            <!-- CUSTOMER + TOTALS -->
+            <!-- CUSTOMER DETAILS HEADER (No border between header and info) -->
             <tr>
-                <td class="customer-header">Customer Details</td>
-                <td class="totals-header">Summary</td>
-                <td class="totals-header">Amount</td>
+                <td class="customer-header" colspan="3" style="border-bottom: none;">
+                    <strong>Customer Details</strong>
+                </td>
             </tr>
 
+            <!-- CUSTOMER DETAILS INFO -->
             <tr>
-                <td class="customer-info">
-                    <strong>Name:</strong> <?php echo htmlspecialchars(substr($order['display_name'], 0, 20)); ?><br>
-                    <strong>Phone 1:</strong> <?php echo htmlspecialchars($order['display_mobile']); ?><br>
+                <td class="customer-info" colspan="3" style="padding: 2mm; font-size: 11px; line-height: 1.4; border-top: none;">
+                    <strong>Name:</strong> <?php echo htmlspecialchars($order['display_name']); ?><br>
+                    <strong>Phone 1:</strong> <?php echo htmlspecialchars($order['display_mobile']); ?>
                     <?php if (!empty($order['display_mobile_2'])): ?>
-                        <strong>Phone 2:</strong> <?php echo htmlspecialchars($order['display_mobile_2']); ?><br>
-                    <?php endif; ?>
-                    <strong>Address:</strong> 
-                    <?php 
-                        $addr = $order['display_address'];
-                        echo htmlspecialchars(substr($addr, 0, 60)) . (strlen($addr) > 60 ? "..." : "");
-                    ?>
-                </td>
-
-                <td class="totals-cell">
-                    Subtotal:<br>Delivery:<br>Discount:
-                </td>
-
-                <td class="totals-cell amount">
-                    <?php echo $currencySymbol . " " . number_format($subtotal, 2); ?><br>
-                    <?php echo $currencySymbol . " " . number_format($delivery_fee, 2); ?><br>
-                    <?php echo $currencySymbol . " " . number_format($discount, 2); ?>
+                    | <strong>Phone 2:</strong> <?php echo htmlspecialchars($order['display_mobile_2']); ?>
+                    <?php endif; ?><br>
+                    <strong>Address:</strong> <?php echo htmlspecialchars($order['display_address']); ?><br>
+                    <strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'N/A'; ?>
                 </td>
             </tr>
 
+
+            <?php if (!$is_paid): ?>
+            <!-- SUMMARY SECTION - Only show when NOT paid -->
+            <tr>
+                <td class="totals-header">Summary</td>
+                <td class="totals-header" colspan="2">Amount</td>
+            </tr>
+
+            <tr>
+                <td class="totals-cell" style="font-size: 9px;">
+                    Subtotal<br>
+                    Delivery<br>
+                    Discount
+                </td>
+                <td class="totals-cell amount" colspan="2" style="font-size: 9px;">
+                    <?php echo $currencySymbol . ' ' . number_format($subtotal, 2); ?><br>
+                    <?php echo $currencySymbol . ' ' . number_format($delivery_fee, 2); ?><br>
+                    <?php echo $currencySymbol . ' ' . number_format($discount, 2); ?>
+                </td>
+            </tr>
 
             <!-- TOTAL PAYABLE -->
-         <tr>
-    <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
-    <td class="total-payable amount">
-        <?php echo $currencySymbol . " " . number_format($totalPayable, 2); ?>
-    </td>
-</tr>
-
+            <tr>
+                <td class="total-payable">TOTAL PAYABLE</td>
+                <td class="total-payable amount" colspan="2">
+                    <?php echo $currencySymbol . ' ' . number_format($totalPayable, 2); ?>
+                </td>
+            </tr>
+            <?php endif; ?>
 
         </table>
 
