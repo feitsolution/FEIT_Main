@@ -133,7 +133,6 @@ try {
     $userId = $_SESSION['user_id'] ?? 0;
     
     if (!is_array($orderIds) || empty($orderIds)) throw new Exception('Invalid order IDs');
-    
     // Get courier details
     $stmt = $conn->prepare("SELECT courier_name, api_key, client_id FROM couriers WHERE courier_id = ? AND status = 'active' AND has_api_new = 1");
     $stmt->bind_param("i", $carrierId);

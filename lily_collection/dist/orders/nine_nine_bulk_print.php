@@ -352,12 +352,14 @@ window.onload = function() {
             <?php endif; ?>
         <br>
 
-        <!-- Barcode -->
-        <?php if (!empty($o['tracking_number'])): ?>
-            <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
-                 style="width:150px; height:auto;" 
-                 alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
-        <?php endif; ?>
+          <!-- Barcode -->
+    <?php if (!empty($o['tracking_number'])): ?>
+    <div style="text-align:center;">
+        <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
+             style="width:180px; height:auto;" 
+             alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
+    </div>
+<?php endif; ?>
 
     </div>
 

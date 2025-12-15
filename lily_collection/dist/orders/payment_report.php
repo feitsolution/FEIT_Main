@@ -319,7 +319,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 <?php endif; ?>
             </div>
         </div>
-
         <?php 
         // Calculate return summary totals for all filtered results (not just current page)
         // UPDATED summary calculation with percentage-based return fees
