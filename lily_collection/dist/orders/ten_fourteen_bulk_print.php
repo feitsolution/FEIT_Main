@@ -298,6 +298,9 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                 $delivery_fee = floatval($order['delivery_fee']);
                 $discount = floatval($order['discount']);
                 $subtotal = calculateSubtotal($total_amount, $delivery_fee, $discount);
+
+                // Total payable logic
+                $total_payable = $is_paid ? 0 : $total_amount;
                 
                 // Get items for this order
                 $order_items = isset($items_by_order[$order_id]) ? $items_by_order[$order_id] : [];
@@ -430,10 +433,12 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                                 </td>
                             </tr>
 
-                            <!-- Total Payable -->
-                            <tr>
-                                <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
-                                <td class="total-payable amount"><?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?></td>
+                           <!-- Total Payable -->
+                          <tr>
+                            <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
+                            <td class="total-payable amount">
+                                <?php echo $currency_symbol . ' ' . number_format($total_payable, 2); ?>
+                            </td>
                             </tr>
                         </table>
                     </div>
