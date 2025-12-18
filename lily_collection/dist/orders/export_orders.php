@@ -182,7 +182,7 @@ $output = fopen('php://output', 'w');
 // Add BOM for proper UTF-8 encoding in Excel
 fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-// CSV Headers - Full Name removed, customer data from customers table
+// CSV Headers - Removed 'Discount' and 'Quantity'
 $headers = [
     'Order ID',
     'Created Date',
@@ -193,7 +193,6 @@ $headers = [
     'Payment Status',
     'Tracking Number',
     'Subtotal',
-    'Discount',
     'Delivery Fee',
     'Phone',
     'Phone 2',
@@ -205,7 +204,6 @@ $headers = [
     'Amount Paid',
     'Product Code',
     'Product Name',
-    'Quantity',
     'Item Discount'
 ];
 
@@ -242,7 +240,7 @@ if ($result && $result->num_rows > 0) {
         // Format status for better readability
         $statusText = ucfirst(str_replace('_', ' ', $row['status'] ?? ''));
         
-        // Base order data with customer data from customers table
+        // Base order data - Removed 'Discount' from base data
         $baseData = [
             $row['order_id'],
             $createdDate,
@@ -253,7 +251,6 @@ if ($result && $result->num_rows > 0) {
             ucfirst($row['pay_status'] ?? ''),
             $row['tracking_number'] ?? '',
             number_format((float)$row['subtotal'], 2, '.', ''),
-            number_format((float)$row['discount'], 2, '.', ''),
             number_format((float)$row['delivery_fee'], 2, '.', ''),
             $row['customer_phone'] ?? '',
             $row['customer_phone_2'] ?? '',
@@ -265,20 +262,19 @@ if ($result && $result->num_rows > 0) {
             !empty($row['amount_paid']) ? number_format((float)$row['amount_paid'], 2, '.', '') : ''
         ];
         
-        // If order has products, add a row for each product
+        // If order has products, add a row for each product - Removed 'Quantity'
         if ($itemsResult && $itemsResult->num_rows > 0) {
             while ($item = $itemsResult->fetch_assoc()) {
                 $data = array_merge($baseData, [
                     $item['product_code'] ?? '',
                     $item['product_name'] ?? '',
-                    $item['quantity'] ?? '',
                     number_format((float)$item['item_discount'], 2, '.', '')
                 ]);
                 fputcsv($output, $data);
             }
         } else {
             // If no products, still add the order row with empty product fields
-            $data = array_merge($baseData, ['', '', '', '']);
+            $data = array_merge($baseData, ['', '', '']);
             fputcsv($output, $data);
         }
         
