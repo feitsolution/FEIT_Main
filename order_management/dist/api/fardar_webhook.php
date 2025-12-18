@@ -17,34 +17,28 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 $waybill_id = 'API2553980';
 $delivery_status = 'Return Pending';
-$last_update_time = '';
+$last_update_time = ''; // Empty for testing
 
-// Log the incoming data for debugging
-error_log("Courier webhook received - Waybill: $waybill_id, Status: $delivery_status, Time: $last_update_time");
+// Always ensure valid datetime
+$update_time = empty($last_update_time) ? date('Y-m-d H:i:s') : $last_update_time;
 
-// Validate required fields
-if (empty($waybill_id) || empty($delivery_status)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Missing required fields: waybill_id and delivery_status']);
-    exit;
-}
-
+// Map status
 if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed' || $delivery_status == 'Rearrange') {
     $status_update = 'Pending to Deliver';
-}elseif ($delivery_status == 'Dispatched') {
+} elseif ($delivery_status == 'Dispatched') {
     $status_update = 'Courier Dispatch';
-}else{
+} else {
     $status_update = $delivery_status;
 }
 
-// Update the order_header table using waybill_id as tracking_number
+// Update query
 $sql = "UPDATE order_header 
         SET status = ?, 
             updated_at = ? 
         WHERE tracking_number = ?";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("sss", $status_update, $last_update_time, $waybill_id);
+$stmt->bind_param("sss", $status_update, $update_time, $waybill_id);
 
 if ($stmt->execute()) {
     // Check if any row was updated
