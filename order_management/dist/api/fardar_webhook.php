@@ -11,9 +11,13 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Get the courier callback parameters
-$waybill_id = isset($_POST["waybill_id"]) ? $_POST["waybill_id"] : '';
-$delivery_status = isset($_POST["current_status"]) ? $_POST["current_status"] : '';
-$last_update_time = isset($_POST["last_scan_date"]) ? $_POST["last_scan_date"] : '';
+// $waybill_id = isset($_POST["waybill_id"]) ? $_POST["waybill_id"] : '';
+// $delivery_status = isset($_POST["current_status"]) ? $_POST["current_status"] : '';
+// $last_update_time = isset($_POST["last_scan_date"]) ? $_POST["last_scan_date"] : date('Y-m-d H:i:s');
+
+$waybill_id = 'API2553980';
+$delivery_status = 'Return Pending';
+$last_update_time = '';
 
 // Log the incoming data for debugging
 error_log("Courier webhook received - Waybill: $waybill_id, Status: $delivery_status, Time: $last_update_time");
@@ -24,6 +28,7 @@ if (empty($waybill_id) || empty($delivery_status)) {
     echo json_encode(['error' => 'Missing required fields: waybill_id and delivery_status']);
     exit;
 }
+
 if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed' || $delivery_status == 'Rearrange') {
     $status_update = 'Pending to Deliver';
 }elseif ($delivery_status == 'Dispatched') {
@@ -31,6 +36,7 @@ if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed' || $d
 }else{
     $status_update = $delivery_status;
 }
+
 // Update the order_header table using waybill_id as tracking_number
 $sql = "UPDATE order_header 
         SET status = ?, 
@@ -67,3 +73,6 @@ if ($stmt->execute()) {
 $stmt->close();
 $conn->close();
 ?>
+
+
+
