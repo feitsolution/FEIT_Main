@@ -13,14 +13,14 @@ header('Access-Control-Allow-Headers: Content-Type');
 // Get the courier callback parameters
 $waybill_id = isset($_POST["waybill_id"]) ? $_POST["waybill_id"] : '';
 $delivery_status = isset($_POST["current_status"]) ? $_POST["current_status"] : '';
-// $last_update_time = isset($_POST["last_scan_date"]) ? $_POST["last_scan_date"] : date('Y-m-d H:i:s');
+$last_update_time = isset($_POST["last_update_time"]) ? $_POST["last_update_time"] : date('Y-m-d H:i:s');
 
 // $waybill_id = 'API2553980';
 // $delivery_status = 'Return Pending';
-$last_update_time = '2024-06-25 10:00:05'; // Empty for testing
+// $last_update_time = '2024-06-25 10:00:05'; 
 
 // Always ensure valid datetime
-$update_time = empty($last_update_time) ? date('Y-m-d H:i:s') : $last_update_time;
+// $update_time = empty($last_update_time) ? date('Y-m-d H:i:s') : $last_update_time;
 
 // Map status
 if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed' || $delivery_status == 'Rearrange') {
