@@ -17,7 +17,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 $waybill_id = 'API2553980';
 $delivery_status = 'Return Pending';
-$last_update_time = ''; // Empty for testing
+$last_update_time = '2024-06-25 10:00:05'; // Empty for testing
 
 // Always ensure valid datetime
 $update_time = empty($last_update_time) ? date('Y-m-d H:i:s') : $last_update_time;
