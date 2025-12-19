@@ -179,8 +179,8 @@ header('Expires: 0');
 // Create output stream
 $output = fopen('php://output', 'w');
 
-// Add BOM for proper UTF-8 encoding in Excel
-fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+// BOM removed - causes display issues in some Excel versions
+// fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
 // CSV Headers - Reordered as requested
 $headers = [
