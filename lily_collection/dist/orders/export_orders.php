@@ -169,6 +169,11 @@ if (!$result) {
     die("Query Error: " . $conn->error);
 }
 
+// Clean any output buffer before sending headers
+if (ob_get_level()) {
+    ob_end_clean();
+}
+
 // Set headers for CSV download
 $filename = "orders_export_" . date('Y-m-d_H-i-s') . ".csv";
 header('Content-Type: text/csv; charset=utf-8');
@@ -178,9 +183,6 @@ header('Expires: 0');
 
 // Create output stream
 $output = fopen('php://output', 'w');
-
-// BOM removed - causes display issues in some Excel versions
-// fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
 // CSV Headers - Reordered as requested
 $headers = [
