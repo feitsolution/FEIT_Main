@@ -182,29 +182,20 @@ $output = fopen('php://output', 'w');
 // Add BOM for proper UTF-8 encoding in Excel
 fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-// CSV Headers - Removed 'Discount' and 'Quantity'
+// CSV Headers - Reordered as requested
 $headers = [
     'Order ID',
+    'Tracking Number',
     'Created Date',
     'Created Time',
     'Customer Name',
-    'Total Amount',
-    'Status',
-    'Payment Status',
-    'Tracking Number',
-    'Subtotal',
-    'Delivery Fee',
     'Phone',
-    'Phone 2',
-    'Email',
     'Address Line 1',
-    'Address Line 2',
-    'Paid By',
-    'User Name',
-    'Amount Paid',
     'Product Code',
     'Product Name',
-    'Item Discount'
+    'Product Price',
+    'Item Discount',
+    'Subtotal'
 ];
 
 fputcsv($output, $headers);
@@ -237,44 +228,32 @@ if ($result && $result->num_rows > 0) {
             $createdTime = $createdDateTime->format('H:i:s');
         }
         
-        // Format status for better readability
-        $statusText = ucfirst(str_replace('_', ' ', $row['status'] ?? ''));
-        
-        // Base order data - Removed 'Discount' from base data
+        // Base order data - Reordered to match headers
         $baseData = [
             $row['order_id'],
+            $row['tracking_number'] ?? '',
             $createdDate,
             $createdTime,
             $row['customer_name'] ?? 'N/A',
-            number_format((float)$row['total_amount'], 2, '.', ''),
-            $statusText,
-            ucfirst($row['pay_status'] ?? ''),
-            $row['tracking_number'] ?? '',
-            number_format((float)$row['subtotal'], 2, '.', ''),
-            number_format((float)$row['delivery_fee'], 2, '.', ''),
             $row['customer_phone'] ?? '',
-            $row['customer_phone_2'] ?? '',
-            $row['customer_email'] ?? '',
-            $row['customer_address_line1'] ?? '',
-            $row['customer_address_line2'] ?? '',
-            $row['paid_by_name'] ?? 'N/A',
-            $row['user_name'] ?? 'N/A',
-            !empty($row['amount_paid']) ? number_format((float)$row['amount_paid'], 2, '.', '') : ''
+            $row['customer_address_line1'] ?? ''
         ];
         
-        // If order has products, add a row for each product - Removed 'Quantity'
+        // If order has products, add a row for each product
         if ($itemsResult && $itemsResult->num_rows > 0) {
             while ($item = $itemsResult->fetch_assoc()) {
                 $data = array_merge($baseData, [
                     $item['product_code'] ?? '',
                     $item['product_name'] ?? '',
-                    number_format((float)$item['item_discount'], 2, '.', '')
+                    number_format((float)$item['unit_price'], 2, '.', ''),
+                    number_format((float)$item['item_discount'], 2, '.', ''),
+                    number_format((float)$row['subtotal'], 2, '.', '')
                 ]);
                 fputcsv($output, $data);
             }
         } else {
             // If no products, still add the order row with empty product fields
-            $data = array_merge($baseData, ['', '', '']);
+            $data = array_merge($baseData, ['', '', '', '', '']);
             fputcsv($output, $data);
         }
         
