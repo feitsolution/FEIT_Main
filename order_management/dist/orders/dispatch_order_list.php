@@ -66,8 +66,8 @@ $order_id_filter = isset($_GET['order_id_filter']) ? trim($_GET['order_id_filter
 $customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['customer_name_filter']) : '';
 $tracking_id = isset($_GET['tracking_id']) ? trim($_GET['tracking_id']) : '';
 $user_id_filter = isset($_GET['user_id_filter']) ? trim($_GET['user_id_filter']) : '';
-$date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
-$date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+$updated_date_from = isset($_GET['updated_date_from']) ? trim($_GET['updated_date_from']) : '';
+$updated_date_to = isset($_GET['updated_date_to']) ? trim($_GET['updated_date_to']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -89,31 +89,43 @@ if ($current_user_role != 1) {
 
 // Base SQL for counting total records - ONLY DISPATCH STATUS
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
-             WHERE  i.interface IN ('individual', 'leads') AND i.status = 'dispatch'$roleBasedCondition";
+             WHERE i.interface IN ('individual', 'leads') 
+             AND i.status = 'dispatch'$roleBasedCondition";
 
-// Main query with all required joins - ONLY DISPATCH STATUS - FIXED: Changed creator_name to user_name
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+
+// Main query with all required joins - ONLY DISPATCH STATUS - UPDATED with customer name fallback
+$sql = "SELECT i.*, 
+               -- Customer info: Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
+               
+               -- User who created the order
                u2.name as user_name
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.user_id = u2.id
-        WHERE  i.interface IN ('individual', 'leads') AND i.status = 'dispatch'$roleBasedCondition";
-
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
+        WHERE i.interface IN ('individual', 'leads') 
+        AND i.status = 'dispatch'$roleBasedCondition";
+// Build search conditions
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality)
+// General search condition - UPDATED to use order_header fields
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -128,10 +140,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// Specific Customer Name filter - UPDATED
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Tracking ID filter
@@ -140,7 +152,7 @@ if (!empty($tracking_id)) {
     $searchConditions[] = "i.tracking_number LIKE '%$trackingTerm%'";
 }
 
-//Specific User ID filter - MODIFIED: Apply role-based restrictions
+// Specific User ID filter - MODIFIED: Apply role-based restrictions
 if (!empty($user_id_filter)) {
     $userIdTerm = $conn->real_escape_string($user_id_filter);
     if ($current_user_role == 1) {
@@ -154,15 +166,15 @@ if (!empty($user_id_filter)) {
     }
 }
 
-// Date range filter
-if (!empty($date_from)) {
-    $dateFromTerm = $conn->real_escape_string($date_from);
-    $searchConditions[] = "DATE(i.issue_date) >= '$dateFromTerm'";
+// Updated Date range filter
+if (!empty($updated_date_from)) {
+    $updatedDateFromTerm = $conn->real_escape_string($updated_date_from);
+    $searchConditions[] = "DATE(i.updated_at) >= '$updatedDateFromTerm'";
 }
 
-if (!empty($date_to)) {
-    $dateToTerm = $conn->real_escape_string($date_to);
-    $searchConditions[] = "DATE(i.issue_date) <= '$dateToTerm'";
+if (!empty($updated_date_to)) {
+    $updatedDateToTerm = $conn->real_escape_string($updated_date_to);
+    $searchConditions[] = "DATE(i.updated_at) <= '$updatedDateToTerm'";
 }
 
 // Apply all search conditions
@@ -173,7 +185,7 @@ if (!empty($searchConditions)) {
 }
 
 // Add ordering and pagination
-$sql .= " ORDER BY i.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY i.updated_at DESC, i.order_id DESC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
@@ -184,7 +196,7 @@ if ($countResult && $countResult->num_rows > 0) {
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
-// FIXED: Fetch all users for the User ID dropdown
+// Fetch all users for the User ID dropdown
 $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
@@ -294,17 +306,17 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                    value="<?php echo htmlspecialchars($tracking_id); ?>">
                         </div>
                         
-                        <div class="form-group">
-                            <label for="date_from">Date From</label>
-                            <input type="date" id="date_from" name="date_from" 
-                                   value="<?php echo htmlspecialchars($date_from); ?>">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="date_to">Date To</label>
-                            <input type="date" id="date_to" name="date_to" 
-                                   value="<?php echo htmlspecialchars($date_to); ?>">
-                        </div>
+                            <div class="form-group">
+                                                <label for="updated_date_from">Updated From</label>
+                                                <input type="date" id="updated_date_from" name="updated_date_from" 
+                                                    value="<?php echo htmlspecialchars($updated_date_from); ?>">
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="updated_date_to">Updated To</label>
+                                                <input type="date" id="updated_date_to" name="updated_date_to" 
+                                                    value="<?php echo htmlspecialchars($updated_date_to); ?>">
+                                            </div>
                         
                         <div class="form-group">
                             <div class="button-group">
@@ -485,20 +497,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                     </div>
                     <div class="pagination-controls">
                         <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&updated_date_from=<?php echo urlencode($updated_date_from); ?>&updated_date_to=<?php echo urlencode($updated_date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&updated_date_from=<?php echo urlencode($updated_date_from); ?>&updated_date_to=<?php echo urlencode($updated_date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&updated_date_from=<?php echo urlencode($updated_date_from); ?>&updated_date_to=<?php echo urlencode($updated_date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
@@ -538,8 +550,8 @@ function clearFilters() {
     document.getElementById('customer_name_filter').value = '';
     document.getElementById('user_id_filter').value = '';
     document.getElementById('tracking_id').value = '';
-    document.getElementById('date_from').value = '';
-    document.getElementById('date_to').value = '';
+    document.getElementById('updated_date_from').value = '';
+    document.getElementById('updated_date_to').value = '';
 
      // Only clear user_id_filter for admin users (if it exists)
             const userIdFilter = document.getElementById('user_id_filter');

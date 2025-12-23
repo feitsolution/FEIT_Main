@@ -102,6 +102,7 @@ class RoleBasedAccessControl {
  * This page displays orders with status 'cancel' for individual interface
  * Includes search, pagination, and modal view functionality
  * MODIFIED: Added centralized role-based access control
+ * FIXED: Customer name display using order_header.full_name
  */
 
 // Start session management
@@ -175,7 +176,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 /**
- * DATABASE QUERIES - SIMPLIFIED WITH RBAC
+ * DATABASE QUERIES - FIXED: Using order_header.full_name instead of customers table
  * Main query to fetch orders with customer and payment information
  * Filtered for individual interface and cancel status only
  */
@@ -185,31 +186,40 @@ $roleBasedCondition = $rbac->getRoleBasedCondition();
 
 // Base SQL for counting total records
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
              WHERE i.interface IN ('individual', 'leads') AND i.status = 'cancel'$roleBasedCondition";
 
-// Main query with all required joins
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+// FIXED: Main query - using i.full_name from order_header instead of joining customers table
+$sql = "SELECT i.*, 
+               -- UPDATED: Customer info with fallback - Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
+               
+               -- User who created the order
                u2.name as user_name
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.user_id = u2.id
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
         WHERE i.interface IN ('individual', 'leads') AND i.status = 'cancel'$roleBasedCondition";
 
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality)
+// FIXED: General search condition - using i.full_name
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -223,10 +233,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// FIXED: Specific Customer Name filter - using i.full_name
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Specific User ID filter - SIMPLIFIED WITH RBAC
@@ -410,7 +420,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <option value="">All Payment Status</option>
                                 <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
                                 <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
-                                <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
                             </select>
                         </div>
                         
@@ -463,7 +472,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
                                         </td>
                                         
-                                        <!-- Customer Name with ID -->
+                                        <!-- FIXED: Customer Name with ID - now using full_name from order_header -->
                                         <td class="customer-name">
                                             <?php
                                             $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';

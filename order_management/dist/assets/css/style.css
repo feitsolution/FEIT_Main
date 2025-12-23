@@ -1482,7 +1482,7 @@ b, strong{
 .pc-container .pc-content{
   padding-left: 2.5rem;
   padding-right: 0.5rem;
-  padding-top: 2.5rem;
+  padding-top: 1rem;
 }
 @media not all and (min-width: 640px){
   .pc-container .pc-content{

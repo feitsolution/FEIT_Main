@@ -351,14 +351,44 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
                                         </td>
                                         
-                                        <!-- Customer Name -->
-                                        <td class="customer-name">
-                                            <?php echo isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A'; ?>
-                                        </td>
                                         
-                                        <!-- Phone Number -->
+                                         <!-- Customer Name - Prioritize order_header full_name for leads -->
+                                            <td class="customer-name">
+                                                <?php 
+                                                // For leads interface, prioritize full_name from order_header
+                                                $customerName = '';
+                                                if (!empty($row['full_name'])) {
+                                                    // Primary: Use full_name from order_header (leads data)
+                                                    $customerName = $row['full_name'];
+                                                } elseif (!empty($row['customer_name'])) {
+                                                    // Fallback: Use customer table name if available
+                                                    $customerName = $row['customer_name'];
+                                                } else {
+                                                    $customerName = 'N/A';
+                                                }
+                                                echo htmlspecialchars($customerName);
+                                                ?>
+                                            </td>
+                                         <!-- Phone Number - Prioritize order_header mobile for leads -->
                                         <td class="phone-number">
-                                            <?php echo isset($row['customer_phone']) ? htmlspecialchars($row['customer_phone']) : 'N/A'; ?>
+                                            <?php 
+                                            // For leads interface, prioritize mobile from order_header
+                                            $phoneNumber = '';
+                                            if (!empty($row['mobile'])) {
+                                                // Primary: Use mobile from order_header (leads data)
+                                                $phoneNumber = $row['mobile'];
+                                                // If mobile_2 exists, show both
+                                                if (!empty($row['mobile_2'])) {
+                                                    $phoneNumber .= ' / ' . $row['mobile_2'];
+                                                }
+                                            } elseif (!empty($row['customer_phone'])) {
+                                                // Fallback: Use customer table phone if available
+                                                $phoneNumber = $row['customer_phone'];
+                                            } else {
+                                                $phoneNumber = 'N/A';
+                                            }
+                                            echo htmlspecialchars($phoneNumber);
+                                            ?>
                                         </td>
                                        
                                         <!-- Total Amount with Currency -->

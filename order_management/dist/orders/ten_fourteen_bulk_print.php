@@ -236,7 +236,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
     <title>Six by Four Bulk Print - 6x4 inch Labels (<?php echo count($orders); ?> orders)</title>
     
     <!-- Link to external CSS file -->
-    <link rel="stylesheet" href="../assets/css/print.css">
+    <link rel="stylesheet" href="../assets/css/print_new.css">
     
     <style>
         /* Additional styling for payment badge */
@@ -268,7 +268,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
             </div>
         <?php else: ?>
             
-            <?php foreach ($orders as $index => $order): ?>
+          <?php foreach ($orders as $index => $order): ?>
                 <?php
                 // Prepare order data 
                 $order_id = $order['order_id'];
@@ -298,6 +298,9 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                 $delivery_fee = floatval($order['delivery_fee']);
                 $discount = floatval($order['discount']);
                 $subtotal = calculateSubtotal($total_amount, $delivery_fee, $discount);
+
+                // Total payable logic
+                $total_payable = $is_paid ? 0 : $total_amount;
                 
                 // Get items for this order
                 $order_items = isset($items_by_order[$order_id]) ? $items_by_order[$order_id] : [];
@@ -307,7 +310,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                 $phone_2 = !empty($order['customer_phone_2']) ? htmlspecialchars($order['customer_phone_2']) : '';
                 ?>
                 
-                <div class="label-wrapper">
+                <div class="label-wrapper <?php echo ($index < count($orders) - 1) ? 'page-break-after' : ''; ?>">
                     <div class="receipt-container">
                         <!-- Main Table Structure -->
                         <table class="main-table">
@@ -363,23 +366,29 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                                 </td>
                             </tr>
 
-                            <!-- Delivery Service Row -->
+                            <!-- Delivery Service Row - Updated UI -->
                             <tr>
-                                <td class="delivery-service-cell">
-                                    <strong>Delivery Service:</strong><br>
-                                    <?php echo !empty($order['delivery_service']) ? htmlspecialchars($order['delivery_service']) : 'Standard Delivery'; ?>
-                                </td>
-                                <td class="tracking-cell" colspan="2">
-                                    <strong>Tracking:</strong> 
-                                    <?php if ($has_tracking): ?>
-                                        <span style="color: #2563eb;"><?php echo htmlspecialchars(substr($tracking_display, 0, 15)); ?></span>
-                                    <?php else: ?>
-                                        <span style="color: #dc2626;">No Tracking</span>
-                                    <?php endif; ?><br>
-                                    <strong>Date:</strong> <?php echo !empty($order['issue_date']) ? date('Y-m-d', strtotime($order['issue_date'])) : date('Y-m-d'); ?>
+                                <td class="delivery-service-cell" colspan="3" style="padding: 2mm; border: 1px solid #ddd;">
+                                    <div style="margin-bottom: 2mm;">
+                                        <strong>Delivery Service:</strong> 
+                                        <?php echo !empty($order['delivery_service']) ? htmlspecialchars($order['delivery_service']) : 'Standard Delivery'; ?>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                                        <div>
+                                            <strong>Tracking:</strong> 
+                                            <?php if ($has_tracking): ?>
+                                                <span style="color: #2563eb;"><?php echo htmlspecialchars(substr($tracking_display, 0, 20)); ?></span>
+                                            <?php else: ?>
+                                                <span style="color: #dc2626;">No Tracking</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div>
+                                            <strong>Date:</strong> 
+                                            <?php echo !empty($order['issue_date']) ? date('Y-m-d', strtotime($order['issue_date'])) : date('Y-m-d'); ?>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
-
                             <!-- Products Section -->
                             <tr>
                                 <td class="product-header" colspan="3">
@@ -402,46 +411,56 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                                 </td>
                             </tr>
 
-                            <!-- Customer Details and Totals -->
-                            <tr>
-                                <td class="customer-header">Customer Details</td>
-                                <td class="totals-header">Summary</td>
-                                <td class="totals-header">Amount</td>
-                            </tr>
+                        <!-- Customer Details Section (No border line between header and info) -->
+                       <tr>
+                        <td class="customer-header" colspan="3" style="border-bottom: none;">
+                            <strong>Customer Details</strong>
+                        </td>
+                    </tr>
 
-                            <tr>
-                               <td class="customer-info" width="50%"> 
-                                   <strong>Name:</strong> <?php echo htmlspecialchars(substr($order['display_name'], 0, 20)); ?><br>
-                                   <strong>Phone 1:</strong> <?php echo $phone_1; ?><br>
-                                   <?php if ($phone_2): ?>
-                                   <strong>Phone 2:</strong> <?php echo $phone_2; ?><br>
-                                   <?php endif; ?>
-                                   <strong>Address:</strong> <?php echo htmlspecialchars(substr($order['display_address'], 0, 60)) . (strlen($order['display_address']) > 60 ? '...' : ''); ?>
-                               </td>
-                                <td class="totals-cell">
-                                    Subtotal:<br>
-                                    Delivery:<br>
-                                    Discount:
-                                </td>
-                                <td class="totals-cell amount">
-                                    <?php echo $currency_symbol . ' ' . number_format($subtotal, 2); ?><br>
-                                    <?php echo $currency_symbol . ' ' . number_format($delivery_fee, 2); ?><br>
-                                    <?php echo $currency_symbol . ' ' . number_format($discount, 2); ?>
-                                </td>
-                            </tr>
+                    <tr>
+                        <td class="customer-info" colspan="3" style="padding: 2mm; font-size: 11px; line-height: 1.4; border-top: none;"> 
+                            <strong>Name:</strong> <?php echo htmlspecialchars($order['display_name']); ?><br>
+                            <strong>Phone 1:</strong> <?php echo $phone_1; ?>
+                            <?php if ($phone_2): ?>
+                            | <strong>Phone 2:</strong> <?php echo $phone_2; ?>
+                            <?php endif; ?><br>
+                            <strong>Address:</strong> <?php echo htmlspecialchars($order['display_address']); ?><br>
+                            <strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'N/A'; ?>
+                        </td>
+                    </tr>
 
-                            <!-- Total Payable -->
-                            <tr>
-                                <td class="total-payable" colspan="2">TOTAL PAYABLE</td>
-                                <td class="total-payable amount"><?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?></td>
-                            </tr>
+                        <?php if (!$is_paid): ?>
+                        <!-- Summary Section - Only show when NOT paid -->
+                        <tr>
+                            <td class="totals-header">Summary</td>
+                            <td class="totals-header" colspan="2">Amount</td>
+                        </tr>
+
+                        <tr>
+                            <td class="totals-cell" style="font-size: 9px;">
+                                Subtotal<br>
+                                Delivery<br>
+                                Discount
+                            </td>
+                            <td class="totals-cell amount" colspan="2" style="font-size: 9px;">
+                                <?php echo $currency_symbol . ' ' . number_format($subtotal, 2); ?><br>
+                                <?php echo $currency_symbol . ' ' . number_format($delivery_fee, 2); ?><br>
+                                <?php echo $currency_symbol . ' ' . number_format($discount, 2); ?>
+                            </td>
+                        </tr>
+
+                        <!-- Total Payable -->
+                        <tr>
+                            <td class="total-payable">TOTAL PAYABLE</td>
+                            <td class="total-payable amount" colspan="2">
+                                <?php echo $currency_symbol . ' ' . number_format($total_payable, 2); ?>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                         </table>
                     </div>
                 </div>
-
-                <?php if ($index < count($orders) - 1): ?>
-                    <div class="page-break"></div>
-                <?php endif; ?>
                 
             <?php endforeach; ?>
         <?php endif; ?>

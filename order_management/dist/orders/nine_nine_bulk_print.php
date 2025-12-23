@@ -346,17 +346,21 @@ window.onload = function() {
 
         <hr>
 
-        <!-- Total Amount -->
-        <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
-
+              <!-- Total Amount -->
+          <?php if ($o['pay_status'] !== 'paid'): ?>
+            <b>Total: <?php echo currencySymbol($o['currency']) . " " . number_format($o['total_amount'], 2); ?></b><br>
+            <?php endif; ?>
         <br>
 
         <!-- Barcode -->
-        <?php if (!empty($o['tracking_number'])): ?>
-            <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
-                 style="width:150px; height:auto;" 
-                 alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
-        <?php endif; ?>
+    <?php if (!empty($o['tracking_number'])): ?>
+    <div style="text-align:center;">
+        <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
+             style="width:155px; height:auto;" 
+             alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
+    </div>
+<?php endif; ?>
+
 
     </div>
 

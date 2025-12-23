@@ -98,12 +98,12 @@ body {
 /* Product and Customer Headers */
 .product-header {
     font-weight: bold;
-    background-color: #e0e0e0;
+    /* background-color: #e0e0e0; */
 }
 
 .customer-header {
     font-weight: bold;
-    background-color: #e0e0e0;
+    /* background-color: #e0e0e0; */
 }
 
 .customer-info {
@@ -398,7 +398,7 @@ body {
         }
         
         .order-id-cell {
-            width: 40%;
+            width: 100%;
             padding: 2mm;
             font-size: 10px;
         }

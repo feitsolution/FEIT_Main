@@ -191,9 +191,12 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $cancel_orders_query .= $role_based_condition . $date_condition;
     $stats['cancel_orders'] = safeQuery($conn, $cancel_orders_query);
     
-    // Count for dispatch orders
-    $dispatch_orders_query = "SELECT COUNT(*) as count FROM order_header WHERE status = 'dispatch'";
-    $dispatch_orders_query .= $role_based_condition . $date_condition;
+    // Count for dispatch orders - ALWAYS show TODAY'S dispatch orders only (by updated_at)
+    $today_date = date('Y-m-d');
+    $dispatch_orders_query = "SELECT COUNT(*) as count FROM order_header 
+                              WHERE status = 'dispatch' 
+                              AND DATE(updated_at) = '$today_date'";
+    $dispatch_orders_query .= $role_based_condition; // Apply role-based filtering but NO date filter
     $stats['dispatch_orders'] = safeQuery($conn, $dispatch_orders_query);
     
     // Count for return complete orders
@@ -525,7 +528,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <!-- Dispatch Orders -->
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
-    <a href="../orders/dispatch_order_list.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
+   <a href="../orders/dispatch_order_list.php?updated_date_from=<?= $today_date ?>&updated_date_to=<?= $today_date ?>" class="card-link">
         <div class="card">
             <div class="card-header !pb-0 !border-b-0">
                 <h5>Dispatch Orders</h5>
@@ -541,7 +544,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 </div>
                 <div class="w-full bg-theme-bodybg rounded-lg h-1.5 mt-6 dark:bg-themedark-bodybg">
                     <div class="bg-blue-500 h-full rounded-lg shadow-[0_10px_20px_0_rgba(0,0,0,0.3)]" role="progressbar"
-                        style="width: <?= $stats['total_orders'] > 0 ? ($stats['dispatch_orders'] / $stats['total_orders']) * 100 : 0 ?>%"></div>
+                         <?= $stats['total_orders'] > 0 ? ($stats['dispatch_orders'] / $stats['total_orders']) * 100 : 0 ?>"></div>
                 </div>
             </div>
         </div>

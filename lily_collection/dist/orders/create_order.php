@@ -172,7 +172,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 .autocomplete-suggestion.active {
     background-color: #e9ecef;
 }
-
 .no-results {
     padding: 10px;
     color: #999;

@@ -13,12 +13,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 
 // NEW: Get current user's role information
@@ -53,7 +53,7 @@ if ($current_user_id == 0 || $current_user_role == 0) {
 
 // If still no user data, redirect to login
 if ($current_user_id == 0) {
-    header("Location: /order_management/dist/pages/login.php");
+    header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
 
@@ -123,7 +123,9 @@ if (!empty($search)) {
                         i.status LIKE '%$searchTerm%' OR 
                         i.tracking_number LIKE '%$searchTerm%' OR
                         i.pay_status LIKE '%$searchTerm%' OR
+                        i.created_at LIKE '%$searchTerm% OR
                         u2.name LIKE '%$searchTerm%')";
+                        
 }
 
 // Specific Order ID filter
@@ -161,12 +163,12 @@ if (!empty($tracking_id)) {
 // Date range filter
 if (!empty($date_from)) {
     $dateFromTerm = $conn->real_escape_string($date_from);
-    $searchConditions[] = "DATE(i.issue_date) >= '$dateFromTerm'";
+    $searchConditions[] = "DATE(i.created_at) >= '$dateFromTerm'";
 }
 
 if (!empty($date_to)) {
     $dateToTerm = $conn->real_escape_string($date_to);
-    $searchConditions[] = "DATE(i.issue_date) <= '$dateToTerm'";
+    $searchConditions[] = "DATE(i.created_at) <= '$dateToTerm'";
 }
 
 // Status filter
@@ -205,8 +207,8 @@ $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
 // Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 
 ?>
 
@@ -216,7 +218,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 <head>
     <title>Order Management Admin Portal - All Orders</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -312,7 +314,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -372,13 +374,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                         </div>
                         
                         <div class="form-group">
-                            <label for="date_from">Date From</label>
+                            <label for="date_from">Created From</label>
                             <input type="date" id="date_from" name="date_from" 
                                    value="<?php echo htmlspecialchars($date_from); ?>">
                         </div>
                         
                         <div class="form-group">
-                            <label for="date_to">Date To</label>
+                            <label for="date_to">Created To</label>
                             <input type="date" id="date_to" name="date_to" 
                                    value="<?php echo htmlspecialchars($date_to); ?>">
                         </div>
@@ -428,6 +430,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <button type="button" class="search-btn" onclick="clearFilters()" style="background: #6c757d;">
                                     <i class="fas fa-times"></i>
                                     Clear
+                                </button>
+                                <button type="button" class="search-btn" onclick="exportToCSV()" style="background: #28a745;">
+                                    <i class="fas fa-file-export"></i>
+                                     Export
                                 </button>
                             </div>
                         </div>
@@ -729,7 +735,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
    
     <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
+      <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/order_view_modal.php'); ?>
 
   <script>
 // MODIFIED: Enhanced JavaScript functionality with always-show payment slip button for paid orders
@@ -886,7 +892,7 @@ function viewPaymentSlip() {
     }
     
     // Construct the payment slip URL
-    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
+    const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
     
     // Open payment slip in new tab
     window.open(slipUrl, '_blank');
@@ -989,7 +995,7 @@ document.getElementById("syncRoyalBtn").addEventListener("click", function() {
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/order_management/dist/api/royalexpress_webhook.php')
+    fetch('/lily_collection/dist/api/royalexpress_webhook.php')
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1039,7 +1045,7 @@ document.getElementById("syncTransexpBtn").addEventListener("click", function() 
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/order_management/dist/api/transexp_webhook.php') // adjust path if needed
+    fetch('/lily_collection/dist/api/transexp_webhook.php') // adjust path if needed
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1090,7 +1096,7 @@ document.getElementById("syncKoombiyoBtn").addEventListener("click", function() 
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/order_management/dist/api/koombiyo_webhook.php') // adjust path if needed
+    fetch('/lily_collection/dist/api/koombiyo_webhook.php') // adjust path if needed
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1146,12 +1152,100 @@ document.getElementById("syncKoombiyoBtn").addEventListener("click", function() 
             alert("Error syncing Koombiyo: " + error.message);
         });
 });
+// Updated exportToCSV function that reads current filter values directly
+function exportToCSV() {
+    // Create URLSearchParams object
+    const params = new URLSearchParams();
+    
+    // Add export flag
+    params.set('export', '1');
+    
+    // Get all filter values directly from form inputs
+    const orderId = document.getElementById('order_id_filter')?.value.trim();
+    const customerName = document.getElementById('customer_name_filter')?.value.trim();
+    const userId = document.getElementById('user_id_filter')?.value.trim();
+    const trackingId = document.getElementById('tracking_id')?.value.trim();
+    const dateFrom = document.getElementById('date_from')?.value.trim();
+    const dateTo = document.getElementById('date_to')?.value.trim();
+    const status = document.getElementById('status_filter')?.value.trim();
+    const payStatus = document.getElementById('pay_status_filter')?.value.trim();
+    
+    // Add parameters only if they have values
+    if (orderId) params.set('order_id_filter', orderId);
+    if (customerName) params.set('customer_name_filter', customerName);
+    if (userId) params.set('user_id_filter', userId);
+    if (trackingId) params.set('tracking_id', trackingId);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (status) params.set('status_filter', status);
+    if (payStatus) params.set('pay_status_filter', payStatus);
+    
+    // Create export URL with all filter parameters
+    const exportUrl = 'export_orders.php?' + params.toString();
+    
+    console.log('Exporting to:', exportUrl);
+    console.log('Filters:', {
+        orderId, customerName, userId, trackingId, 
+        dateFrom, dateTo, status, payStatus
+    });
+    
+    // Trigger download
+    window.location.href = exportUrl;
+}
 
+// Alternative: If you want to show a confirmation message before export
+function exportToCSVWithConfirm() {
+    // Get filter values
+    const filters = [];
+    
+    const orderId = document.getElementById('order_id_filter')?.value.trim();
+    const customerName = document.getElementById('customer_name_filter')?.value.trim();
+    const userId = document.getElementById('user_id_filter')?.value.trim();
+    const trackingId = document.getElementById('tracking_id')?.value.trim();
+    const dateFrom = document.getElementById('date_from')?.value.trim();
+    const dateTo = document.getElementById('date_to')?.value.trim();
+    const status = document.getElementById('status_filter')?.value.trim();
+    const payStatus = document.getElementById('pay_status_filter')?.value.trim();
+    
+    // Build filter description
+    if (orderId) filters.push(`Order ID: ${orderId}`);
+    if (customerName) filters.push(`Customer: ${customerName}`);
+    if (userId) filters.push(`User ID: ${userId}`);
+    if (trackingId) filters.push(`Tracking: ${trackingId}`);
+    if (dateFrom) filters.push(`From: ${dateFrom}`);
+    if (dateTo) filters.push(`To: ${dateTo}`);
+    if (status) filters.push(`Status: ${status}`);
+    if (payStatus) filters.push(`Payment: ${payStatus}`);
+    
+    // Show confirmation
+    const filterText = filters.length > 0 
+        ? `Export with filters:\n${filters.join('\n')}` 
+        : 'Export all orders (no filters applied)';
+    
+    if (confirm(filterText + '\n\nContinue?')) {
+        // Create URLSearchParams object
+        const params = new URLSearchParams();
+        params.set('export', '1');
+        
+        // Add parameters
+        if (orderId) params.set('order_id_filter', orderId);
+        if (customerName) params.set('customer_name_filter', customerName);
+        if (userId) params.set('user_id_filter', userId);
+        if (trackingId) params.set('tracking_id', trackingId);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (status) params.set('status_filter', status);
+        if (payStatus) params.set('pay_status_filter', payStatus);
+        
+        // Trigger download
+        window.location.href = 'export_orders.php?' + params.toString();
+    }
+}
 
 </script>
     <!-- Include Footer and Scripts -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
 
 </body>
 </html>

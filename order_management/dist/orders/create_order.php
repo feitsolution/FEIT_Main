@@ -14,14 +14,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
-
 // Function to log user actions
 function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = null) {
     $stmt = $conn->prepare("INSERT INTO user_logs (user_id, action_type, inquiry_id, details) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("isis", $user_id, $action_type, $inquiry_id, $details);
     return $stmt->execute();
 }
-
 // Function to check courier and tracking status
 function checkCourierStatus($conn) {
     $status = [
@@ -373,7 +371,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <i class="feather icon-users"></i> Select Customer
                         </button>
                     </div>
-
                     <div class="section-body">
                         <div class="customer-info-grid">
                             <input type="hidden" name="customer_id" id="customer_id" value="">
@@ -707,7 +704,235 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-// ========== CUSTOMER MANAGEMENT ==========
+// ========== PHONE VALIDATION MODULE (ADD THIS NEW SECTION) ==========
+const PhoneValidator = {
+    timeouts: {},
+    
+    // Check if phone number exists in database
+    checkPhoneExists: async (phone, currentCustomerId = 0) => {
+        if (!phone || phone.length !== 10) return { exists: false };
+        
+        try {
+            const response = await fetch(`check_phone.php?phone=${encodeURIComponent(phone)}&customer_id=${currentCustomerId}`);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error checking phone:', error);
+            return { exists: false };
+        }
+    },
+    
+    // Validate phone field with debouncing
+    validatePhoneField: (fieldId, otherFieldId) => {
+        const field = document.getElementById(fieldId);
+        const otherField = document.getElementById(otherFieldId);
+        
+        // Clear existing timeout
+        if (PhoneValidator.timeouts[fieldId]) {
+            clearTimeout(PhoneValidator.timeouts[fieldId]);
+        }
+        
+        // Remove previous error for this field
+        const existingError = field.parentNode.querySelector('.phone-validation-error');
+        if (existingError) existingError.remove();
+        
+        const phone = field.value.trim();
+        const otherPhone = otherField.value.trim();
+        
+        // Check if empty (allowed for phone_2)
+        if (!phone) {
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+        
+        // Check if same as other field
+        if (phone === otherPhone && phone.length === 10) {
+            ValidationUtils.showError(field, 'Phone numbers cannot be the same', 'phone-validation-error');
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+        
+        // Check format
+        if (phone.length !== 10) {
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+        
+        // Debounced database check
+        PhoneValidator.timeouts[fieldId] = setTimeout(async () => {
+            const currentCustomerId = document.getElementById('customer_id').value || 0;
+            const result = await PhoneValidator.checkPhoneExists(phone, currentCustomerId);
+            
+            if (result.exists) {
+                let message = '';
+                if (result.type === 'primary') {
+                    message = 'This number is already registered as a primary phone';
+                } else if (result.type === 'secondary') {
+                    message = 'This number is already registered as a secondary phone';
+                }
+                
+                ValidationUtils.showError(field, message, 'phone-validation-error');
+            }
+            
+            FormValidator.validateAndToggleSubmit();
+        }, 500); // 500ms debounce
+    }
+};
+
+// ========== EMAIL VALIDATION MODULE ==========
+// ========== UPDATED EMAIL VALIDATION WITH AUTO-FILL MODULE ==========
+const EmailValidator = {
+    timeout: null,
+
+    // Validate email format using regex
+    isValidFormat: (email) => {
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(email);
+    },
+
+    checkEmailExists: async (email, customerId = 0) => {
+        if (!EmailValidator.isValidFormat(email)) return { exists: false };
+
+        try {
+            const response = await fetch(
+                `check_email.php?email=${encodeURIComponent(email)}&customer_id=${customerId}`
+            );
+            return await response.json();
+        } catch (err) {
+            console.error('Email check error:', err);
+            return { exists: false };
+        }
+    },
+
+    // NEW: Get customer data by email
+    getCustomerByEmail: async (email) => {
+        try {
+            const response = await fetch(
+                `get_customer_by_email.php?email=${encodeURIComponent(email)}`
+            );
+            return await response.json();
+        } catch (err) {
+            console.error('Get customer error:', err);
+            return { exists: false };
+        }
+    },
+
+   // NEW: Auto-fill customer data
+autoFillCustomerData: (customerData) => {
+    // Set customer ID (hidden field)
+    document.getElementById('customer_id').value = customerData.customer_id;
+    
+    // Fill all form fields
+    document.getElementById('customer_name').value = customerData.name || '';
+    document.getElementById('customer_phone').value = customerData.phone || '';
+    document.getElementById('customer_phone_2').value = customerData.phone_2 || '';
+    document.getElementById('address_line1').value = customerData.address_line1 || '';
+    document.getElementById('address_line2').value = customerData.address_line2 || '';
+    document.getElementById('city_id').value = customerData.city_id || '';
+    document.getElementById('city_autocomplete').value = customerData.city_name || '';
+    
+    // Mark as existing customer
+    isExistingCustomer = true;
+    
+    // Keep all fields editable - CHANGED FROM true TO false
+    CustomerManager.toggleFields(false);
+    
+    // Clear any existing validation errors
+    ValidationUtils.clearErrors();
+    ValidationUtils.clearErrors('phone-validation-error');
+    ValidationUtils.clearErrors('email-validation-error');
+    
+    // Show success message
+    const emailField = document.getElementById('customer_email');
+    const successMsg = document.createElement('div');
+    successMsg.className = 'email-validation-success';
+    successMsg.style.color = '#28a745';
+    successMsg.style.fontSize = '0.875rem';
+    successMsg.style.marginTop = '0.25rem';
+    successMsg.textContent = '✓ Customer found — email already exists';
+    emailField.parentNode.appendChild(successMsg);
+    
+    // Remove success message after 3 seconds
+    setTimeout(() => {
+        const successEl = emailField.parentNode.querySelector('.email-validation-success');
+        if (successEl) successEl.remove();
+    }, 3000);
+    
+    // Validate form
+    FormValidator.validateAndToggleSubmit();
+    
+    console.log('Auto-filled customer data for:', customerData.name);
+},
+    validateEmailField: () => {
+        const field = document.getElementById('customer_email');
+
+        // Clear old errors and success messages
+        const oldError = field.parentNode.querySelector('.email-validation-error');
+        if (oldError) oldError.remove();
+        
+        const oldSuccess = field.parentNode.querySelector('.email-validation-success');
+        if (oldSuccess) oldSuccess.remove();
+
+        const email = field.value.trim();
+        
+        // If email is empty, clear customer data if it was auto-filled
+        if (!email) {
+            if (isExistingCustomer) {
+                CustomerManager.clearFields();
+            }
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+
+        // First check: Email format validation
+        if (!EmailValidator.isValidFormat(email)) {
+            ValidationUtils.showError(
+                field,
+                'Please enter a valid email address (e.g., name@example.com)',
+                'email-validation-error'
+            );
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+
+        // Second check: Look up customer by email (with debounce)
+        clearTimeout(EmailValidator.timeout);
+
+        EmailValidator.timeout = setTimeout(async () => {
+            const customerId = document.getElementById('customer_id').value || 0;
+            
+            // NEW: Try to get customer data by email
+            const customerResult = await EmailValidator.getCustomerByEmail(email);
+            
+            if (customerResult.exists && customerResult.customer) {
+                // Customer found - auto-fill data
+                EmailValidator.autoFillCustomerData(customerResult.customer);
+            } else {
+                // No customer found - check if email is used (for new customers)
+                const duplicateResult = await EmailValidator.checkEmailExists(email, customerId);
+                
+                if (duplicateResult.exists) {
+                    ValidationUtils.showError(
+                        field,
+                        'This email is already registered',
+                        'email-validation-error'
+                    );
+                } else {
+                    // Email is new - clear any existing customer data
+                    if (isExistingCustomer) {
+                        CustomerManager.clearFields();
+                        // Re-populate the email field
+                        document.getElementById('customer_email').value = email;
+                    }
+                }
+            }
+
+            FormValidator.validateAndToggleSubmit();
+        }, 500);
+    }
+};
+
+// ========== UPDATED CUSTOMER MANAGER ==========
 const CustomerManager = {
     toggleFields: (readonly = false) => {
         const fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_phone_2', 'city_autocomplete', 'address_line1', 'address_line2'];
@@ -732,6 +957,8 @@ const CustomerManager = {
         document.getElementById('address_line1').value = '';
         document.getElementById('address_line2').value = '';
         ValidationUtils.clearErrors();
+        ValidationUtils.clearErrors('phone-validation-error');
+        ValidationUtils.clearErrors('email-validation-error'); // ADDED THIS LINE
         isExistingCustomer = false;
         CustomerManager.toggleFields(false);
         FormValidator.validateAndToggleSubmit();
@@ -753,6 +980,28 @@ const CustomerManager = {
             isValid = false;
         }
 
+        // Check for phone validation errors
+        const phoneErrors = document.querySelectorAll('.phone-validation-error');
+        if (phoneErrors.length > 0) {
+            isValid = false;
+        }
+
+        // **FIXED: Check for email validation errors**
+        const emailErrors = document.querySelectorAll('.email-validation-error');
+        if (emailErrors.length > 0) {
+            isValid = false;
+        }
+
+        // Check if phones are the same
+        if (phone && phone2 && phone === phone2 && phone.length === 10) {
+            const phone2Field = document.getElementById('customer_phone_2');
+            const existingError = phone2Field.parentNode.querySelector('.phone-validation-error');
+            if (!existingError) {
+                ValidationUtils.showError(phone2Field, 'Phone numbers cannot be the same', 'phone-validation-error');
+            }
+            isValid = false;
+        }
+
         // For new customers, all fields required
         if (!isExistingCustomer) {
             if (!phone) {
@@ -763,7 +1012,7 @@ const CustomerManager = {
                 isValid = false;
             }
 
-            // NEW: Validate phone_2 ONLY if value is entered
+            // Validate phone_2 ONLY if value is entered
             if (phone2 && !ValidationUtils.isValidPhone(phone2)) {
                 ValidationUtils.showError(document.getElementById('customer_phone_2'), 'Phone 2 must be 10 digits');
                 isValid = false;
@@ -783,30 +1032,79 @@ const CustomerManager = {
         return isValid;
     }
 };
-// Helper function to allow only digits and max 10 characters
-function enforcePhoneInput(fieldId) {
-    const field = document.getElementById(fieldId);
-    if (!field) return;
-
-    field.addEventListener('input', (e) => {
-        // Remove any non-digit characters
-        let digits = e.target.value.replace(/\D/g, '');
-
-        // Limit to 10 digits
-        if (digits.length > 10) {
-            digits = digits.slice(0, 10);
-        }
-
-        // Set the cleaned value back
-        e.target.value = digits;
-    });
-}
-
-// Apply to both phone fields
-enforcePhoneInput('customer_phone');
-enforcePhoneInput('customer_phone_2');
 
 
+// ========== UPDATED EVENT LISTENERS ==========
+// Add these event listeners in your EventListeners.init() function:
+
+// Phone validation listeners
+document.getElementById('customer_phone').addEventListener('input', () => {
+    PhoneValidator.validatePhoneField('customer_phone', 'customer_phone_2');
+});
+
+document.getElementById('customer_phone_2').addEventListener('input', () => {
+    PhoneValidator.validatePhoneField('customer_phone_2', 'customer_phone');
+});
+document.getElementById('customer_email').addEventListener('input', () => {
+    EmailValidator.validateEmailField();
+});
+
+document.getElementById('customer_email').addEventListener('blur', () => {
+    EmailValidator.validateEmailField();
+});
+
+// Also validate when leaving the field
+document.getElementById('customer_phone').addEventListener('blur', () => {
+    PhoneValidator.validatePhoneField('customer_phone', 'customer_phone_2');
+});
+
+document.getElementById('customer_phone_2').addEventListener('blur', () => {
+    PhoneValidator.validatePhoneField('customer_phone_2', 'customer_phone');
+});
+// Phone input - only numbers, max 10 digits
+document.getElementById('customer_phone').addEventListener('input', function(e) {
+    // Remove any non-numeric characters
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    // Limit to 10 digits
+    if (this.value.length > 10) {
+        this.value = this.value.slice(0, 10);
+    }
+    
+    // Trigger phone validation
+    PhoneValidator.validatePhoneField('customer_phone', 'customer_phone_2');
+});
+
+// Phone 2 input - only numbers, max 10 digits
+document.getElementById('customer_phone_2').addEventListener('input', function(e) {
+    // Remove any non-numeric characters
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    // Limit to 10 digits
+    if (this.value.length > 10) {
+        this.value = this.value.slice(0, 10);
+    }
+    
+    // Trigger phone validation
+    PhoneValidator.validatePhoneField('customer_phone_2', 'customer_phone');
+});
+
+// Prevent pasting non-numeric content
+document.getElementById('customer_phone').addEventListener('paste', function(e) {
+    e.preventDefault();
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    const numericOnly = pastedText.replace(/[^0-9]/g, '').slice(0, 10);
+    this.value = numericOnly;
+    PhoneValidator.validatePhoneField('customer_phone', 'customer_phone_2');
+});
+
+document.getElementById('customer_phone_2').addEventListener('paste', function(e) {
+    e.preventDefault();
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    const numericOnly = pastedText.replace(/[^0-9]/g, '').slice(0, 10);
+    this.value = numericOnly;
+    PhoneValidator.validatePhoneField('customer_phone_2', 'customer_phone');
+});
     // ========== DATE VALIDATION ==========
     const DateValidator = {
         validate: () => {
@@ -1025,30 +1323,32 @@ const ProductManager = {
     }
 };
 
-    // ========== FORM VALIDATOR ==========
-    const FormValidator = {
-        validateAndToggleSubmit: () => {
-            const submitButton = document.getElementById('submit_order');
-            
-            ValidationUtils.clearErrors();
-            ValidationUtils.clearErrors('date-validation-error');
-            ValidationUtils.clearErrors('product-validation-error');
+ 
+// ========== UPDATED FORM VALIDATOR ==========
+const FormValidator = {
+    validateAndToggleSubmit: () => {
+        const submitButton = document.getElementById('submit_order');
+        
+        ValidationUtils.clearErrors();
+        ValidationUtils.clearErrors('date-validation-error');
+        ValidationUtils.clearErrors('product-validation-error');
+        // Don't clear phone-validation-error and email-validation-error - they're managed by their validators
 
-            const customerValid = CustomerManager.validate();
-            const datesValid = DateValidator.validate();
-            const productsValid = ProductManager.validate();
-            const hasValidProducts = ProductManager.hasValidProduct();
+        const customerValid = CustomerManager.validate();
+        const datesValid = DateValidator.validate();
+        const productsValid = ProductManager.validate();
+        const hasValidProducts = ProductManager.hasValidProduct();
 
-            const isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
+        const isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
 
-            submitButton.disabled = !isFormValid;
-            submitButton.style.opacity = isFormValid ? '1' : '0.6';
-            submitButton.style.cursor = isFormValid ? 'pointer' : 'not-allowed';
-            submitButton.style.backgroundColor = isFormValid ? '#007bff' : '#6c757d';
+        submitButton.disabled = !isFormValid;
+        submitButton.style.opacity = isFormValid ? '1' : '0.6';
+        submitButton.style.cursor = isFormValid ? 'pointer' : 'not-allowed';
+        submitButton.style.backgroundColor = isFormValid ? '#007bff' : '#6c757d';
 
-            return isFormValid;
-        }
-    };
+        return isFormValid;
+    }
+};
 
     // ========== CITY AUTOCOMPLETE ==========
     const CityAutocomplete = {
@@ -1215,7 +1515,7 @@ const CustomerModal = {
                 document.getElementById('city_autocomplete').value = row.getAttribute('data-city-name');
                 
                 isExistingCustomer = true;
-                CustomerManager.toggleFields(true);
+                CustomerManager.toggleFields(false);
                 ValidationUtils.clearErrors();
                 
                 modal.style.display = "none";
@@ -1289,7 +1589,12 @@ const CustomerModal = {
                     if (!DateValidator.validate()) issues.push('Order dates');
                     if (!ProductManager.validate()) issues.push('Product information');
                     if (!ProductManager.hasValidProduct()) issues.push('At least one complete product');
-                    
+                    // Check email validation errors
+                
+                if (document.querySelectorAll('.email-validation-error').length > 0) {
+                    isValid = false;
+                }
+
                     alert('Please fix the following issues:\n- ' + issues.join('\n- '));
                     return false;
                 }

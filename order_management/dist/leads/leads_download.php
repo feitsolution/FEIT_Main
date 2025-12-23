@@ -23,14 +23,73 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $order_id = $_GET['id'];
 $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] === 'true';
 
+// ==========================================
+// ✅ FETCH COMPANY INFORMATION FROM BRANDING TABLE
+// ==========================================
+$branding_query = "SELECT company_name, address, hotline, email, logo_url FROM branding WHERE active = 1 LIMIT 1";
+$branding_result = $conn->query($branding_query);
+
+if ($branding_result && $branding_result->num_rows > 0) {
+    $branding = $branding_result->fetch_assoc();
+    // Clean up the address - remove extra backslashes and format properly
+    $branding['address'] = str_replace(['\\\\r\\\\n', '\\r\\n', '\\n'], "\n", $branding['address']);
+    
+    // ==========================================
+    // ✅ ALWAYS USE LOGO FROM DATABASE
+    // ==========================================
+    if (!empty($branding['logo_url'])) {
+        // Check if it's a full URL (starts with http/https)
+        if (strpos($branding['logo_url'], 'http') === 0) {
+            $logo_url = $branding['logo_url'];
+        } 
+        // Check if it already has the full path
+        else if (strpos($branding['logo_url'], '/order_management/') === 0) {
+            $logo_url = $branding['logo_url']; // Already has full path
+        }
+        // Otherwise, it's a relative path from dist folder
+        else {
+            $logo_url = '/order_management/dist/' . ltrim($branding['logo_url'], '/');
+        }
+    } else {
+        // If logo_url is empty in DB, use fallback and log error
+        $logo_url = '../assets/images/logo-white.svg';
+        error_log("WARNING: No logo_url found in branding table for active branding record");
+    }
+    
+    // Map branding fields to company array
+    $company = [
+        'name' => $branding['company_name'],
+        'address' => $branding['address'],
+        'email' => $branding['email'],
+        'phone' => $branding['hotline']
+    ];
+} else {
+    // If no active branding record found
+    $logo_url = '../assets/images/logo-white.svg';
+    error_log("ERROR: No active branding record found in database");
+    
+    // Fallback company info
+    $company = [
+        'name' => 'FE IT Solutions pvt (Ltd)',
+        'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
+        'email' => 'info@feitsolutions.com',
+        'phone' => '011-2824524'
+    ];
+}
+
+// UPDATED QUERY: Now gets customer info from order_header table instead of customers table
 $order_query = "SELECT 
                 i.*, 
-                i.pay_status AS order_pay_status, 
-                c.name AS customer_name, 
-                CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
-                c.email AS customer_email, 
-                c.phone AS customer_phone,
+                i.pay_status AS order_pay_status,
+                i.full_name AS customer_name,
+                i.mobile AS customer_phone,
+                i.mobile_2 AS customer_phone_2,
+                CONCAT_WS(', ', i.address_line1, i.address_line2) AS customer_address,
+                i.address_line1,
+                i.address_line2,
                 ct.city_name AS customer_city,
+                c.email AS customer_email,
+                c.customer_id,
                 p.payment_id, 
                 p.amount_paid, 
                 p.payment_method, 
@@ -42,7 +101,7 @@ $order_query = "SELECT
                 u2.name AS creator_name
                 FROM order_header i 
                 LEFT JOIN customers c ON i.customer_id = c.customer_id
-                LEFT JOIN city_table ct ON c.city_id = ct.city_id
+                LEFT JOIN city_table ct ON i.city_id = ct.city_id
                 LEFT JOIN payments p ON i.order_id = p.order_id
                 LEFT JOIN roles r ON p.pay_by = r.id
                 LEFT JOIN users u ON i.user_id = u.id
@@ -125,14 +184,6 @@ if (isset($order['order_pay_status']) && !empty($order['order_pay_status'])) {
         $orderPayStatus = 'unpaid';
     }
 }
-
-// Company information
-$company = [
-    'name' => 'FE IT Solutions pvt (Ltd)',
-    'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
-    'email' => 'info@feitsolutions.com',
-    'phone' => '011-2824524'
-];
 
 // Function to get the color for payment status
 function getPaymentStatusColor($status)
@@ -237,6 +288,13 @@ $column_count = $has_any_discount ? 5 : 4;
         .product-name {
             font-weight: bold;
         }
+
+        /* Style for logo */
+        .company-logo img {
+            max-height: 80px;
+            max-width: 200px;
+            object-fit: contain;
+        }
     </style>
 </head>
 
@@ -244,7 +302,9 @@ $column_count = $has_any_discount ? 5 : 4;
     <div class="order-container modal-specific">
         <div class="order-header">
             <div class="company-logo">
-                <img src="../assets/images/logo-white.svg" alt="Company Logo">
+                <img src="<?php echo htmlspecialchars($logo_url); ?>" 
+                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo"
+                     onerror="this.onerror=null; this.src='../assets/images/logo-white.svg';">
             </div>
             <div class="order-info">
                 <div class="order-title">
@@ -274,8 +334,7 @@ $column_count = $has_any_discount ? 5 : 4;
                 <div class="billing-title">Billing From :</div>
                 <div class="billing-info">
                     <div><?php echo htmlspecialchars($company['name']); ?></div>
-                    <div>No: 04</div>
-                    <div>Wijayamangalarama Road, Kohuwala</div>
+                    <div><?php echo nl2br(htmlspecialchars($company['address'])); ?></div>
                     <div><?php echo htmlspecialchars($company['email']); ?></div>
                     <div><?php echo htmlspecialchars($company['phone']); ?></div>
                 </div>
@@ -283,19 +342,25 @@ $column_count = $has_any_discount ? 5 : 4;
             <div class="billing-block">
                 <div class="billing-title">Billing To :</div>
                 <div class="billing-info">
-                    <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong>
+                    <!-- UPDATED: Now uses full_name from order_header -->
+                    <strong><?php echo !empty($order['customer_name']) ? htmlspecialchars($order['customer_name']) : 'N/A'; ?></strong>
                     <?php if (!empty($order['customer_id'])): ?>
                         <span style="color: #666; font-size: 0.9em;">(ID: <?php echo htmlspecialchars($order['customer_id']); ?>)</span>
                     <?php endif; ?>
                     <br>
+                    <!-- UPDATED: Now uses address_line1 and address_line2 from order_header -->
                     <?php if (!empty($order['customer_address'])): ?>
                         <?php echo nl2br(htmlspecialchars($order['customer_address'])); ?><br>
                     <?php endif; ?>
                     <?php if (!empty($order['customer_city'])): ?>
                         City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
                     <?php endif; ?>
+                    <!-- UPDATED: Now displays mobile and mobile_2 from order_header -->
                     <?php if (!empty($order['customer_phone'])): ?>
-                        Phone: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                        Phone Number 1: <?php echo htmlspecialchars($order['customer_phone']); ?><br>
+                    <?php endif; ?>
+                    <?php if (!empty($order['customer_phone_2'])): ?>
+                        Phone Number 2: <?php echo htmlspecialchars($order['customer_phone_2']); ?>
                     <?php endif; ?>
                 </div>
             </div>
