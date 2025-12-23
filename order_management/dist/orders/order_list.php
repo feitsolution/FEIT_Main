@@ -13,12 +13,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /lily_collection/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
 // Include database connection
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 
 // NEW: Get current user's role information
@@ -53,7 +53,7 @@ if ($current_user_id == 0 || $current_user_role == 0) {
 
 // If still no user data, redirect to login
 if ($current_user_id == 0) {
-    header("Location: /lily_collection/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
@@ -207,8 +207,8 @@ $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
 // Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 
 ?>
 
@@ -218,7 +218,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <head>
     <title>Order Management Admin Portal - All Orders</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
@@ -314,7 +314,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -735,7 +735,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
    
     <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/order_view_modal.php'); ?>
+      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
 
   <script>
 // MODIFIED: Enhanced JavaScript functionality with always-show payment slip button for paid orders
@@ -892,7 +892,7 @@ function viewPaymentSlip() {
     }
     
     // Construct the payment slip URL
-    const slipUrl = '/lily_collection/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
+    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
     
     // Open payment slip in new tab
     window.open(slipUrl, '_blank');
@@ -995,7 +995,7 @@ document.getElementById("syncRoyalBtn").addEventListener("click", function() {
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/lily_collection/dist/api/royalexpress_webhook.php')
+    fetch('/order_management/dist/api/royalexpress_webhook.php')
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1045,7 +1045,7 @@ document.getElementById("syncTransexpBtn").addEventListener("click", function() 
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/lily_collection/dist/api/transexp_webhook.php') // adjust path if needed
+    fetch('/order_management/dist/api/transexp_webhook.php') // adjust path if needed
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1096,7 +1096,7 @@ document.getElementById("syncKoombiyoBtn").addEventListener("click", function() 
     btn.disabled = true; // Disable to prevent multiple clicks
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-    fetch('/lily_collection/dist/api/koombiyo_webhook.php') // adjust path if needed
+    fetch('/order_management/dist/api/koombiyo_webhook.php') // adjust path if needed
         .then(response => response.json())
         .then(data => {
             btn.disabled = false;
@@ -1244,8 +1244,8 @@ function exportToCSVWithConfirm() {
 
 </script>
     <!-- Include Footer and Scripts -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 
 </body>
 </html>
