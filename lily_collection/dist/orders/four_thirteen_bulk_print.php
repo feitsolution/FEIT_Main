@@ -155,13 +155,27 @@ function getOrderProducts($conn, $order_id) {
     return $products;
 }
 
-// Company information (From address)
-$company = [
-   'name' => 'FE IT Solutions pvt (Ltd)',
-    'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
-    'email' => 'info@feitsolutions.com',
-    'phone' => '011-2824524'
-];
+// Fetch branding info (active branding)
+$branding_sql = "SELECT * FROM branding WHERE active = 1 ORDER BY branding_id DESC LIMIT 1";
+$branding_result = $conn->query($branding_sql);
+
+if ($branding_result && $branding_result->num_rows > 0) {
+    $branding = $branding_result->fetch_assoc();
+    $company = [
+        'name'    => $branding['company_name'] ?? 'Company Name',
+        'address' => $branding['address'] ?? 'Address not set',
+        'email'   => $branding['email'] ?? '',
+        'phone'   => $branding['hotline'] ?? ''
+    ];
+} else {
+    // Fallback if no branding found
+    $company = [
+        // 'name'    => 'FE IT Solutions pvt (Ltd)',
+        // 'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
+        // 'email'   => 'info@feitsolutions.com',
+        // 'phone'   => '011-2824524'
+    ];
+}
 
 /**
  * HELPER FUNCTIONS
@@ -471,7 +485,7 @@ foreach ($orders as $order) {
 </head>
 <body>
     <!-- Print Instructions (hidden when printing) -->
-    <div class="print-instructions">
+    <!-- <div class="print-instructions">
         <h3>Simple Bulk Print Instructions - A4 Landscape 8 Labels</h3>
         <p><strong>Orders Found:</strong> <?php echo count($orders); ?> orders</p>
         <p><strong>Labels Per Page:</strong> 8 labels (2 columns × 4 rows)</p>
@@ -481,16 +495,16 @@ foreach ($orders as $order) {
             <?php if ($date): ?><li>Date: <?php echo htmlspecialchars($date); ?></li><?php endif; ?>
             <?php if ($time_from): ?><li>Time From: <?php echo htmlspecialchars($time_from); ?></li><?php endif; ?>
             <?php if ($time_to): ?><li>Time To: <?php echo htmlspecialchars($time_to); ?></li><?php endif; ?>
-            <?php if ($status_filter !== 'all'): ?><li>Status: <?php echo htmlspecialchars($status_filter); ?></li><?php endif; ?>
+            <?php if ($status_filter !== 'all'): ?><li>Status: <?php echo htmlspecialchars($status_filter); ?></li><?php endif; ?> -->
             
             <!-- NEW: Tracking filter display -->
-            <?php if ($tracking_filter !== 'all'): ?>
+            <!-- <?php if ($tracking_filter !== 'all'): ?>
                 <li><strong>Tracking Filter:</strong> <?php echo htmlspecialchars(getTrackingFilterText($tracking_filter, $tracking_number)); ?></li>
             <?php endif; ?>
         </ul>
         <button class="print-button" onclick="window.print()">🖨️ Print Labels</button>
         <button class="print-button" onclick="window.close()" style="background: #6c757d;">❌ Close</button>
-    </div>
+    </div> -->
 
     <!-- Labels Container -->
     <div class="labels-container">
@@ -662,7 +676,6 @@ foreach ($orders as $order) {
                         <div class="barcode-section">
                             <?php if ($has_tracking): ?>
                                 <img src="<?php echo $barcode_url; ?>" alt="Tracking Barcode" class="barcode-image" onerror="this.style.display='none'">
-                                <div class="barcode-text"><?php echo htmlspecialchars($tracking_number_val); ?></div>
                             <?php else: ?>
                                 <div class="no-tracking-barcode">
                                     NO TRACKING<br>

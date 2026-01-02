@@ -3350,7 +3350,7 @@ text:is([data-pc-theme="dark"] *),.apexcharts-theme-light .apexcharts-menu-icon:
   border-color: rgb(57 59 63 / var(--tw-border-opacity));
 }
 .table > :not(caption) > * > *{
-  white-space: nowrap;
+  /* white-space: nowrap; */
   padding: .7rem .75rem;
 }
 .table thead{

@@ -2,6 +2,7 @@
 /**
  * Export Orders to CSV with Products
  * Exports filtered orders based on search parameters including product details
+ * UPDATED: Prioritizes order_header fields over customers table
  */
 session_start();
 
@@ -47,16 +48,27 @@ if ($current_user_role != 1) {
     $roleBasedCondition = " AND i.user_id = $current_user_id";
 }
 
-// Build SQL query with correct customer data fields
+// Build SQL query with UPDATED customer data fields priority
+// Prioritizes order_header fields (i) over customers table (c)
 $sql = "SELECT i.order_id, 
                i.created_at,
-               c.name as customer_name,
-               c.customer_id,
+               
+               -- Customer info: Prioritize order_header, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
                c.email as customer_email,
-               c.phone as customer_phone,
+               COALESCE(NULLIF(i.mobile, ''), c.phone) as customer_phone,
                c.phone_2 as customer_phone_2,
-               c.address_line1 as customer_address_line1,
-               c.address_line2 as customer_address_line2,
+               COALESCE(
+                   NULLIF(i.address_line1, ''), 
+                   c.address_line1
+               ) as customer_address_line1,
+               COALESCE(
+                   NULLIF(i.address_line2, ''), 
+                   c.address_line2
+               ) as customer_address_line2,
+               
+               -- Order details
                i.total_amount,
                i.status,
                i.pay_status,
@@ -65,28 +77,33 @@ $sql = "SELECT i.order_id,
                i.discount,
                i.delivery_fee,
                i.interface,
+               
+               -- User info
                u1.name as paid_by_name,
                u2.name as user_name,
                u2.id as user_id,
+               
+               -- Payment info
                p.amount_paid,
                p.payment_date
+               
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.user_id = u2.id
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
         WHERE i.interface IN ('individual', 'leads') 
         AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
 
 // Build search conditions (EXACTLY same logic as main page)
 $searchConditions = [];
 
-// General search condition
+// General search condition - UPDATED to use order_header fields
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -103,10 +120,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// Specific Customer Name filter - UPDATED to use order_header full_name
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Specific User ID filter - with role-based restrictions
@@ -169,11 +186,6 @@ if (!$result) {
     die("Query Error: " . $conn->error);
 }
 
-// Clean any output buffer before sending headers
-if (ob_get_level()) {
-    ob_end_clean();
-}
-
 // Set headers for CSV download
 $filename = "orders_export_" . date('Y-m-d_H-i-s') . ".csv";
 header('Content-Type: text/csv; charset=utf-8');
@@ -183,6 +195,9 @@ header('Expires: 0');
 
 // Create output stream
 $output = fopen('php://output', 'w');
+
+// Add BOM for proper UTF-8 encoding in Excel
+fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
 // CSV Headers - Reordered as requested
 $headers = [

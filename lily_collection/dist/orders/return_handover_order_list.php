@@ -90,15 +90,25 @@ if ($current_user_role != 1) {
 
 // Base SQL for counting total records - RETURN_HANDOVER STATUS - Updated to use user_id
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
              WHERE i.status = 'return_handover'
              AND (i.interface = 'individual' OR i.interface = 'leads')$roleBasedCondition";
 
+
 // Main query with all required joins - RETURN_HANDOVER STATUS - Updated to use user_id
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+$sql = "SELECT i.*, 
+               -- Customer info from customers table (using customer_id)
+               c.name as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
+               
+               -- User who created the order
                u2.name as user_name
         FROM order_header i 
         LEFT JOIN customers c ON i.customer_id = c.customer_id
@@ -108,6 +118,7 @@ $sql = "SELECT i.*, c.name as customer_name,
         WHERE i.status = 'return_handover'
         AND (i.interface = 'individual' OR i.interface = 'leads')$roleBasedCondition";
 
+
 // Build search conditions
 $searchConditions = [];
 
@@ -116,7 +127,7 @@ if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -134,7 +145,7 @@ if (!empty($order_id_filter)) {
 // Specific Customer Name filter
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Tracking ID filter

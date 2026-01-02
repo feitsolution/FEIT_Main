@@ -89,31 +89,43 @@ if ($current_user_role != 1) {
 
 // Base SQL for counting total records - ONLY DISPATCH STATUS
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
-             WHERE  i.interface IN ('individual', 'leads') AND i.status = 'dispatch'$roleBasedCondition";
+             WHERE i.interface IN ('individual', 'leads') 
+             AND i.status = 'dispatch'$roleBasedCondition";
 
-// Main query with all required joins - ONLY DISPATCH STATUS - FIXED: Changed creator_name to user_name
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+
+// Main query with all required joins - ONLY DISPATCH STATUS - UPDATED with customer name fallback
+$sql = "SELECT i.*, 
+               -- Customer info: Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
+               
+               -- User who created the order
                u2.name as user_name
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.user_id = u2.id
-        WHERE  i.interface IN ('individual', 'leads') AND i.status = 'dispatch'$roleBasedCondition";
-
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
+        WHERE i.interface IN ('individual', 'leads') 
+        AND i.status = 'dispatch'$roleBasedCondition";
+// Build search conditions
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality)
+// General search condition - UPDATED to use order_header fields
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -128,10 +140,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// Specific Customer Name filter - UPDATED
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Tracking ID filter
@@ -140,7 +152,7 @@ if (!empty($tracking_id)) {
     $searchConditions[] = "i.tracking_number LIKE '%$trackingTerm%'";
 }
 
-//Specific User ID filter - MODIFIED: Apply role-based restrictions
+// Specific User ID filter - MODIFIED: Apply role-based restrictions
 if (!empty($user_id_filter)) {
     $userIdTerm = $conn->real_escape_string($user_id_filter);
     if ($current_user_role == 1) {
@@ -154,7 +166,6 @@ if (!empty($user_id_filter)) {
     }
 }
 
-// Date range filter
 // Updated Date range filter
 if (!empty($updated_date_from)) {
     $updatedDateFromTerm = $conn->real_escape_string($updated_date_from);
@@ -174,7 +185,7 @@ if (!empty($searchConditions)) {
 }
 
 // Add ordering and pagination
-$sql .= " ORDER BY i.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY i.updated_at DESC, i.order_id DESC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
@@ -185,7 +196,7 @@ if ($countResult && $countResult->num_rows > 0) {
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
-// FIXED: Fetch all users for the User ID dropdown
+// Fetch all users for the User ID dropdown
 $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 

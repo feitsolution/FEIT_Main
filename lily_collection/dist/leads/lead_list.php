@@ -409,28 +409,40 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         </td>
                                         
                                         <!-- Customer Name - Enhanced to show both customer table name and order full_name -->
-                                        <td class="customer-name">
-                                            <?php 
-                                            $customerName = '';
-                                            if (!empty($row['customer_name'])) {
-                                                $customerName = $row['customer_name'];
-                                            } elseif (!empty($row['full_name'])) {
-                                                $customerName = $row['full_name'];
-                                            } else {
-                                                $customerName = 'N/A';
-                                            }
-                                            echo htmlspecialchars($customerName);
-                                            ?>
-                                        </td>
+                                    <!-- Customer Name - Prioritize order_header full_name for leads -->
+                                            <td class="customer-name">
+                                                <?php 
+                                                // For leads interface, prioritize full_name from order_header
+                                                $customerName = '';
+                                                if (!empty($row['full_name'])) {
+                                                    // Primary: Use full_name from order_header (leads data)
+                                                    $customerName = $row['full_name'];
+                                                } elseif (!empty($row['customer_name'])) {
+                                                    // Fallback: Use customer table name if available
+                                                    $customerName = $row['customer_name'];
+                                                } else {
+                                                    $customerName = 'N/A';
+                                                }
+                                                echo htmlspecialchars($customerName);
+                                                ?>
+                                            </td>
                                         
-                                        <!-- Phone Number - Enhanced to show both customer phone and mobile -->
+                                       
+                                        <!-- Phone Number - Prioritize order_header mobile for leads -->
                                         <td class="phone-number">
                                             <?php 
+                                            // For leads interface, prioritize mobile from order_header
                                             $phoneNumber = '';
-                                            if (!empty($row['customer_phone'])) {
-                                                $phoneNumber = $row['customer_phone'];
-                                            } elseif (!empty($row['mobile'])) {
+                                            if (!empty($row['mobile'])) {
+                                                // Primary: Use mobile from order_header (leads data)
                                                 $phoneNumber = $row['mobile'];
+                                                // If mobile_2 exists, show both
+                                                if (!empty($row['mobile_2'])) {
+                                                    $phoneNumber .= ' / ' . $row['mobile_2'];
+                                                }
+                                            } elseif (!empty($row['customer_phone'])) {
+                                                // Fallback: Use customer table phone if available
+                                                $phoneNumber = $row['customer_phone'];
                                             } else {
                                                 $phoneNumber = 'N/A';
                                             }

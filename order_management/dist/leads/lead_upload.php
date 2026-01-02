@@ -98,19 +98,42 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             throw new Exception("CSV file is empty or invalid.");
         }
         
-        // Expected headers (case-insensitive)
+        // Normalize headers (trim whitespace and convert to lowercase)
+        $normalizedHeaders = array_map(function($h) {
+            return strtolower(trim($h));
+        }, $headers);
+        
+        // Expected headers (lowercase)
         $expectedHeaders = [
-            'Full Name', 'Phone Number', 'Phone Number 2', 'City', 'Email', 
-            'Address Line 1', 'Address Line 2', 'Product Code', 'Total Amount', 'Other'
+            'full name', 
+            'phone number', 
+            'phone number 2', 
+            'city', 
+            'email', 
+            'address line 1', 
+            'address line 2', 
+            'product code', 
+            'total amount', 
+            'other'
         ];
         
-        // Normalize headers for comparison
-        $normalizedHeaders = array_map('strtolower', array_map('trim', $headers));
-        $normalizedExpected = array_map('strtolower', $expectedHeaders);
+        // Create mapping of header name to column index
+        $headerMap = array_flip($normalizedHeaders);
         
-        // Check if headers match
-        if ($normalizedHeaders !== $normalizedExpected) {
-            throw new Exception("CSV headers do not match the expected format. Expected: " . implode(', ', $expectedHeaders));
+        // Check if all required headers exist
+        $missingHeaders = [];
+        foreach ($expectedHeaders as $expected) {
+            if (!isset($headerMap[$expected])) {
+                $missingHeaders[] = ucwords($expected);
+            }
+        }
+        
+        if (!empty($missingHeaders)) {
+            throw new Exception(
+                "Missing required CSV headers: " . implode(', ', $missingHeaders) . "\n\n" .
+                "Found headers: " . implode(', ', $headers) . "\n\n" .
+                "Please download a fresh template and ensure all headers are present."
+            );
         }
         
         // Initialize counters
@@ -134,37 +157,43 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     continue;
                 }
                 
-                // Map CSV columns to variables
-                $fullName = trim($row[0]);
-                $phoneNumber = trim($row[1]);
-                $phoneNumber2 = trim($row[2]);
-                $city = trim($row[3]);
-                $email = trim($row[4]);
-                $addressLine1 = trim($row[5]);
-                $addressLine2 = trim($row[6]);
-                $productCode = trim($row[7]);
-                $totalAmount = trim($row[8]);
-                $other = trim($row[9]);
+                // Map CSV columns using header positions (with fallback to empty string)
+                $fullName = trim($row[$headerMap['full name']] ?? '');
+                $phoneNumber = trim($row[$headerMap['phone number']] ?? '');
+                $phoneNumber2 = trim($row[$headerMap['phone number 2']] ?? '');
+                $city = trim($row[$headerMap['city']] ?? '');
+                $email = trim($row[$headerMap['email']] ?? '');
+                $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
+                $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
+                $productCode = trim($row[$headerMap['product code']] ?? '');
+                $totalAmount = trim($row[$headerMap['total amount']] ?? '');
+                $other = trim($row[$headerMap['other']] ?? '');
 
                 // ===============================
                 // FIX: Preserve leading 0 in phone numbers
                 // ===============================
                
                 // Convert +94XXXXXXXXX → 0XXXXXXXXX
-                if (strlen($phoneNumber) === 11 && substr($phoneNumber, 0, 2) === '94') {
+                if (strlen($phoneNumber) === 12 && substr($phoneNumber, 0, 3) === '+94') {
+                    $phoneNumber = '0' . substr($phoneNumber, 3);
+                } elseif (strlen($phoneNumber) === 11 && substr($phoneNumber, 0, 2) === '94') {
                     $phoneNumber = '0' . substr($phoneNumber, 2);
                 }
 
-                if (!empty($phoneNumber2) && strlen($phoneNumber2) === 11 && substr($phoneNumber2, 0, 2) === '94') {
-                    $phoneNumber2 = '0' . substr($phoneNumber2, 2);
+                if (!empty($phoneNumber2)) {
+                    if (strlen($phoneNumber2) === 12 && substr($phoneNumber2, 0, 3) === '+94') {
+                        $phoneNumber2 = '0' . substr($phoneNumber2, 3);
+                    } elseif (strlen($phoneNumber2) === 11 && substr($phoneNumber2, 0, 2) === '94') {
+                        $phoneNumber2 = '0' . substr($phoneNumber2, 2);
+                    }
                 }
 
-               // Excel removed leading 0 → add it back
-                if (strlen($phoneNumber) === 9) {
+                // Excel removed leading 0 → add it back
+                if (strlen($phoneNumber) === 9 && ctype_digit($phoneNumber)) {
                     $phoneNumber = '0' . $phoneNumber;
                 }
 
-                if (!empty($phoneNumber2) && strlen($phoneNumber2) === 9) {
+                if (!empty($phoneNumber2) && strlen($phoneNumber2) === 9 && ctype_digit($phoneNumber2)) {
                     $phoneNumber2 = '0' . $phoneNumber2;
                 }
 
@@ -209,17 +238,13 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     }
                 }
                 
-               // MUST be exactly 10 digits and start with 0
+                // MUST be exactly 10 digits and start with 0
                 if (!preg_match('/^0\d{9}$/', $phoneNumber)) {
-                    throw new Exception("Phone Number must be exactly 10 digits and start with 0");
+                    throw new Exception("Phone Number must be exactly 10 digits and start with 0 (got: '$phoneNumber')");
                 }
 
                 if (!empty($phoneNumber2) && !preg_match('/^0\d{9}$/', $phoneNumber2)) {
-                    throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0");
-                }
-
-                if (empty($addressLine1)) {
-                    throw new Exception("Address Line 1 is required");
+                    throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0 (got: '$phoneNumber2')");
                 }
                 
                 // Validate total amount is numeric and positive
@@ -266,7 +291,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $cityStmt->close();
                 
-                // NEW LOGIC: Check if customer exists by phone1, phone_2, or email
+                // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
                 $customerFound = false;
                 
@@ -313,7 +338,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     // Customer EXISTS - Use existing customer ID, NO UPDATE
                     $customerId = $customerCheckResult->fetch_assoc()['customer_id'];
                     $customerFound = true;
-                    error_log("Existing customer found - ID: $customerId, Phone: $phoneNumber");
                 } else {
                     // Customer DOES NOT EXIST - Create NEW customer
                     $customerInsertSql = "INSERT INTO customers (name, email, phone, phone_2, address_line1, address_line2, city_id) 
@@ -331,8 +355,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $customerId = $conn->insert_id;
                     $customerInsertStmt->close();
                     $customerFound = false;
-                    
-                    error_log("New customer created - ID: $customerId, Phone: $phoneNumber, Phone_2: $phoneNumber2");
                 }
                 $customerCheckStmt->close();
                 
@@ -353,22 +375,21 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $notes = !empty($other) ? $other : 'Imported from CSV';
                 
-                // Bind parameters: i=integer, d=double, s=string
-                // Parameters: customer_id, user_id, subtotal, notes, total_amount, product_code, mobile, mobile_2, city_id, address_line1, address_line2, full_name, created_by
+                // Bind parameters
                 $orderStmt->bind_param("iidsdsssisssi", 
-                    $customerId,        // i - integer
-                    $assignedUserId,    // i - integer
-                    $totalAmountDecimal,// d - double
-                    $notes,             // s - string
-                    $totalAmountDecimal,// d - double
-                    $productCode,       // s - string
-                    $phoneNumber,       // s - string
-                    $phoneNumber2,      // s - string
-                    $cityId,            // i - integer
-                    $addressLine1,      // s - string
-                    $addressLine2,      // s - string
-                    $fullName,          // s - string
-                    $loggedInUserId     // i - integer
+                    $customerId,
+                    $assignedUserId,
+                    $totalAmountDecimal,
+                    $notes,
+                    $totalAmountDecimal,
+                    $productCode,
+                    $phoneNumber,
+                    $phoneNumber2,
+                    $cityId,
+                    $addressLine1,
+                    $addressLine2,
+                    $fullName,
+                    $loggedInUserId
                 );
                 
                 if (!$orderStmt->execute()) {
@@ -602,10 +623,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
-                               <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code, Total Amount</li>
+                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code, Total Amount</li>
                                 <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
+                                <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
+                                <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
@@ -618,27 +641,23 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             
                             <h5 style="margin-top: 1rem;">⚠️ Common Errors & Solutions:</h5>
                             <ul>
-                                <li><strong>"Full Name is required"</strong> → Ensure column 1 has data</li>
-                                <li><strong>"Phone Number is required"</strong> → Ensure column 2 has valid phone</li>
-                                <li><strong>"Phone Number must be exactly 10 digits"</strong> → Use a valid Sri Lankan mobile number</li>
-                                <li><strong>"Invalid email format"</strong> → Check email syntax (leave blank if none)</li>
+                                <li><strong>"Missing required CSV headers"</strong> → Download fresh template, ensure all column headers are present</li>
+                                <li><strong>"Full Name is required"</strong> → Ensure Full Name column has data</li>
+                                <li><strong>"Phone Number is required"</strong> → Ensure Phone Number column has valid phone</li>
+                                <li><strong>"Phone Number must be exactly 10 digits"</strong> → Use format: 0771234567</li>
+                                <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
                                 <li><strong>"City not found"</strong> → City name must match system database exactly</li>
                                 <li><strong>"Product code not found"</strong> → Verify product code exists and is active</li>
                                 <li><strong>"Total Amount must be positive"</strong> → Enter numeric value > 0</li>
-                                <li><strong>"CSV headers do not match"</strong> → Download latest template, don't modify headers</li>
-                                <li><strong>"File size exceeds limit"</strong> → Reduce file to under 10MB</li>
-                                <li><strong>"Please select at least one user"</strong> → Check at least one user checkbox</li>
-                                <li><strong>"Address Line 1 is required"</strong> → Ensure column 6 has address data</li>
-
-
+                                <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">💡 Best Practices:</h5>
                             <ul>
                                 <li>Test with 2-3 rows first before uploading large batches</li>
+                                <li>Phone numbers: System accepts +94771234567, 94771234567, or 0771234567 formats</li>
                                 <li>Keep city names consistent with existing database entries</li>
-                                <li>Use dash (-) or leave empty for optional fields</li>
-                                <li>Phone numbers can include country codes (+94...)</li>
+                                <li>Use dash (-) or leave empty for optional fields like Email</li>
                                 <li>Check error details if any rows fail - they show specific issues</li>
                                 <li>Successful rows are imported even if some rows have errors</li>
                             </ul>

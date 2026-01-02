@@ -16,6 +16,9 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 // Include the database connection file early
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
+// Initialize transaction flag
+$transactionStarted = false;
+
 // Function to log user actions
 function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details) {
     $logSql = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details) VALUES (?, ?, ?, ?)";
@@ -53,7 +56,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         }
         
         // Get the logged-in user ID who is performing the import
-        $loggedInUserId = $_SESSION['user_id']; // Assuming user_id is stored in session
+        $loggedInUserId = $_SESSION['user_id'];
         
         if (!$loggedInUserId) {
             throw new Exception("Unable to determine logged-in user.");
@@ -95,30 +98,54 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             throw new Exception("CSV file is empty or invalid.");
         }
         
-        // Expected headers (case-insensitive)
+        // Normalize headers (trim whitespace and convert to lowercase)
+        $normalizedHeaders = array_map(function($h) {
+            return strtolower(trim($h));
+        }, $headers);
+        
+        // Expected headers (lowercase)
         $expectedHeaders = [
-            'Full Name', 'Phone Number', 'City', 'Email', 'Address Line 1', 
-            'Address Line 2', 'Product Code', 'Total Amount', 'Other'
+            'full name', 
+            'phone number', 
+            'phone number 2', 
+            'city', 
+            'email', 
+            'address line 1', 
+            'address line 2', 
+            'product code', 
+            'total amount', 
+            'other'
         ];
         
-        // Normalize headers for comparison
-        $normalizedHeaders = array_map('strtolower', array_map('trim', $headers));
-        $normalizedExpected = array_map('strtolower', $expectedHeaders);
+        // Create mapping of header name to column index
+        $headerMap = array_flip($normalizedHeaders);
         
-        // Check if headers match
-        if ($normalizedHeaders !== $normalizedExpected) {
-            throw new Exception("CSV headers do not match the expected format. Please use the template.");
+        // Check if all required headers exist
+        $missingHeaders = [];
+        foreach ($expectedHeaders as $expected) {
+            if (!isset($headerMap[$expected])) {
+                $missingHeaders[] = ucwords($expected);
+            }
+        }
+        
+        if (!empty($missingHeaders)) {
+            throw new Exception(
+                "Missing required CSV headers: " . implode(', ', $missingHeaders) . "\n\n" .
+                "Found headers: " . implode(', ', $headers) . "\n\n" .
+                "Please download a fresh template and ensure all headers are present."
+            );
         }
         
         // Initialize counters
         $successCount = 0;
         $errorCount = 0;
         $errorMessages = [];
-        $rowNumber = 1; // Start from 1 (header is row 0)
-        $successfulOrderIds = []; // Track successful order IDs for logging
+        $rowNumber = 1;
+        $successfulOrderIds = [];
         
         // Begin transaction
         $conn->begin_transaction();
+        $transactionStarted = true;
         
         // Process each row
         while (($row = fgetcsv($handle)) !== FALSE) {
@@ -130,28 +157,59 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     continue;
                 }
                 
-                // Map CSV columns to variables
-                $fullName = trim($row[0]);
-                $phoneNumber = trim($row[1]);
-                $city = trim($row[2]);
-                $email = trim($row[3]);
-                $addressLine1 = trim($row[4]);
-                $addressLine2 = trim($row[5]);
-                $productCode = trim($row[6]);
-                $totalAmount = trim($row[7]);
-                $other = trim($row[8]);
+                // Map CSV columns using header positions (with fallback to empty string)
+                $fullName = trim($row[$headerMap['full name']] ?? '');
+                $phoneNumber = trim($row[$headerMap['phone number']] ?? '');
+                $phoneNumber2 = trim($row[$headerMap['phone number 2']] ?? '');
+                $city = trim($row[$headerMap['city']] ?? '');
+                $email = trim($row[$headerMap['email']] ?? '');
+                $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
+                $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
+                $productCode = trim($row[$headerMap['product code']] ?? '');
+                $totalAmount = trim($row[$headerMap['total amount']] ?? '');
+                $other = trim($row[$headerMap['other']] ?? '');
+
+                // ===============================
+                // FIX: Preserve leading 0 in phone numbers
+                // ===============================
+               
+                // Convert +94XXXXXXXXX → 0XXXXXXXXX
+                if (strlen($phoneNumber) === 12 && substr($phoneNumber, 0, 3) === '+94') {
+                    $phoneNumber = '0' . substr($phoneNumber, 3);
+                } elseif (strlen($phoneNumber) === 11 && substr($phoneNumber, 0, 2) === '94') {
+                    $phoneNumber = '0' . substr($phoneNumber, 2);
+                }
+
+                if (!empty($phoneNumber2)) {
+                    if (strlen($phoneNumber2) === 12 && substr($phoneNumber2, 0, 3) === '+94') {
+                        $phoneNumber2 = '0' . substr($phoneNumber2, 3);
+                    } elseif (strlen($phoneNumber2) === 11 && substr($phoneNumber2, 0, 2) === '94') {
+                        $phoneNumber2 = '0' . substr($phoneNumber2, 2);
+                    }
+                }
+
+                // Excel removed leading 0 → add it back
+                if (strlen($phoneNumber) === 9 && ctype_digit($phoneNumber)) {
+                    $phoneNumber = '0' . $phoneNumber;
+                }
+
+                if (!empty($phoneNumber2) && strlen($phoneNumber2) === 9 && ctype_digit($phoneNumber2)) {
+                    $phoneNumber2 = '0' . $phoneNumber2;
+                }
+
                 
                 // Handle email - normalize empty values
-                // Check for truly empty email values (empty string, null, whitespace, or common empty indicators)
                 if (empty($email) || $email === '' || $email === 'NULL' || $email === 'null' || $email === 'N/A' || $email === 'n/a' || $email === '-') {
                     $email = '';
-                    $emailForDb = '-'; // Use dash for database storage
+                    $emailForDb = '-';
                 } else {
                     $emailForDb = $email;
                 }
                 
-                // Debug: Add some error context for troubleshooting
-                $emailDebugInfo = "Email value: '" . $email . "' (length: " . strlen($email) . ")";
+                // Handle phone number 2 - normalize empty values
+                if (empty($phoneNumber2) || $phoneNumber2 === 'NULL' || $phoneNumber2 === 'null' || $phoneNumber2 === 'N/A' || $phoneNumber2 === 'n/a' || $phoneNumber2 === '-') {
+                    $phoneNumber2 = '';
+                }
                 
                 // Validate required fields
                 if (empty($fullName)) {
@@ -169,20 +227,27 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 if (empty($totalAmount)) {
                     throw new Exception("Total Amount is required");
                 }
+                if (empty($addressLine1)) {
+                    throw new Exception("Address Line 1 is required");
+                }
                 
-                // Validate email format ONLY if email is actually provided and not empty
+                // Validate email format ONLY if email is provided
                 if (!empty($email) && $email !== '' && $email !== '-') {
                     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        throw new Exception("Invalid email format: '$email' - " . $emailDebugInfo);
+                        throw new Exception("Invalid email format: '$email'");
                     }
                 }
                 
-                // Validate phone number format (allow numbers, spaces, +, -, ())
-                if (!preg_match('/^[0-9\s\+\-\(\)]+$/', $phoneNumber)) {
-                    throw new Exception("Invalid phone number format");
+                // MUST be exactly 10 digits and start with 0
+                if (!preg_match('/^0\d{9}$/', $phoneNumber)) {
+                    throw new Exception("Phone Number must be exactly 10 digits and start with 0 (got: '$phoneNumber')");
+                }
+
+                if (!empty($phoneNumber2) && !preg_match('/^0\d{9}$/', $phoneNumber2)) {
+                    throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0 (got: '$phoneNumber2')");
                 }
                 
-                // Validate total amount is numeric and positive (MODIFIED - removed price matching validation)
+                // Validate total amount is numeric and positive
                 if (!is_numeric($totalAmount) || $totalAmount <= 0) {
                     throw new Exception("Total Amount must be a positive number");
                 }
@@ -190,7 +255,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 // Convert total amount to decimal
                 $totalAmountDecimal = (float)$totalAmount;
                 
-                // Check if product exists and is active, and get its price
+                // Check if product exists and is active
                 $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND status = 'active'";
                 $productStmt = $conn->prepare($productSql);
                 if (!$productStmt) {
@@ -209,9 +274,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $unitPrice = (float)$product['lkr_price'];
                 $productStmt->close();
                 
-                // REMOVED: Price matching validation - now allows any positive amount
-                // The original validation that checked if total amount matches product price has been removed
-                
                 // Look up city_id - REQUIRED field
                 $cityId = null;
                 $citySql = "SELECT city_id FROM city_table WHERE city_name = ? AND is_active = 1 LIMIT 1";
@@ -229,67 +291,62 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $cityStmt->close();
                 
-                // MODIFIED: Check if customer exists by phone number only and update if found
-                $customerSql = "SELECT customer_id, name, email, phone, address_line1, address_line2, city_id 
-                               FROM customers WHERE phone = ?";
-                $customerStmt = $conn->prepare($customerSql);
-                if (!$customerStmt) {
-                    throw new Exception("Failed to prepare customer query: " . $conn->error);
-                }
-                $customerStmt->bind_param("s", $phoneNumber);
-                $customerStmt->execute();
-                $customerResult = $customerStmt->get_result();
-                
+                // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
-                $customerAction = '';
+                $customerFound = false;
                 
-                if ($customerResult->num_rows > 0) {
-                    // Customer exists - UPDATE with new data from CSV
-                    $existingCustomer = $customerResult->fetch_assoc();
-                    $customerId = $existingCustomer['customer_id'];
-                    
-                    // Update customer with new CSV data
-                    $customerUpdateSql = "UPDATE customers SET 
-                                         name = ?, 
-                                         email = ?, 
-                                         address_line1 = ?, 
-                                         address_line2 = ?, 
-                                         city_id = ? 
-                                         WHERE customer_id = ?";
-                    
-                    $customerUpdateStmt = $conn->prepare($customerUpdateSql);
-                    if (!$customerUpdateStmt) {
-                        throw new Exception("Failed to prepare customer update query: " . $conn->error);
-                    }
-                    
-                    $customerUpdateStmt->bind_param("ssssii", 
-                        $fullName, 
-                        $emailForDb, 
-                        $addressLine1, 
-                        $addressLine2, 
-                        $cityId, 
-                        $customerId
-                    );
-                    
-                    if (!$customerUpdateStmt->execute()) {
-                        throw new Exception("Failed to update customer: " . $customerUpdateStmt->error);
-                    }
-                    
-                    $customerUpdateStmt->close();
-                    $customerAction = 'updated';
-                    
-                    // Optional: Log the update for audit purposes
-                    error_log("Customer updated - ID: $customerId, Phone: $phoneNumber, Name: $fullName");
-                    
+                // Build dynamic query based on available data
+                $customerCheckConditions = [];
+                $customerCheckParams = [];
+                $customerCheckTypes = '';
+                
+                // Check Phone Number 1 (always required)
+                $customerCheckConditions[] = "phone = ?";
+                $customerCheckParams[] = $phoneNumber;
+                $customerCheckTypes .= 's';
+                
+                // Check Phone Number 2 if provided
+                if (!empty($phoneNumber2)) {
+                    $customerCheckConditions[] = "phone = ?";
+                    $customerCheckConditions[] = "phone_2 = ?";
+                    $customerCheckParams[] = $phoneNumber2;
+                    $customerCheckParams[] = $phoneNumber2;
+                    $customerCheckTypes .= 'ss';
+                }
+             
+                // Check Email if provided
+                if (!empty($email) && $email !== '-') {
+                    $customerCheckConditions[] = "email = ?";
+                    $customerCheckParams[] = $emailForDb;
+                    $customerCheckTypes .= 's';
+                }
+                
+                // Build the query
+                $customerCheckSql = "SELECT customer_id FROM customers WHERE " . implode(' OR ', $customerCheckConditions) . " LIMIT 1";
+                $customerCheckStmt = $conn->prepare($customerCheckSql);
+                
+                if (!$customerCheckStmt) {
+                    throw new Exception("Failed to prepare customer check query: " . $conn->error);
+                }
+                
+                // Bind parameters dynamically
+                $customerCheckStmt->bind_param($customerCheckTypes, ...$customerCheckParams);
+                $customerCheckStmt->execute();
+                $customerCheckResult = $customerCheckStmt->get_result();
+                
+                if ($customerCheckResult->num_rows > 0) {
+                    // Customer EXISTS - Use existing customer ID, NO UPDATE
+                    $customerId = $customerCheckResult->fetch_assoc()['customer_id'];
+                    $customerFound = true;
                 } else {
-                    // Customer doesn't exist - Create new customer
-                    $customerInsertSql = "INSERT INTO customers (name, email, phone, address_line1, address_line2, city_id) 
-                                         VALUES (?, ?, ?, ?, ?, ?)";
+                    // Customer DOES NOT EXIST - Create NEW customer
+                    $customerInsertSql = "INSERT INTO customers (name, email, phone, phone_2, address_line1, address_line2, city_id) 
+                                         VALUES (?, ?, ?, ?, ?, ?, ?)";
                     $customerInsertStmt = $conn->prepare($customerInsertSql);
                     if (!$customerInsertStmt) {
                         throw new Exception("Failed to prepare customer insert query: " . $conn->error);
                     }
-                    $customerInsertStmt->bind_param("sssssi", $fullName, $emailForDb, $phoneNumber, $addressLine1, $addressLine2, $cityId);
+                    $customerInsertStmt->bind_param("ssssssi", $fullName, $emailForDb, $phoneNumber, $phoneNumber2, $addressLine1, $addressLine2, $cityId);
                     
                     if (!$customerInsertStmt->execute()) {
                         throw new Exception("Failed to create customer: " . $customerInsertStmt->error);
@@ -297,25 +354,20 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     
                     $customerId = $conn->insert_id;
                     $customerInsertStmt->close();
-                    $customerAction = 'created';
-                    
-                    // Optional: Log the creation for audit purposes
-                    error_log("New customer created - ID: $customerId, Phone: $phoneNumber, Name: $fullName");
+                    $customerFound = false;
                 }
-                $customerStmt->close();
+                $customerCheckStmt->close();
                 
-                // Randomly assign to one of the selected users (this is the lead assignee)
+                // Randomly assign to one of the selected users
                 $assignedUserId = $selectedUsers[array_rand($selectedUsers)];
                 
-                // Create order header
-                // user_id = assigned user (who will handle the lead)
-                // created_by = logged-in user (who is importing the leads)
+                // Create order header with CSV data
                 $orderSql = "INSERT INTO order_header (
                     customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
                     pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-                    mobile, city_id, address_line1, address_line2, full_name, call_log, created_by
+                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, call_log, created_by
                 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, 0, ?)";
+                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, 0, ?)";
                 
                 $orderStmt = $conn->prepare($orderSql);
                 if (!$orderStmt) {
@@ -323,11 +375,21 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $notes = !empty($other) ? $other : 'Imported from CSV';
                 
-                // Using the total amount from CSV (no longer needs to match product price)
-                $orderStmt->bind_param("iidsdssisssi", 
-                    $customerId, $assignedUserId, $totalAmountDecimal, $notes, $totalAmountDecimal, 
-                    $productCode, $phoneNumber, $cityId, $addressLine1, $addressLine2, 
-                    $fullName, $loggedInUserId
+                // Bind parameters
+                $orderStmt->bind_param("iidsdsssisssi", 
+                    $customerId,
+                    $assignedUserId,
+                    $totalAmountDecimal,
+                    $notes,
+                    $totalAmountDecimal,
+                    $productCode,
+                    $phoneNumber,
+                    $phoneNumber2,
+                    $cityId,
+                    $addressLine1,
+                    $addressLine2,
+                    $fullName,
+                    $loggedInUserId
                 );
                 
                 if (!$orderStmt->execute()) {
@@ -338,7 +400,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $orderStmt->close();
                 
                 // Create order item
-                $quantity = 1; // Default quantity
+                $quantity = 1;
                 $itemSql = "INSERT INTO order_items (
                     order_id, product_id, quantity, unit_price, discount, total_amount, 
                     pay_status, status, description
@@ -350,7 +412,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $description = "Product: $productCode";
                 
-                // MODIFIED: Use the CSV total amount instead of unit price for calculations
                 $itemStmt->bind_param("iiidds", 
                     $orderId, $productId, $quantity, $totalAmountDecimal, $totalAmountDecimal, $description
                 );
@@ -361,15 +422,13 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 
                 $itemStmt->close();
                 
-                // Track successful order ID for logging
+                // Track successful order ID
                 $successfulOrderIds[] = $orderId;
                 $successCount++;
                 
             } catch (Exception $e) {
                 $errorCount++;
                 $errorMessages[] = "Row $rowNumber: " . $e->getMessage();
-                
-                // Continue processing other rows
                 continue;
             }
         }
@@ -378,36 +437,15 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         
         // Commit transaction
         $conn->commit();
+        $transactionStarted = false;
         
-        // SIMPLIFIED LOGGING - Single log entry with summary
+        // Log the import summary
         if ($successCount > 0 || $errorCount > 0) {
-            // Get assigned user names for better logging
-            $assignedUserNames = [];
-            if (!empty($selectedUsers)) {
-                $userNameSql = "SELECT name FROM users WHERE id IN (" . str_repeat('?,', count($selectedUsers) - 1) . "?) AND status = 'active'";
-                $userNameStmt = $conn->prepare($userNameSql);
-                if ($userNameStmt) {
-                    $userNameStmt->bind_param(str_repeat('i', count($selectedUsers)), ...$selectedUsers);
-                    $userNameStmt->execute();
-                    $userNameResult = $userNameStmt->get_result();
-                    while ($userNameRow = $userNameResult->fetch_assoc()) {
-                        $assignedUserNames[] = $userNameRow['name'];
-                    }
-                    $userNameStmt->close();
-                }
-            }
-            
-            // Create simplified log message
             $logDetails = "Lead uploaded - Success($successCount) | Failed($errorCount)";
-           
             if (!empty($selectedUsers)) {
                 $logDetails .= " | Selected User IDs: " . implode(',', $selectedUsers);
             }
-            
-            // Use the first successful order ID for logging, or 0 if none
             $logOrderId = !empty($successfulOrderIds) ? $successfulOrderIds[0] : 0;
-            
-            // Log the summary
             logUserAction($conn, $loggedInUserId, "lead_upload", $logOrderId, $logDetails);
         }
         
@@ -424,8 +462,9 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         
     } catch (Exception $e) {
         // Rollback transaction on error
-        if ($conn->inTransaction()) {
+        if ($transactionStarted) {
             $conn->rollback();
+            $transactionStarted = false;
         }
         
         if (isset($handle) && is_resource($handle)) {
@@ -438,7 +477,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
     }
 }
 
-// Fetch only active users from the database using prepared statement
+// Fetch only active users
 $usersSql = "SELECT id, name FROM users WHERE status = 'active' ORDER BY name ASC";
 $usersStmt = $conn->prepare($usersSql);
 if (!$usersStmt) {
@@ -454,7 +493,6 @@ if ($usersResult && $usersResult->num_rows > 0) {
 }
 $usersStmt->close();
 
-// Include UI files after processing POST request to avoid header issues
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
@@ -467,13 +505,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
-    <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/leads.css" id="main-style-link" />
 </head>
-<style>
-/* Add this simple CSS to your leads.css file */
 
+<style>
 .alert-info {
     background-color: #d1ecf1;
     border: 1px solid #bee5eb;
@@ -496,15 +532,37 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 .alert-info li {
     margin-bottom: 0.3rem;
 }
+
+.alert-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 5px;
+}
+
+.error-section {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 5px;
+}
+
+.error-section h5 {
+    color: #721c24;
+    margin-bottom: 0.5rem;
+}
 </style>
+
 <body>
-    <!-- Page Loader -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
             
-            <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
                     <div class="page-header-title">
@@ -514,7 +572,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             </div>
 
             <div class="main-content-wrapper">
-                <!-- Display import results/errors -->
                 <?php if (isset($_SESSION['import_result'])): ?>
                     <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
                         <h4>Import Results</h4>
@@ -523,12 +580,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             <p><strong>Failed imports:</strong> <?php echo $_SESSION['import_result']['errors']; ?> records</p>
                             <?php if (!empty($_SESSION['import_result']['messages'])): ?>
                                 <details>
-                                    <summary>View Error Details</summary>
-                                    <ul class="mt-2">
-                                        <?php foreach ($_SESSION['import_result']['messages'] as $message): ?>
-                                            <li><?php echo htmlspecialchars($message); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
+                                    <summary style="cursor: pointer; font-weight: bold;">View Error Details</summary>
+                                    <div class="error-section">
+                                        <ul class="mt-2">
+                                            <?php foreach ($_SESSION['import_result']['messages'] as $message): ?>
+                                                <li><?php echo htmlspecialchars($message); ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
                                 </details>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -545,7 +604,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
                 <div class="lead-upload-container">
                     <form method="POST" enctype="multipart/form-data" id="uploadForm">
-                        <!-- Download CSV Template Section -->
                         <div class="file-upload-section">
                             <a href="/lily_collection/dist/templates/generate_template.php" class="choose-file-btn">
                                 Download CSV Template
@@ -560,22 +618,53 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 </button>
                             </div>
                         </div>
+                        
                         <div class="alert alert-info">
-                            <h4>📋 Upload Guidelines</h4>
+                            <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
-                                <li><strong>Download the template first</strong> - Use the provided CSV template</li>
-                                <li><strong>Required fields:</strong> Full Name, Phone, City, Product Code, Total Amount</li>
-                                <li><strong>Total Amount must be a positive number</strong> - Can be different from product price</li>
-                                <li><strong>Email is optional</strong> - Leave blank if not available</li>
-                                <li><strong>City names must match system database</strong></li>
-                                <li><strong>File limit:</strong> 10MB maximum, CSV format only</li>
-                                <li><strong>Select users</strong> to randomly assign leads to</li>
-                                <li><strong>Customer Update:</strong> Existing customers (same phone) will be updated with new CSV data</li>
+                                <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
+                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code, Total Amount</li>
+                                <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
+                                <li><strong>Select users</strong> to randomly distribute leads</li>
+                                <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
+                                <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
+                            </ul>
+                            
+                            <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
+                            <ul>
+                                <li><strong>Existing customer check:</strong> System searches by Phone 1, Phone 2, OR Email</li>
+                                <li><strong>If ANY match found:</strong> Order created for existing customer (NO customer data update)</li>
+                                <li><strong>If NO match found:</strong> New customer created with all CSV data</li>
+                                <li><strong>Multiple orders allowed:</strong> Same customer can have multiple orders</li>
+                            </ul>
+                            
+                            <h5 style="margin-top: 1rem;">⚠️ Common Errors & Solutions:</h5>
+                            <ul>
+                                <li><strong>"Missing required CSV headers"</strong> → Download fresh template, ensure all column headers are present</li>
+                                <li><strong>"Full Name is required"</strong> → Ensure Full Name column has data</li>
+                                <li><strong>"Phone Number is required"</strong> → Ensure Phone Number column has valid phone</li>
+                                <li><strong>"Phone Number must be exactly 10 digits"</strong> → Use format: 0771234567</li>
+                                <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
+                                <li><strong>"City not found"</strong> → City name must match system database exactly</li>
+                                <li><strong>"Product code not found"</strong> → Verify product code exists and is active</li>
+                                <li><strong>"Total Amount must be positive"</strong> → Enter numeric value > 0</li>
+                                <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
+                            </ul>
+                            
+                            <h5 style="margin-top: 1rem;">💡 Best Practices:</h5>
+                            <ul>
+                                <li>Test with 2-3 rows first before uploading large batches</li>
+                                <li>Phone numbers: System accepts +94771234567, 94771234567, or 0771234567 formats</li>
+                                <li>Keep city names consistent with existing database entries</li>
+                                <li>Use dash (-) or leave empty for optional fields like Email</li>
+                                <li>Check error details if any rows fail - they show specific issues</li>
+                                <li>Successful rows are imported even if some rows have errors</li>
                             </ul>
                         </div>
+                        
                         <hr>
                         
-                        <!-- Select Users Section -->
                         <div class="users-section">
                             <h2 class="section-title">Select Users</h2>
                             <p class="text-muted">Choose which users will receive the imported leads</p>
@@ -594,15 +683,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             </ul>
                         </div>
                         
-                        
-                        <!-- Select All Button -->
                         <?php if (!empty($users)): ?>
                             <button type="button" class="select-all-btn" id="toggleSelectAll">Select All</button>
                         <?php endif; ?>
                         
                         <hr>
                         
-                        <!-- Action Buttons -->
                         <div class="action-buttons">
                             <button type="button" class="action-btn reset-btn" id="resetBtn">Reset</button>
                             <button type="submit" class="action-btn import-btn" id="importBtn">
@@ -615,14 +701,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         </div>
     </div>
 
-    <!-- Footer -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
-
-    <!-- Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
     
     <script>
-        // Form validation
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             const fileInput = document.getElementById('csv_file');
             const userCheckboxes = document.querySelectorAll('#usersList input[type="checkbox"]:checked');
@@ -639,7 +721,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 return false;
             }
             
-            // Show loading state
             const importBtn = document.getElementById('importBtn');
             importBtn.disabled = true;
             importBtn.innerHTML = '⏳ Importing...';
@@ -647,7 +728,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             return true;
         });
         
-        // Toggle select all/deselect all functionality
         const toggleBtn = document.getElementById('toggleSelectAll');
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function() {
@@ -662,37 +742,30 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
         
-        // Reset button functionality
         document.getElementById('resetBtn').addEventListener('click', function() {
             if (confirm('Are you sure you want to reset the form?')) {
-                // Uncheck all checkboxes
                 document.querySelectorAll('#usersList input[type="checkbox"]').forEach(checkbox => {
                     checkbox.checked = false;
                 });
                 
-                // Reset file input
                 document.getElementById('csv_file').value = '';
                 document.getElementById('file-name').textContent = 'No file selected';
                 
-                // Reset the select all button text
                 if (toggleBtn) {
                     toggleBtn.textContent = 'Select All';
                 }
                 
-                // Reset import button
                 const importBtn = document.getElementById('importBtn');
                 importBtn.disabled = false;
                 importBtn.innerHTML = '📤 Import Leads';
             }
         });
         
-        // Show selected file name and validate file type
         document.getElementById('csv_file').addEventListener('change', function() {
             const file = this.files[0];
             const fileNameEl = document.getElementById('file-name');
             
             if (file) {
-                // Check file extension
                 const validExtensions = ['.csv'];
                 const fileName = file.name.toLowerCase();
                 const isValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
@@ -704,8 +777,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     return;
                 }
                 
-                // Check file size (10MB limit)
-                const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                const maxSize = 10 * 1024 * 1024;
                 if (file.size > maxSize) {
                     alert('File size must be less than 10MB.');
                     this.value = '';

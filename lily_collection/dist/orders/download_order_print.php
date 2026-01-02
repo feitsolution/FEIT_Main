@@ -11,12 +11,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
-// Include the database connection filea
+// Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
-
 // =============================================================
-//  BRANDING DATA - GET FROM DB
+//  BRANDING DATA - GET FROM DB (INCLUDING LOGO FROM DATABASE)
 // =============================================================
 $branding_sql = "SELECT * FROM branding WHERE active = 1 LIMIT 1";
 $branding_result = $conn->query($branding_sql);
@@ -27,7 +26,26 @@ $company_name = !empty($branding['company_name']) ? $branding['company_name'] : 
 $company_address = !empty($branding['address']) ? $branding['address'] : "";
 $company_email = !empty($branding['email']) ? $branding['email'] : "";
 $company_hotline = !empty($branding['hotline']) ? $branding['hotline'] : "";
-$company_logo = "/lily_collection/dist/assets/images/lily.jpeg";
+
+//  GET LOGO FROM DATABASE (NOT HARDCODED)
+if (!empty($branding['logo_url'])) {
+    // Check if it's a full URL (starts with http/https)
+    if (strpos($branding['logo_url'], 'http') === 0) {
+        $company_logo = $branding['logo_url'];
+    } 
+    // Check if it already has the full path
+    else if (strpos($branding['logo_url'], '/lily_collection/') === 0) {
+        $company_logo = $branding['logo_url'];
+    }
+    // Otherwise, it's a relative path from dist folder
+    else {
+        $company_logo = '/lily_collection/dist/' . ltrim($branding['logo_url'], '/');
+    }
+} else {
+    // Fallback if no logo in database
+    $company_logo = '';
+    error_log("WARNING: No logo_url found in branding table");
+}
 
 
 // =============================================================
@@ -41,36 +59,47 @@ $order_id = $_GET['id'];
 
 
 // =============================================================
-//  ORDER HEADER QUERY
+//  ORDER HEADER QUERY - REVISED FOR CUSTOMER DATA PRECEDENCE
+//  Prioritizes order_header fields (o) over customer table fields (c)
 // =============================================================
-$order_query = "SELECT o.*, c.name as customer_name, c.phone as customer_phone, 
-                c.phone_2 as customer_phone_2,
-                c.email as customer_email, c.city_id,
-                CONCAT_WS(', ', c.address_line1, c.address_line2) as customer_address,
-                o.delivery_fee, o.discount, o.total_amount, o.issue_date, o.tracking_number,
-                o.pay_status, o.pay_by, o.pay_date,
-                cr.courier_name as delivery_service,
-                ct.city_name,
+$order_query = "
+    SELECT 
+        o.*, 
+        
+        -- 1. Full Name: Prefer o.full_name, fall back to c.name
+        COALESCE(NULLIF(o.full_name, ''), c.name, 'Unknown Customer') as display_name,
 
-                COALESCE(NULLIF(o.full_name, ''), c.name, 'Unknown Customer') as display_name,
-                COALESCE(NULLIF(o.mobile, ''), c.phone, 'No phone') as display_mobile,
-                c.phone_2 as display_mobile_2,
+        -- 2. Mobile: Prefer o.mobile, fall back to c.phone
+        COALESCE(NULLIF(o.mobile, ''), c.phone, 'No phone') as display_mobile,
+        c.phone_2 as display_mobile_2, -- Secondary phone is usually only on customer table
 
-                COALESCE(
-                    NULLIF(CONCAT_WS(', ', NULLIF(o.address_line1, ''), NULLIF(o.address_line2, '')), ''),
-                    NULLIF(CONCAT_WS(', ', 
-                        NULLIF(c.address_line1, ''), 
-                        NULLIF(c.address_line2, ''), 
-                        ct.city_name
-                    ), ''),
-                    'Address not available'
-                ) as display_address
-                
-                FROM order_header o 
-                LEFT JOIN customers c ON o.customer_id = c.customer_id
-                LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
-                LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
-                WHERE o.order_id = ?";
+        -- 3. City ID: Prefer o.city_id, fall back to c.city_id
+        COALESCE(o.city_id, c.city_id) as final_city_id,
+        
+        -- 4. Address: Prefer o.address_line1/2, fall back to c.address_line1/2
+        COALESCE(
+            NULLIF(CONCAT_WS(', ', NULLIF(o.address_line1, ''), NULLIF(o.address_line2, '')), ''), 
+            NULLIF(CONCAT_WS(', ', NULLIF(c.address_line1, ''), NULLIF(c.address_line2, '')), ''),
+            'Address not available'
+        ) as display_address,
+        
+        -- Other details from Order Header and Joins
+        o.delivery_fee, o.discount, o.total_amount, o.issue_date, o.tracking_number,
+        o.pay_status, o.pay_by, o.pay_date,
+        
+        cr.courier_name as delivery_service,
+        ct.city_name -- City name from the joined city_table
+
+    FROM order_header o 
+    LEFT JOIN customers c ON o.customer_id = c.customer_id
+    LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
+    
+    -- Join city_table using the preferred city_id (o.city_id or c.city_id)
+    LEFT JOIN city_table ct ON 
+        ct.city_id = COALESCE(o.city_id, c.city_id) 
+        AND ct.is_active = 1
+        
+    WHERE o.order_id = ?";
 
 $stmt = $conn->prepare($order_query);
 $stmt->bind_param("i", $order_id);
@@ -80,7 +109,6 @@ $result = $stmt->get_result();
 if ($result->num_rows === 0) {
     die("Order not found");
 }
-
 
 $order = $result->fetch_assoc();
 
@@ -113,6 +141,7 @@ while ($item = $items_result->fetch_assoc()) {
 $currency = isset($order['currency']) ? strtolower($order['currency']) : 'lkr';
 $currencySymbol = ($currency == 'usd') ? '$' : 'Rs.';
 
+// Calculations based on fetched data
 $subtotal = floatval($order['total_amount']) - floatval($order['delivery_fee']) + floatval($order['discount']);
 $delivery_fee = floatval($order['delivery_fee']);
 $discount = floatval($order['discount']);
@@ -148,19 +177,7 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Print - <?php echo $order_id; ?></title>
     <link rel="stylesheet" href="../assets/css/print.css" id="main-style-link" />
-    <style>
-        .payment-badge {
-            display: inline-block;
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-            margin-top: 2mm;
-        }
-    </style>
+
 </head>
 
 <body>
@@ -169,11 +186,16 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
 
         <table class="main-table">
 
-            <!-- HEADER SECTION WITH BRANDING -->
             <tr>
                 <td class="header-section" colspan="2">
                     <div class="company-logo">
-                      <img src="<?php echo htmlspecialchars($company_logo); ?>" alt="Company Logo">
+                        <?php if (!empty($company_logo)): ?>
+                            <img src="<?php echo htmlspecialchars($company_logo); ?>" alt="Company Logo">
+                        <?php else: ?>
+                            <div style="font-weight: bold; font-size: 14px; color: #333;">
+                                <?php echo htmlspecialchars($company_name); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="company-name">
@@ -192,7 +214,6 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                     </div>
                 </td>
 
-                <!-- ORDER ID + BARCODE -->
                 <td class="order-id-cell">
                     <div style="font-weight:bold;">
                         Order ID: <?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?>
@@ -221,7 +242,6 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             </tr>
 
 
-            <!-- DELIVERY SERVICE -->
             <tr>
                 <td class="delivery-service-cell" colspan="3" style="padding: 2mm; border: 1px solid #ddd;">
                     <div style="margin-bottom: 2mm;">
@@ -246,7 +266,6 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             </tr>
 
 
-            <!-- PRODUCT LIST -->
             <tr>
                 <td class="product-header" colspan="3">
                     <strong>Products :</strong>
@@ -265,14 +284,12 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
             </tr>
 
 
-            <!-- CUSTOMER DETAILS HEADER (No border between header and info) -->
             <tr>
                 <td class="customer-header" colspan="3" style="border-bottom: none;">
                     <strong>Customer Details</strong>
                 </td>
             </tr>
 
-            <!-- CUSTOMER DETAILS INFO -->
             <tr>
                 <td class="customer-info" colspan="3" style="padding: 2mm; font-size: 11px; line-height: 1.4; border-top: none;">
                     <strong>Name:</strong> <?php echo htmlspecialchars($order['display_name']); ?><br>
@@ -282,12 +299,14 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                     <?php endif; ?><br>
                     <strong>Address:</strong> <?php echo htmlspecialchars($order['display_address']); ?><br>
                     <strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'N/A'; ?>
+                    <?php if (!empty($order['final_city_id'])): ?>
+                    
+                    <?php endif; ?>
                 </td>
             </tr>
 
 
             <?php if (!$is_paid): ?>
-            <!-- SUMMARY SECTION - Only show when NOT paid -->
             <tr>
                 <td class="totals-header">Summary</td>
                 <td class="totals-header" colspan="2">Amount</td>
@@ -306,7 +325,6 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                 </td>
             </tr>
 
-            <!-- TOTAL PAYABLE -->
             <tr>
                 <td class="total-payable">TOTAL PAYABLE</td>
                 <td class="total-payable amount" colspan="2">

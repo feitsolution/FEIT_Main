@@ -23,18 +23,26 @@ $order_id = $_GET['id'];
 $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] === 'true';
 
 // ==========================================
-// ✅ CHANGE 1: Added c.phone_2 to SELECT query
+// ✅ FIXED QUERY: Get data from order_header FIRST, fallback to customers table
+// Priority: order_header fields > customers table fields
 // ==========================================
-// Updated query to include payment slip information and phone_2
 $order_query = "SELECT 
-                i.*, 
-                i.pay_status AS order_pay_status, 
-                c.name AS customer_name, 
-                CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
-                c.email AS customer_email, 
-                c.phone AS customer_phone,
-                c.phone_2 AS customer_phone_2,
+                oh.*, 
+                oh.pay_status AS order_pay_status,
+                
+                -- Customer data (always from order_header)
+                oh.customer_id,
+                oh.full_name AS customer_name,
+                oh.mobile AS customer_phone,
+                oh.mobile_2 AS customer_phone_2,
+                oh.address_line1 AS customer_address_line1,
+                oh.address_line2 AS customer_address_line2,
+                oh.city_id,
+                
+                -- City name lookup
                 city.city_name AS customer_city,
+                
+                -- Payment information
                 p.payment_id, 
                 p.amount_paid, 
                 p.payment_method, 
@@ -42,18 +50,19 @@ $order_query = "SELECT
                 p.pay_by,
                 r.name AS paid_by_name, 
                 u.name AS user_name,
-                i.delivery_fee, 
-                i.pay_by AS order_pay_by, 
-                i.pay_date AS order_pay_date, 
-                i.slip AS payment_slip
-            FROM order_header i
-            LEFT JOIN customers c ON i.customer_id = c.customer_id
-            LEFT JOIN city_table city ON c.city_id = city.city_id
-            LEFT JOIN payments p ON i.order_id = p.order_id
+                
+                -- Order details
+                oh.delivery_fee, 
+                oh.pay_by AS order_pay_by, 
+                oh.pay_date AS order_pay_date, 
+                oh.slip AS payment_slip
+                
+            FROM order_header oh
+            LEFT JOIN city_table city ON oh.city_id = city.city_id
+            LEFT JOIN payments p ON oh.order_id = p.order_id
             LEFT JOIN roles r ON p.pay_by = r.id
-            LEFT JOIN users u ON i.user_id = u.id
-            WHERE i.order_id = ?";
-
+            LEFT JOIN users u ON oh.user_id = u.id
+            WHERE oh.order_id = ?";
 
 $stmt = $conn->prepare($order_query);
 
@@ -71,6 +80,18 @@ if ($result->num_rows === 0) {
 }
 
 $order = $result->fetch_assoc();
+
+// ==========================================
+// ✅ FORMAT CUSTOMER ADDRESS
+// Combine address lines for display
+// ==========================================
+$customer_address = '';
+if (!empty($order['customer_address_line1'])) {
+    $customer_address .= $order['customer_address_line1'];
+}
+if (!empty($order['customer_address_line2'])) {
+    $customer_address .= !empty($customer_address) ? ', ' . $order['customer_address_line2'] : $order['customer_address_line2'];
+}
 
 // Get currency from order
 $currency = isset($order['currency']) ? strtolower($order['currency']) : 'lkr';
@@ -130,6 +151,7 @@ if (isset($order['order_pay_status']) && !empty($order['order_pay_status'])) {
 }
 
 // Fetch company information from branding table (UPDATED TO INCLUDE LOGO)
+// Fetch company information from branding table (UPDATED TO ALWAYS USE DB LOGO)
 $branding_query = "SELECT company_name, address, hotline, email, logo_url FROM branding WHERE active = 1 LIMIT 1";
 $branding_result = $conn->query($branding_query);
 
@@ -138,30 +160,33 @@ if ($branding_result && $branding_result->num_rows > 0) {
     // Clean up the address - remove extra backslashes and format properly
     $company['address'] = str_replace(['\\\\r\\\\n', '\\r\\n', '\\n'], "\n", $company['address']);
     
-    // Set logo URL - use from database if available, otherwise use default
+    // ==========================================
+    // ✅ ALWAYS USE LOGO FROM DATABASE
+    // ==========================================
     if (!empty($company['logo_url'])) {
-        // If logo_url is a full path, use it directly; otherwise prepend the base path
+        // Check if it's a full URL (starts with http/https)
         if (strpos($company['logo_url'], 'http') === 0) {
             $logo_url = $company['logo_url'];
-        } else {
-            // Assuming logo_url stores relative path like 'uploads/logos/logo.png'
-            $logo_url = '/lily_collection/dist/' . $company['logo_url'];
+        } 
+        // Check if it already has the full path
+        else if (strpos($company['logo_url'], '/lily_collection/') === 0) {
+            $logo_url = $company['logo_url']; // Already has full path
+        }
+        // Otherwise, it's a relative path from dist folder
+        else {
+            $logo_url = '/lily_collection/dist/' . ltrim($company['logo_url'], '/');
         }
     } else {
-        // Fallback to default logo
-        $logo_url = '../assets/images/lily.jpeg';
+        // If logo_url is empty in DB, show error instead of fallback
+        $logo_url = '';
+        error_log("WARNING: No logo_url found in branding table for active branding record");
     }
 } else {
-    // Fallback to default company info if branding not found
-    $company = [
-        'company_name' => 'FE IT Solutions pvt (Ltd)',
-        'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
-        'email' => 'info@feitsolutions.com',
-        'hotline' => '011-2824524'
-    ];
-    $logo_url = '../assets/images/lily.jpeg';
+    // If no active branding record found, show error
+    $logo_url = '';
+    error_log("ERROR: No active branding record found in database");
+    die("Error: Company branding not configured. Please contact administrator.");
 }
-
 // Function to get the color for payment status
 function getPaymentStatusColor($status)
 {
@@ -216,6 +241,18 @@ $has_any_discount = $total_item_discounts > 0 || floatval($order['discount']) > 
 
 // Count how many columns we need to display in the table
 $column_count = $has_any_discount ? 5 : 4;
+
+// ==========================================
+// ✅ DEBUG LOGGING (REMOVE IN PRODUCTION)
+// ==========================================
+error_log("DEBUG - Invoice Display for Order #$order_id:");
+error_log("  - Customer Name: " . $order['customer_name']);
+error_log("  - Customer Phone: " . $order['customer_phone']);
+error_log("  - Customer Phone 2: " . ($order['customer_phone_2'] ?? 'NULL'));
+error_log("  - Address Line 1: " . $order['customer_address_line1']);
+error_log("  - Address Line 2: " . $order['customer_address_line2']);
+error_log("  - City: " . $order['customer_city']);
+error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (fallback)' : 'order_header table'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -322,12 +359,21 @@ $column_count = $has_any_discount ? 5 : 4;
             object-fit: contain;
         }
 
-        /* ==========================================
-           ✅ CHANGE 2: Added styling for secondary phone
-           ========================================== */
+        /* Phone number styling */
         .phone-secondary {
             color: #666;
             font-size: 0.95em;
+        }
+
+        /* Data source indicator (for debugging - remove in production) */
+        .data-source-debug {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 8px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #004085;
         }
 
         /* Make alerts responsive */
@@ -450,13 +496,23 @@ $column_count = $has_any_discount ? 5 : 4;
         }
         ?>
 
+        <?php
+        // ==========================================
+        // ✅ DEBUG INFO (REMOVE IN PRODUCTION)
+        // Shows where the data is coming from
+        // ==========================================
+        $data_source = empty($order['full_name']) ? 'Customers Table (Fallback)' : 'Order Header Table';
+        ?>
+        <!-- REMOVE THIS SECTION IN PRODUCTION -->
+        <!-- <div class="data-source-debug">
+            ℹ️ <strong>Data Source:</strong> <?php echo $data_source; ?> 
+            <?php if (empty($order['full_name'])): ?>
+                (Order header fields were empty, displaying from customers table)
+            <?php endif; ?>
+        </div> -->
+
         <?php if (!$autoPrint): ?>
             <div class="control-buttons">
-                <!-- COMMENTED OUT: Print functionality disabled -->
-                <!-- <button class="btn btn-primary" onclick="window.print()">Print Invoice</button> -->
-                <!-- <button class="btn btn-secondary"
-                    onclick="window.location.href='download_order_print.php?id=<?php echo $order_id; ?>'">Print</button> -->
-
                 <?php if ($show_payment_details && $orderPayStatus != 'paid'): ?>
                     <button id="markAsPaidBtn" class="btn btn-success">Mark as Paid</button>
                 <?php endif; ?>
@@ -464,17 +520,23 @@ $column_count = $has_any_discount ? 5 : 4;
         <?php endif; ?>
 
         <div class="order-header">
-            <div class="company-logo">
-                <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo"
-                     onerror="this.onerror=null; this.src='../assets/images/lily.jpeg';">
-            </div>
+           <div class="company-logo">
+    <?php if (!empty($logo_url)): ?>
+        <!-- Show logo if available in database -->
+        <img src="<?php echo htmlspecialchars($logo_url); ?>" 
+             alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo">
+    <?php else: ?>
+        <!-- Show company name if no logo -->
+        <h6 style="margin: 0; color: #333; font-weight: bold;">
+            <?php echo htmlspecialchars($company['company_name']); ?>
+        </h6>
+    <?php endif; ?>
+</div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>
                 <div class="order-date">Date Issued: <?php echo date('Y-m-d', strtotime($order['issue_date'])); ?>
                 </div>
                 <div>Due Date: <?php echo date('Y-m-d', strtotime($order['due_date'])); ?></div>
-                <!-- Add this line to display just the created time -->
                 <div>Created Time: <?php echo date('H:i:s', strtotime($order['created_at'])); ?></div>
                 <div class="pay-status">
                     Pay Status:
@@ -485,7 +547,7 @@ $column_count = $has_any_discount ? 5 : 4;
                 
                 <?php if (!empty($order['user_name'])): ?>
                     <div class="pay-by-info">
-                        <strong>Pay By:</strong> <?php echo htmlspecialchars($order['user_name']); ?> (ID: <?php echo $order['user_id']; ?>)
+                        <strong>Created By:</strong> <?php echo htmlspecialchars($order['user_name']); ?> (ID: <?php echo $order['user_id']; ?>)
                     </div>
                 <?php endif; ?>
 
@@ -512,15 +574,17 @@ $column_count = $has_any_discount ? 5 : 4;
                 <div class="billing-title">Billing To :</div>
                 <div class="billing-info">
                     <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong><br>
-                    <?php echo nl2br(htmlspecialchars($order['customer_address'])); ?><br>
-                    City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
+                    <?php echo nl2br(htmlspecialchars($customer_address)); ?><br>
+                    <?php if (!empty($order['customer_city'])): ?>
+                        City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
+                    <?php endif; ?>
                     
                     <?php 
                     // ==========================================
-                    // ✅ CHANGE 3: Display phone numbers with phone_2 support
+                    // ✅ Display phone numbers from order_header (with fallback to customers table)
                     // ==========================================
                     ?>
-                    PhoneNumber 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    Phone Number 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
                     <?php if (!empty($order['customer_phone_2'])): ?>
                         <br><span class="phone-secondary">Phone Number 2: <?php echo htmlspecialchars($order['customer_phone_2']); ?></span>
                     <?php endif; ?>
@@ -641,7 +705,7 @@ $column_count = $has_any_discount ? 5 : 4;
         <?php endif; ?>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // COMMENTED OUT: Auto print functionality disabled
         /*
@@ -693,12 +757,13 @@ $column_count = $has_any_discount ? 5 : 4;
         
     </script>
     <script>
-        // Auto redirect after 5 seconds
+        // Auto redirect after 10 seconds
         setTimeout(function() {
             window.location.href = 'create_order.php';
         }, 10000);
-    </script>
-</body>
+
+  </script>
+        </body>
 
 </html>
 <?php

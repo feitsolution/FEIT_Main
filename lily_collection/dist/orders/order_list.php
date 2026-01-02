@@ -94,29 +94,44 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
             WHERE i.interface IN ('individual', 'leads') AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
 
 // Main query with all required joins - Updated to use user_id instead of created_by
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+// Main query with all required joins - UPDATED to prioritize order_header customer data
+$sql = "SELECT i.*, 
+               -- Customer info: Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
+               
+               -- User information
                u2.name as user_name,
-               i.slip as payment_slip, i.pay_status as order_pay_status,
+               
+               -- Order details
+               i.slip as payment_slip, 
+               i.pay_status as order_pay_status,
                i.updated_at as order_updated_at
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.user_id = u2.id
-        WHERE i.interface IN ('individual', 'leads') AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
-
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
+        WHERE i.interface IN ('individual', 'leads') 
+        AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
 
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality) - Updated to use user_name
+// General search condition - UPDATED to use order_header fields
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -125,7 +140,6 @@ if (!empty($search)) {
                         i.pay_status LIKE '%$searchTerm%' OR
                         i.created_at LIKE '%$searchTerm% OR
                         u2.name LIKE '%$searchTerm%')";
-                        
 }
 
 // Specific Order ID filter
@@ -134,10 +148,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// Specific Customer Name filter - UPDATED to use order_header full_name
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 //Specific User ID filter - MODIFIED: Apply role-based restrictions
@@ -506,7 +520,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         </td>
 
                                         
-                                        <!-- Customer Name with ID -->
+                                    <!-- Customer Name with ID -->
                                         <td class="customer-name">
                                             <?php
                                             $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';

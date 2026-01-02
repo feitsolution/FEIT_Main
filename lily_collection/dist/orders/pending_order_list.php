@@ -61,7 +61,6 @@ $customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['custo
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
-$call_log_filter = isset($_GET['call_log_filter']) ? trim($_GET['call_log_filter']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -82,31 +81,50 @@ if ($current_user_role != 1) {
 
 // Base SQL for counting total records
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.created_by = u2.id
-             WHERE i.interface IN ('individual', 'leads') AND i.status = 'pending'$roleBasedCondition";
+             WHERE i.interface IN ('individual', 'leads') 
+             AND i.status = 'pending'$roleBasedCondition";
 
 // Main query with all required joins
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+// Main query with all required joins - UPDATED to fetch customer name from customers table as fallback
+$sql = "SELECT i.*, 
+               -- Customer info: Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               
+               -- Payment information
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
-               u2.name as creator_name
+               
+               -- User who created the order
+               u2.name as creator_name,
+               
+               -- Order details
+               i.slip as payment_slip,
+               i.pay_status,
+               i.created_at,
+               i.call_log
         FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
-        LEFT JOIN users u2 ON i.created_by = u2.id
-        WHERE i.interface IN ('individual', 'leads') AND i.status = 'pending'$roleBasedCondition";
+        LEFT JOIN users u2 ON i.user_id = u2.id
+        LEFT JOIN customers c ON i.customer_id = c.customer_id
+        WHERE i.interface IN ('individual', 'leads') 
+        AND i.status = 'pending'$roleBasedCondition";
 
+// Build search conditions
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality)
+// General search condition - UPDATED to use order_header fields
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -120,10 +138,10 @@ if (!empty($order_id_filter)) {
     $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
 }
 
-// Specific Customer Name filter
+// Specific Customer Name filter - UPDATED
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Date range filter
@@ -143,13 +161,7 @@ if (!empty($pay_status_filter)) {
     $searchConditions[] = "i.pay_status = '$payStatusTerm'";
 }
 
-// Call Log Status filter
-if ($call_log_filter !== '') {
-    $callLogTerm = $conn->real_escape_string($call_log_filter);
-    $searchConditions[] = "i.call_log = '$callLogTerm'";
-}
-
-// Apply all search conditions
+// Apply search conditions
 if (!empty($searchConditions)) {
     $finalSearchCondition = " AND (" . implode(' AND ', $searchConditions) . ")";
     $countSql .= $finalSearchCondition;
@@ -267,17 +279,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
                             </select>
                         </div>
-
-                                <!-- NEW CALL LOG FILTER -->
-                            <div class="form-group">
-                                <label for="call_log_filter">Call Status</label>
-                                <select id="call_log_filter" name="call_log_filter">
-                                    <option value="">All Call Status</option>
-                                    <option value="1" <?php echo ($call_log_filter == '1') ? 'selected' : ''; ?>>Answered</option>
-                                    <option value="0" <?php echo ($call_log_filter == '0') ? 'selected' : ''; ?>>No Answer</option>
-                                </select>
-                            </div>
-
                         
                         <div class="form-group">
                             <div class="button-group">
@@ -354,13 +355,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
                         </td>             
                         <!-- Customer Name with ID -->
-                        <td class="customer-name">
-                            <?php
-                            $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
-                            $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
-                            echo $customerName . ($customerId ? " ($customerId)" : "");
-                            ?>
-                        </td>
+                     <td class="customer-name">
+    <?php
+    $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
+    $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
+    echo $customerName . ($customerId ? " ($customerId)" : "");
+    ?>
+</td>
                   <td class="date-range">
     <?php
     // Issue & Due dates (DATE only)
@@ -2554,18 +2555,6 @@ document.addEventListener('DOMContentLoaded', function() {
     dispatchTypeContainer.style.display = 'none';
 });
 
-
-function clearFilters() {
-    document.getElementById('order_id_filter').value = '';
-    document.getElementById('customer_name_filter').value = '';
-    document.getElementById('date_from').value = '';
-    document.getElementById('date_to').value = '';
-    document.getElementById('pay_status_filter').value = '';
-    document.getElementById('call_log_filter').value = '';
-    
-    // Reload page without query parameters
-    window.location.href = window.location.pathname;
-}
  </script>
 
     <!-- Include Footer and Scripts -->
