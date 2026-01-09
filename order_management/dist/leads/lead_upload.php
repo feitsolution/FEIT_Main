@@ -78,6 +78,22 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         }
         $userValidationStmt->close();
         
+        // Fetch delivery fee from branding table (active branding only)
+        $deliveryFee = 0.00;
+        $brandingSql = "SELECT delivery_fee FROM branding WHERE active = 1 LIMIT 1";
+        $brandingStmt = $conn->prepare($brandingSql);
+        if (!$brandingStmt) {
+            throw new Exception("Failed to prepare branding query: " . $conn->error);
+        }
+        $brandingStmt->execute();
+        $brandingResult = $brandingStmt->get_result();
+        
+        if ($brandingResult->num_rows > 0) {
+            $brandingData = $brandingResult->fetch_assoc();
+            $deliveryFee = (float)$brandingData['delivery_fee'];
+        }
+        $brandingStmt->close();
+        
         // Process CSV file
         $csvFile = $_FILES['csv_file']['tmp_name'];
         $handle = fopen($csvFile, 'r');
@@ -252,8 +268,11 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Total Amount must be a positive number");
                 }
                 
-                // Convert total amount to decimal
-                $totalAmountDecimal = (float)$totalAmount;
+                // Convert total amount to decimal (this is the subtotal/product price)
+                $subtotal = (float)$totalAmount;
+                
+                // Calculate final total amount = subtotal + delivery fee
+                $finalTotalAmount = $subtotal + $deliveryFee;
                 
                 // Check if product exists and is active
                 $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND status = 'active'";
@@ -361,13 +380,14 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 // Randomly assign to one of the selected users
                 $assignedUserId = $selectedUsers[array_rand($selectedUsers)];
                 
-                // Create order header with CSV data
+                // Create order header with CSV data and delivery fee
                 $orderSql = "INSERT INTO order_header (
                     customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
                     pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, call_log, created_by
+                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, call_log, 
+                    created_by, delivery_fee
                 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, 0, ?)";
+                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, 0, ?, ?)";
                 
                 $orderStmt = $conn->prepare($orderSql);
                 if (!$orderStmt) {
@@ -375,13 +395,13 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $notes = !empty($other) ? $other : 'Imported from CSV';
                 
-                // Bind parameters
-                $orderStmt->bind_param("iidsdsssisssi", 
+                // Bind parameters (including delivery_fee at the end)
+                $orderStmt->bind_param("iidsdsssisssid", 
                     $customerId,
                     $assignedUserId,
-                    $totalAmountDecimal,
+                    $subtotal,              // subtotal (product price from CSV)
                     $notes,
-                    $totalAmountDecimal,
+                    $finalTotalAmount,      // total_amount (subtotal + delivery fee)
                     $productCode,
                     $phoneNumber,
                     $phoneNumber2,
@@ -389,7 +409,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $addressLine1,
                     $addressLine2,
                     $fullName,
-                    $loggedInUserId
+                    $loggedInUserId,
+                    $deliveryFee            // delivery_fee from branding table
                 );
                 
                 if (!$orderStmt->execute()) {
@@ -399,7 +420,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $orderId = $conn->insert_id;
                 $orderStmt->close();
                 
-                // Create order item
+                // Create order item (using subtotal, not final total)
                 $quantity = 1;
                 $itemSql = "INSERT INTO order_items (
                     order_id, product_id, quantity, unit_price, discount, total_amount, 
@@ -413,7 +434,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $description = "Product: $productCode";
                 
                 $itemStmt->bind_param("iiidds", 
-                    $orderId, $productId, $quantity, $totalAmountDecimal, $totalAmountDecimal, $description
+                    $orderId, $productId, $quantity, $subtotal, $subtotal, $description
                 );
                 
                 if (!$itemStmt->execute()) {
@@ -441,7 +462,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         
         // Log the import summary
         if ($successCount > 0 || $errorCount > 0) {
-            $logDetails = "Lead uploaded - Success($successCount) | Failed($errorCount)";
+            $logDetails = "Lead uploaded - Success($successCount) | Failed($errorCount) | Delivery Fee: " . number_format($deliveryFee, 2);
             if (!empty($selectedUsers)) {
                 $logDetails .= " | Selected User IDs: " . implode(',', $selectedUsers);
             }
@@ -453,7 +474,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         $_SESSION['import_result'] = [
             'success' => $successCount,
             'errors' => $errorCount,
-            'messages' => $errorMessages
+            'messages' => $errorMessages,
+            'delivery_fee' => $deliveryFee
         ];
         
         // Redirect to avoid resubmission
@@ -492,6 +514,19 @@ if ($usersResult && $usersResult->num_rows > 0) {
     }
 }
 $usersStmt->close();
+
+// Fetch current delivery fee for display
+$currentDeliveryFee = 0.00;
+$deliveryFeeSql = "SELECT delivery_fee FROM branding WHERE active = 1 LIMIT 1";
+$deliveryFeeStmt = $conn->prepare($deliveryFeeSql);
+if ($deliveryFeeStmt) {
+    $deliveryFeeStmt->execute();
+    $deliveryFeeResult = $deliveryFeeStmt->get_result();
+    if ($deliveryFeeResult->num_rows > 0) {
+        $currentDeliveryFee = (float)$deliveryFeeResult->fetch_assoc()['delivery_fee'];
+    }
+    $deliveryFeeStmt->close();
+}
 
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
@@ -555,6 +590,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     color: #721c24;
     margin-bottom: 0.5rem;
 }
+
+.delivery-fee-badge {
+    display: inline-block;
+    background-color: #28a745;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
 </style>
 
 <body>
@@ -576,6 +621,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                     <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
                         <h4>Import Results</h4>
                         <p><strong>Successfully imported:</strong> <?php echo $_SESSION['import_result']['success']; ?> records</p>
+                        <?php if (isset($_SESSION['import_result']['delivery_fee'])): ?>
+                            <p><strong>Delivery fee applied:</strong> LKR <?php echo number_format($_SESSION['import_result']['delivery_fee'], 2); ?></p>
+                        <?php endif; ?>
                         <?php if ($_SESSION['import_result']['errors'] > 0): ?>
                             <p><strong>Failed imports:</strong> <?php echo $_SESSION['import_result']['errors']; ?> records</p>
                             <?php if (!empty($_SESSION['import_result']['messages'])): ?>
@@ -603,6 +651,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 <?php endif; ?>
 
                 <div class="lead-upload-container">
+                    <div class="delivery-fee-badge">
+                        🚚 Current Delivery Fee: LKR <?php echo number_format($currentDeliveryFee, 2); ?>
+                    </div>
+                    
                     <form method="POST" enctype="multipart/form-data" id="uploadForm">
                         <div class="file-upload-section">
                             <a href="/order_management/dist/templates/generate_template.php" class="choose-file-btn">
@@ -629,6 +681,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
                                 <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
+                                <li><strong>Delivery fee:</strong> LKR <?php echo number_format($currentDeliveryFee, 2); ?> will be automatically added to each order</li>
+                            </ul>
+                            
+                            <h5 style="margin-top: 1rem;">💰 Pricing Calculation:</h5>
+                            <ul>
+                                <li><strong>Subtotal:</strong> The "Total Amount" from your CSV (product price)</li>
+                                <li><strong>Delivery Fee:</strong> LKR <?php echo number_format($currentDeliveryFee, 2); ?> (fetched from branding settings)</li>
+                                <li><strong>Final Total:</strong> Subtotal + Delivery Fee</li>
+                                <li><strong>Example:</strong> If CSV Total Amount = 5000, Final Total = 5000 + <?php echo number_format($currentDeliveryFee, 2); ?> = <?php echo number_format(5000 + $currentDeliveryFee, 2); ?></li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
@@ -660,6 +721,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li>Use dash (-) or leave empty for optional fields like Email</li>
                                 <li>Check error details if any rows fail - they show specific issues</li>
                                 <li>Successful rows are imported even if some rows have errors</li>
+                                <li>Total Amount in CSV should be product price only (delivery fee added automatically)</li>
                             </ul>
                         </div>
                         
