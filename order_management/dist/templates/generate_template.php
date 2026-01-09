@@ -18,6 +18,7 @@ header('Expires: 0');
 $header = [
     'Full Name',
     'Phone Number', 
+    'Phone Number 2',
     'City',
     'Email',
     'Address Line 1',
