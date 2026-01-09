@@ -293,7 +293,7 @@ $role_sql = "SELECT DISTINCT r.name as role FROM roles r WHERE r.name IS NOT NUL
 $role_result = $conn->query($role_sql);
 $roles = [];
 if ($role_result && $role_result->num_rows > 0) {
-    $roles = $role_result->fetch_all(order_managementSQLI_ASSOC);
+    $roles = $role_result->fetch_all(MYSQLI_ASSOC);  // ← FIXED: Changed from order_managementSQLI_ASSOC
 }
 
 /**
