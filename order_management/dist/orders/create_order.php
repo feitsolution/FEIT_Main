@@ -1219,18 +1219,16 @@ const ProductManager = {
         let subtotalAfterDiscount = subtotal - totalDiscount;
         const hasProducts = ProductManager.checkForProducts();
 
-        // ===== NEW LOGIC: Free delivery for orders >= 5000 =====
-        let finalDeliveryFee = 0;
-        if (hasProducts) {
-            if (subtotalAfterDiscount >= 5000) {
-                finalDeliveryFee = 0; // Free delivery
-                // Add visual indicator for free delivery
-                document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
-            } else {
-                finalDeliveryFee = deliveryFee; // Normal delivery fee
-                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
-            }
-        }
+
+// ===== FIXED: Always apply delivery fee (no free delivery) =====
+let finalDeliveryFee = 0;
+
+if (hasProducts) {
+    finalDeliveryFee = deliveryFee;
+    document.getElementById('delivery_fee_display').textContent =
+        deliveryFee.toFixed(2);
+}
+
 
         // Update delivery fee hidden input
         document.getElementById('delivery_fee').value = finalDeliveryFee.toFixed(2);

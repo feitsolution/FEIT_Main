@@ -481,13 +481,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $final_product_code = implode(',', $product_codes);
             $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
-            // Free delivery for orders >= 5000
-            if ($subtotal_after_discount >= 5000) {
-                $delivery_fee = 0.00;
-                error_log("DEBUG - Free delivery applied. Order total: Rs. $subtotal_after_discount");
-            }
-
-            $total_amount = $subtotal_after_discount + $delivery_fee;
+           // Calculate total amount with delivery fee
+$total_amount = $subtotal_after_discount + $delivery_fee;
 
            // ==========================================
     // INSERT ORDER_HEADER WITH ALL FIELDS INCLUDING EMAIL

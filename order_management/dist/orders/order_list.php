@@ -476,9 +476,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <th>Status</th>
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
-                                <th>Processed By</th>
+                                <th>Paid by</th>
                                  <?php if ($current_user_role == 1): ?>
-                                    <th>User</th>
+                                    <th>Processed By</th>
                                 <?php endif; ?>
                                 <th>Actions</th>
                             </tr>
