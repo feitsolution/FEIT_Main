@@ -30,6 +30,20 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details) {
     }
 }
 
+// Fetch delivery fee from branding table (assuming branding_id = 1 or active branding)
+$deliveryFee = 0.00;
+$brandingSql = "SELECT delivery_fee FROM branding WHERE active = 1 LIMIT 1";
+$brandingStmt = $conn->prepare($brandingSql);
+if ($brandingStmt) {
+    $brandingStmt->execute();
+    $brandingResult = $brandingStmt->get_result();
+    if ($brandingResult && $brandingResult->num_rows > 0) {
+        $branding = $brandingResult->fetch_assoc();
+        $deliveryFee = (float)$branding['delivery_fee'];
+    }
+    $brandingStmt->close();
+}
+
 // Process CSV upload if form is submitted
 if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
     try {
@@ -199,11 +213,9 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
 
                 
                 // Handle email - normalize empty values
-                if (empty($email) || $email === '' || $email === 'NULL' || $email === 'null' || $email === 'N/A' || $email === 'n/a' || $email === '-') {
+           // Handle email - normalize empty values to empty string
+                if (empty($email) || $email === 'NULL' || $email === 'null' || $email === 'N/A' || $email === 'n/a' || $email === '-') {
                     $email = '';
-                    $emailForDb = '-';
-                } else {
-                    $emailForDb = $email;
                 }
                 
                 // Handle phone number 2 - normalize empty values
@@ -231,6 +243,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Address Line 1 is required");
                 }
                 
+                // Email validation removed - optional field, any value accepted
+                
                 // Validate email format ONLY if email is provided
                 if (!empty($email) && $email !== '' && $email !== '-') {
                     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -254,6 +268,9 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 
                 // Convert total amount to decimal
                 $totalAmountDecimal = (float)$totalAmount;
+                
+                // Calculate final total with delivery fee
+                $finalTotalAmount = $totalAmountDecimal + $deliveryFee;
                 
                 // Check if product exists and is active
                 $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND status = 'active'";
@@ -361,66 +378,106 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 // Randomly assign to one of the selected users
                 $assignedUserId = $selectedUsers[array_rand($selectedUsers)];
                 
-                // Create order header with CSV data
-                $orderSql = "INSERT INTO order_header (
-                    customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
-                    pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, call_log, created_by
-                ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, 0, ?)";
-                
-                $orderStmt = $conn->prepare($orderSql);
-                if (!$orderStmt) {
-                    throw new Exception("Failed to prepare order query: " . $conn->error);
-                }
-                $notes = !empty($other) ? $other : 'Imported from CSV';
-                
-                // Bind parameters
-                $orderStmt->bind_param("iidsdsssisssi", 
-                    $customerId,
-                    $assignedUserId,
-                    $totalAmountDecimal,
-                    $notes,
-                    $totalAmountDecimal,
-                    $productCode,
-                    $phoneNumber,
-                    $phoneNumber2,
-                    $cityId,
-                    $addressLine1,
-                    $addressLine2,
-                    $fullName,
-                    $loggedInUserId
-                );
-                
-                if (!$orderStmt->execute()) {
-                    throw new Exception("Failed to create order: " . $orderStmt->error);
-                }
-                
-                $orderId = $conn->insert_id;
-                $orderStmt->close();
-                
-                // Create order item
-                $quantity = 1;
-                $itemSql = "INSERT INTO order_items (
-                    order_id, product_id, quantity, unit_price, discount, total_amount, 
-                    pay_status, status, description
-                ) VALUES (?, ?, ?, ?, 0.00, ?, 'unpaid', 'pending', ?)";
-                
-                $itemStmt = $conn->prepare($itemSql);
-                if (!$itemStmt) {
-                    throw new Exception("Failed to prepare order item query: " . $conn->error);
-                }
-                $description = "Product: $productCode";
-                
-                $itemStmt->bind_param("iiidds", 
-                    $orderId, $productId, $quantity, $totalAmountDecimal, $totalAmountDecimal, $description
-                );
-                
-                if (!$itemStmt->execute()) {
-                    throw new Exception("Failed to create order item: " . $itemStmt->error);
-                }
-                
-                $itemStmt->close();
+                // Create order header with CSV data INCLUDING delivery_fee
+// Create order header with CSV data INCLUDING delivery_fee AND interface
+$orderSql = "INSERT INTO order_header (
+    customer_id,
+    user_id,
+    issue_date,
+    due_date,
+    subtotal,
+    notes,
+    total_amount,
+    product_code,
+    interface,
+    mobile,
+    mobile_2,
+    city_id,
+    address_line1,
+    address_line2,
+    full_name,
+    created_by,
+    delivery_fee
+) VALUES (
+    ?, ?, 
+    CURDATE(), 
+    DATE_ADD(CURDATE(), INTERVAL 7 DAY),
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+)";
+
+$orderStmt = $conn->prepare($orderSql);
+if (!$orderStmt) {
+    throw new Exception("Failed to prepare order query: " . $conn->error);
+}
+
+// Notes
+$notes = !empty($other) ? $other : 'Imported from CSV';
+
+// ✅ interface value
+$interface = 'leads';
+
+// Bind parameters (NOW 15 parameters)
+$orderStmt->bind_param(
+    "iidsdssssisssid",
+    $customerId,
+    $assignedUserId,
+    $totalAmountDecimal,
+    $notes,
+    $finalTotalAmount,
+    $productCode,
+    $interface,
+    $phoneNumber,
+    $phoneNumber2,
+    $cityId,
+    $addressLine1,
+    $addressLine2,
+    $fullName,
+    $loggedInUserId,
+    $deliveryFee
+);
+
+
+if (!$orderStmt->execute()) {
+    throw new Exception("Failed to create order: " . $orderStmt->error);
+}
+
+$orderId = $conn->insert_id;
+$orderStmt->close();
+
+             // Create order item 
+$itemSql = "INSERT INTO order_items (
+    order_id,
+    product_id,
+    unit_price,
+    discount,
+    total_amount,
+    pay_status,
+    status,
+    description
+) VALUES (?, ?, ?, 0.00, ?, 'unpaid', 'pending', ?)";
+
+$itemStmt = $conn->prepare($itemSql);
+if (!$itemStmt) {
+    throw new Exception("Failed to prepare order item query: " . $conn->error);
+}
+
+$description = "Product: $productCode";
+
+$itemStmt->bind_param(
+    "iidds",
+    $orderId,
+    $productId,
+    $unitPrice,          // unit_price from products table
+    $totalAmountDecimal,
+    $description
+);
+
+if (!$itemStmt->execute()) {
+    throw new Exception("Failed to create order item: " . $itemStmt->error);
+}
+
+$itemStmt->close();
+
                 
                 // Track successful order ID
                 $successfulOrderIds[] = $orderId;
@@ -629,6 +686,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
                                 <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
+                                <li><strong>Delivery fee:</strong> System automatically adds delivery fee (<?php echo number_format($deliveryFee, 2); ?> LKR) from branding settings</li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
