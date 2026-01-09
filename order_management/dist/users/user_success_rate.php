@@ -1,15 +1,9 @@
 <?php
-/**
- * Orders Management System
- * This page displays orders with all statuses except 'pending' and 'cancel' for individual interface
- * Includes search, pagination, and modal view functionality
- */
-// Start session management
+// Start session at the very beginning
 session_start();
 
-// Authentication check - redirect if not logged in
+// Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    // Clear output buffers before redirect
     if (ob_get_level()) {
         ob_end_clean();
     }
@@ -17,181 +11,268 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
-// Include database connection
+// Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
-
-// NEW: Get current user's role information
-$current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
-$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-
-// If user_id or role_id is not in session, fetch from database
-if ($current_user_id == 0 || $current_user_role == 0) {
-    // Try to get user info from session username or email
-    $session_identifier = isset($_SESSION['username']) ? $_SESSION['username'] : 
-                         (isset($_SESSION['email']) ? $_SESSION['email'] : '');
-    
-    if ($session_identifier) {
-        $userQuery = "SELECT u.id, u.role_id FROM users u WHERE u.email = ? OR u.name = ? LIMIT 1";
-        $stmt = $conn->prepare($userQuery);
-        $stmt->bind_param("ss", $session_identifier, $session_identifier);
-        $stmt->execute();
-        $userResult = $stmt->get_result();
-        
-        if ($userResult && $userResult->num_rows > 0) {
-            $userData = $userResult->fetch_assoc();
-            $current_user_id = (int)$userData['id'];
-            $current_user_role = (int)$userData['role_id'];
-            
-            // Update session with missing data
-            $_SESSION['user_id'] = $current_user_id;
-            $_SESSION['role_id'] = $current_user_role;
-        }
-        $stmt->close();
-    }
-}
-
-// If still no user data, redirect to login
-if ($current_user_id == 0) {
+// Check if user has admin role (role_id = 1)
+if (!isset($_SESSION['user_id'])) {
     header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
-/**
- * SEARCH AND PAGINATION PARAMETERS
- */
+// Get user's role from database
+$user_id = $_SESSION['user_id'];
+$role_check_sql = "SELECT u.role_id, r.name as role_name 
+                   FROM users u 
+                   LEFT JOIN roles r ON u.role_id = r.id 
+                   WHERE u.id = ? AND u.status = 'active'";
+$role_stmt = $conn->prepare($role_check_sql);
+$role_stmt->bind_param("i", $user_id);
+$role_stmt->execute();
+$role_result = $role_stmt->get_result();
+
+if ($role_result->num_rows === 0) {
+    session_destroy();
+    header("Location: /order_management/dist/pages/login.php");
+    exit();
+}
+
+$user_role = $role_result->fetch_assoc();
+
+// Check if user is admin (role_id = 1)
+if ($user_role['role_id'] != 1) {
+    header("Location: /order_management/dist/dashboard/index.php");
+    exit();
+}
+
+// ============================================
+// HANDLE SUCCESS REPORT EXPORT (CSV/EXCEL)
+// IMPORTANT: This MUST be before any HTML output or includes
+// ============================================
+if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
+    // Get all filters for export
+    $export_search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $export_role = isset($_GET['role_filter']) ? trim($_GET['role_filter']) : '';
+    $export_status = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : '';
+    $export_date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+    $export_date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+    
+    // Build export query with same filters as main query
+    $export_sql = "SELECT u.id as user_id, u.name as username, u.email, u.mobile as phone, 
+                   u.nic, r.name as role, u.status, u.created_at,
+                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'dispatch') as dispatched_orders,
+                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'done') as delivered_orders,
+                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'cancel') as cancelled_orders,
+                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'pending') as pending_orders
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id";
+    
+    $export_conditions = [];
+    
+    if (!empty($export_search)) {
+        $searchTerm = $conn->real_escape_string($export_search);
+        $export_conditions[] = "(u.name LIKE '%$searchTerm%' OR u.email LIKE '%$searchTerm%' OR 
+                                u.mobile LIKE '%$searchTerm%' OR u.nic LIKE '%$searchTerm%')";
+    }
+    
+    if (!empty($export_role)) {
+        $roleTerm = $conn->real_escape_string($export_role);
+        $export_conditions[] = "r.name = '$roleTerm'";
+    }
+    
+    if (!empty($export_status)) {
+        $statusTerm = $conn->real_escape_string($export_status);
+        $export_conditions[] = "u.status = '$statusTerm'";
+    }
+    
+    if (!empty($export_date_from)) {
+        $dateFromTerm = $conn->real_escape_string($export_date_from);
+        $export_conditions[] = "DATE(u.created_at) >= '$dateFromTerm'";
+    }
+    
+    if (!empty($export_date_to)) {
+        $dateToTerm = $conn->real_escape_string($export_date_to);
+        $export_conditions[] = "DATE(u.created_at) <= '$dateToTerm'";
+    }
+    
+    if (!empty($export_conditions)) {
+        $export_sql .= " WHERE " . implode(' AND ', $export_conditions);
+    }
+    
+    $export_sql .= " ORDER BY u.created_at DESC";
+    $export_result = $conn->query($export_sql);
+    
+    // Clear any output buffers
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=user_success_report_' . date('Y-m-d_His') . '.csv');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    $output = fopen('php://output', 'w');
+    
+    // Add BOM for proper UTF-8 encoding in Excel
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+    
+    // CSV Headers
+    fputcsv($output, [
+        'User ID',
+        'Username',
+        'Email',
+        'Phone',
+        'NIC',
+        'Role',
+        'Status',
+        'Dispatched Orders',
+        'Delivered Orders',
+        'Cancelled Orders',
+        'Pending Orders',
+        'Success Rate (%)',
+        'Performance Rating',
+        'Created Date'
+    ]);
+    
+    // CSV Data
+    if ($export_result && $export_result->num_rows > 0) {
+        while ($export_row = $export_result->fetch_assoc()) {
+            $dispatched = $export_row['dispatched_orders'];
+            $delivered = $export_row['delivered_orders'];
+            
+            // Calculate success rate
+            if ($dispatched == 0) {
+                $success_rate = 'N/A';
+                $performance_rating = 'No Data';
+            } else {
+                $rate = ($delivered / $dispatched) * 100;
+                $success_rate = number_format($rate, 2);
+                
+                // Determine performance rating
+                if ($rate >= 80) {
+                    $performance_rating = 'Excellent';
+                } elseif ($rate >= 60) {
+                    $performance_rating = 'Good';
+                } elseif ($rate >= 40) {
+                    $performance_rating = 'Average';
+                } else {
+                    $performance_rating = 'Poor';
+                }
+            }
+            
+            fputcsv($output, [
+                $export_row['user_id'],
+                $export_row['username'],
+                $export_row['email'],
+                $export_row['phone'] ?: 'N/A',
+                $export_row['nic'] ?: 'N/A',
+                $export_row['role'] ?: 'User',
+                ucfirst($export_row['status']),
+                $dispatched,
+                $delivered,
+                $export_row['cancelled_orders'],
+                $export_row['pending_orders'],
+                $success_rate,
+                $performance_rating,
+                date('Y-m-d H:i:s', strtotime($export_row['created_at']))
+            ]);
+        }
+    }
+    
+    fclose($output);
+    exit();
+}
+
+// If we reach here, user is admin and NOT exporting - continue with page display
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+
+// ============================================
+// HANDLE SEARCH AND FILTER PARAMETERS
+// ============================================
+// General search: Searches across name, email, phone, and NIC
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$order_id_filter = isset($_GET['order_id_filter']) ? trim($_GET['order_id_filter']) : '';
-$customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['customer_name_filter']) : '';
-$user_id_filter = isset($_GET['user_id_filter']) ? trim($_GET['user_id_filter']) : '';
-$tracking_id = isset($_GET['tracking_id']) ? trim($_GET['tracking_id']) : '';
+
+// Role filter: Filter by user role (Admin, Courier, etc.)
+$role_filter = isset($_GET['role_filter']) ? trim($_GET['role_filter']) : '';
+
+// Status filter: Filter by active/inactive status
+// - 'active': Users who can access the system
+// - 'inactive': Users who are disabled/suspended
+$status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : '';
+
+// Date range filter: Filter users by their account creation date
+// Useful for reports like "Show me all users created in Q4 2024"
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
-$status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : '';
-$pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
 
+// Pagination settings
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
-// NEW: Role-based access control condition
-$roleBasedCondition = "";
-if ($current_user_role != 1) {
-    // Non-admin users can only see their own orders
-    $roleBasedCondition = " AND i.user_id = $current_user_id";
-}
+// Base SQL for counting total records
+$countSql = "SELECT COUNT(*) as total FROM users";
 
-/**
- * DATABASE QUERIES
- * Main query to fetch orders with customer and payment information
- * Filtered for individual interface and excludes 'pending' and 'cancel' statuses
- */
-
-// Base SQL for counting total records - Updated to use user_id instead of created_by
-$countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
-            WHERE i.interface IN ('individual', 'leads') AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
-
-// Main query with all required joins - Updated to use user_id instead of created_by
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
-               u1.name as paid_by_name,
-               u2.name as user_name,
-               i.slip as payment_slip, i.pay_status as order_pay_status,
-               i.updated_at as order_updated_at
-        FROM order_header i 
-        LEFT JOIN customers c ON i.customer_id = c.customer_id
-        LEFT JOIN payments p ON i.order_id = p.order_id
-        LEFT JOIN users u1 ON p.pay_by = u1.id
-        LEFT JOIN users u2 ON i.user_id = u2.id
-        WHERE i.interface IN ('individual', 'leads') AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
-
+// Main query with success rate calculation
+$sql = "SELECT u.id as user_id, u.name as username, u.email, u.mobile as phone, 
+               u.nic, r.name as role, u.status, u.created_at,
+               (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'dispatch') as dispatched_orders,
+               (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'done') as delivered_orders
+        FROM users u 
+        LEFT JOIN roles r ON u.role_id = r.id";
 
 // Build search conditions
 $searchConditions = [];
 
-// General search condition (existing functionality) - Updated to use user_name
+// ============================================
+// APPLY FILTERS TO SQL QUERY
+// ============================================
+
+// General search filter: Matches partial text in name, email, phone, or NIC
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
-    $searchConditions[] = "(
-                        i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
-                        i.issue_date LIKE '%$searchTerm%' OR 
-                        i.due_date LIKE '%$searchTerm%' OR 
-                        i.total_amount LIKE '%$searchTerm%' OR
-                        i.status LIKE '%$searchTerm%' OR 
-                        i.tracking_number LIKE '%$searchTerm%' OR
-                        i.pay_status LIKE '%$searchTerm%' OR
-                        i.created_at LIKE '%$searchTerm% OR
-                        u2.name LIKE '%$searchTerm%')";
-                        
+    $searchConditions[] = "(u.name LIKE '%$searchTerm%' OR 
+                            u.email LIKE '%$searchTerm%' OR 
+                            u.mobile LIKE '%$searchTerm%' OR 
+                            u.nic LIKE '%$searchTerm%')";
 }
 
-// Specific Order ID filter
-if (!empty($order_id_filter)) {
-    $orderIdTerm = $conn->real_escape_string($order_id_filter);
-    $searchConditions[] = "i.order_id LIKE '%$orderIdTerm%'";
+// Role filter: Exact match for role name
+if (!empty($role_filter)) {
+    $roleTerm = $conn->real_escape_string($role_filter);
+    $searchConditions[] = "r.name = '$roleTerm'";
 }
 
-// Specific Customer Name filter
-if (!empty($customer_name_filter)) {
-    $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
-}
-
-//Specific User ID filter - MODIFIED: Apply role-based restrictions
-if (!empty($user_id_filter)) {
-    $userIdTerm = $conn->real_escape_string($user_id_filter);
-    if ($current_user_role == 1) {
-        // Admin can filter by any user
-        $searchConditions[] = "i.user_id = '$userIdTerm'";
-    } else {
-        // Non-admin can only filter by their own user ID
-        if ($userIdTerm == $current_user_id) {
-            $searchConditions[] = "i.user_id = '$userIdTerm'";
-        }
-    }
-}
-
-// Tracking ID filter
-if (!empty($tracking_id)) {
-    $trackingTerm = $conn->real_escape_string($tracking_id);
-    $searchConditions[] = "i.tracking_number LIKE '%$trackingTerm%'";
-}
-
-// Date range filter
-if (!empty($date_from)) {
-    $dateFromTerm = $conn->real_escape_string($date_from);
-    $searchConditions[] = "DATE(i.created_at) >= '$dateFromTerm'";
-}
-
-if (!empty($date_to)) {
-    $dateToTerm = $conn->real_escape_string($date_to);
-    $searchConditions[] = "DATE(i.created_at) <= '$dateToTerm'";
-}
-
-// Status filter
+// Status filter: Shows only active or inactive users
 if (!empty($status_filter)) {
     $statusTerm = $conn->real_escape_string($status_filter);
-    $searchConditions[] = "i.status = '$statusTerm'";
+    $searchConditions[] = "u.status = '$statusTerm'";
 }
 
-// Payment Status filter
-if (!empty($pay_status_filter)) {
-    $payStatusTerm = $conn->real_escape_string($pay_status_filter);
-    $searchConditions[] = "i.pay_status = '$payStatusTerm'";
+// Date FROM filter: Shows users created on or after this date
+if (!empty($date_from)) {
+    $dateFromTerm = $conn->real_escape_string($date_from);
+    $searchConditions[] = "DATE(u.created_at) >= '$dateFromTerm'";
 }
 
-// Apply all search conditions
+// Date TO filter: Shows users created on or before this date
+if (!empty($date_to)) {
+    $dateToTerm = $conn->real_escape_string($date_to);
+    $searchConditions[] = "DATE(u.created_at) <= '$dateToTerm'";
+}
+
+// Apply all search conditions to the query
 if (!empty($searchConditions)) {
-    $finalSearchCondition = " AND (" . implode(' AND ', $searchConditions) . ")";
-    $countSql .= $finalSearchCondition;
+    $finalSearchCondition = " WHERE " . implode(' AND ', $searchConditions);
+    $countSql = "SELECT COUNT(*) as total FROM users u LEFT JOIN roles r ON u.role_id = r.id" . $finalSearchCondition;
     $sql .= $finalSearchCondition;
 }
 
 // Add ordering and pagination
-$sql .= " ORDER BY i.updated_at DESC, i.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY u.created_at DESC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
@@ -202,114 +283,183 @@ if ($countResult && $countResult->num_rows > 0) {
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
-// Fetch all users for the User ID dropdown
-$usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
-$usersResult = $conn->query($usersQuery);
+// Debug: Check if query failed
+if (!$result) {
+    die("Query failed: " . $conn->error);
+}
 
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+// Get unique roles for filter dropdown
+$role_sql = "SELECT DISTINCT r.name as role FROM roles r WHERE r.name IS NOT NULL AND r.name != '' ORDER BY r.name";
+$role_result = $conn->query($role_sql);
+$roles = [];
+if ($role_result && $role_result->num_rows > 0) {
+    $roles = $role_result->fetch_all(order_managementSQLI_ASSOC);
+}
 
+/**
+ * Calculate User Success Rate
+ * 
+ * SUCCESS RATE EXPLANATION:
+ * -------------------------
+ * The success rate measures how effectively a user (typically a courier/delivery person) 
+ * completes their assigned deliveries.
+ * 
+ * Formula: (Delivered Orders / Dispatched Orders) × 100
+ * 
+ * ORDER STATUS MEANINGS:
+ * - 'dispatch': Order has been assigned to courier for delivery
+ * - 'done': Order successfully delivered to customer
+ * - 'pending': Order created but not yet dispatched
+ * - 'cancel': Order cancelled by customer or admin
+ * - 'no_answer': Customer didn't answer call (from call_log field)
+ * 
+ * WHY ONLY 'dispatch' and 'done' ARE USED:
+ * - We only count orders that were actually assigned (dispatched) to the user
+ * - Success = How many of those dispatched orders were successfully delivered (done)
+ * - Pending orders aren't counted because they haven't been assigned yet
+ * - Cancelled orders aren't counted as failures because they're not delivery failures
+ * 
+ * Real-World Example:
+ * If a courier is assigned 100 orders (dispatched) and successfully delivers 85 of them (done),
+ * their success rate is 85%. This helps management identify:
+ * - Top performers (80%+ success rate)
+ * - Training needs (40-60% success rate)
+ * - Problem areas (<40% success rate)
+ * 
+ * Ratings:
+ * - Excellent: 80%+ (Green badge)
+ * - Good: 60-79% (Blue badge)
+ * - Average: 40-59% (Yellow badge)
+ * - Poor: <40% (Red badge)
+ * - N/A: No dispatched orders yet (Gray badge)
+ */
+function calculateSuccessRate($dispatched, $delivered) {
+    if ($dispatched == 0) {
+        return ['rate' => 0, 'display' => 'N/A'];
+    }
+    $rate = ($delivered / $dispatched) * 100;
+    return ['rate' => $rate, 'display' => number_format($rate, 2) . '%'];
+}
+
+// Function to get success rate badge color
+function getSuccessRateBadgeClass($rate) {
+    if ($rate >= 80) return 'success-rate-excellent';
+    if ($rate >= 60) return 'success-rate-good';
+    if ($rate >= 40) return 'success-rate-average';
+    return 'success-rate-poor';
+}
 ?>
 
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Order Management Admin Portal - All Orders</title>
+    <title>Order Management Admin Portal - User Management</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
-    <style>
-.print-btn {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    margin-left: 5px;
-    transition: background-color 0.3s;
-}
-
-.print-btn:hover {
-    background-color: #218838;
-}
-
-.print-btn:active {
-    transform: scale(0.95);
-}
-
-.actions {
-    white-space: nowrap;
-}
-
-/* Style for Created Time column */
-.updated-time {
-    white-space: nowrap;
-    font-size: 0.9em;
-    color: #666;
-}
-
-.updated-date {
-    display: block;
-    font-weight: 500;
-    color: #333;
-}
-
-.created-time-only {
-    display: block;
-    font-size: 0.8em;
-    color: #999;
-}
-
-/* Main Container */
-.sync-buttons-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: row; 
-    gap: 6px;
-    z-index: 9999;
-}
-
-/* Button Base (Use your class: .bulk-dispatch-btn) */
-.sync-buttons-container .bulk-dispatch-btn {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px; /* Default size for large screens */
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #17a2b8; 
-    color: #fff;
-    white-space: nowrap; 
-    flex-shrink: 0; /* Ensures they don't shrink on large screens */
-}
-
-/* === Responsive Fix: Scrollable Horizontal Row with Decreased Size === */
-@media (max-width: 600px) {
-    .sync-buttons-container {
-        /* right: 5x;  */
-        top: 100px; 
-    }
+    <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
     
-    .sync-buttons-container .bulk-dispatch-btn {
-        font-size: 9px; 
-        padding: 4px 6px; 
-        gap: 1px; 
-    }
-}
-
-</style>
+    <style>
+        /* Success Rate Badge Styles */
+        .success-rate-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 60px;
+        }
+        
+        .success-rate-excellent {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .success-rate-good {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .success-rate-average {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .success-rate-poor {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-rate-na {
+            background-color: #e9ecef;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+        
+        .order-stats {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+        
+        .order-stats-item {
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .order-stats-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        /* Export Button Styling */
+        .export-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .export-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        .export-btn i {
+            font-size: 16px;
+        }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 15px;
+        }
+        
+        .filter-info {
+            font-size: 13px;
+            color: #6c757d;
+        }
+    </style>
 </head>
 
 <body>
@@ -323,102 +473,80 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             <div class="page-header">
                 <div class="page-block">
                     <div class="page-header-title">
-                        <h5 class="mb-0 font-medium"> Processed Orders</h5>
+                        <h5 class="mb-0 font-medium">User Management</h5>
+                        <small class="text-muted">Administrator Access - User Performance & Success Rate</small>
                     </div>
                 </div>
             </div>
 
             <div class="main-content-wrapper">
                 
-                <!-- Order Tracking and Filter Section -->
+                <!-- User Filter Section -->
                 <div class="tracking-container">
-                   
                     <form class="tracking-form" method="GET" action="">
+                        <!-- General Search: Searches across name, email, phone, and NIC -->
                         <div class="form-group">
-                            <label for="order_id_filter">Order ID</label>
-                            <input type="text" id="order_id_filter" name="order_id_filter" 
-                                   placeholder="Enter order ID" 
-                                   value="<?php echo htmlspecialchars($order_id_filter); ?>">
+                            <label for="search">
+                                Search
+                                <small style="color: #6c757d; font-weight: normal;"></small>
+                            </label>
+                            <input type="text" id="search" name="search" 
+                                   placeholder="Search by name, email, phone, or NIC" 
+                                   value="<?php echo htmlspecialchars($search); ?>">
                         </div>
                         
+                        <!-- Role Filter: Filter by user role (Admin, Courier, Manager, etc.) -->
                         <div class="form-group">
-                            <label for="customer_name_filter">Customer Name</label>
-                            <input type="text" id="customer_name_filter" name="customer_name_filter" 
-                                   placeholder="Enter customer name" 
-                                   value="<?php echo htmlspecialchars($customer_name_filter); ?>">
+                            <label for="role_filter">
+                                Role
+                                <small style="color: #6c757d; font-weight: normal;"></small>
+                            </label>
+                            <select id="role_filter" name="role_filter">
+                                <option value="">All Roles</option>
+                                <?php foreach ($roles as $role): ?>
+                                    <option value="<?php echo htmlspecialchars($role['role']); ?>" 
+                                            <?php echo $role_filter == $role['role'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($role['role']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         
-                          <!-- User ID Filter - Only show for admin users -->
-                        <?php if ($current_user_role == 1): ?>
-                            <div class="form-group">
-                                <label for="user_id_filter">User</label>
-                                <select id="user_id_filter" name="user_id_filter">
-                                    <option value="">All Users</option>
-                                    <?php if ($usersResult && $usersResult->num_rows > 0): ?>
-                                        <?php while ($userRow = $usersResult->fetch_assoc()): ?>
-                                            <option value="<?php echo htmlspecialchars($userRow['id']); ?>" 
-                                                    <?php echo ($user_id_filter == $userRow['id']) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($userRow['name']) . ' (ID: ' . $userRow['id'] . ')'; ?>
-                                            </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        <?php endif; ?>
-                        
+                        <!-- Status Filter: Active users can login, Inactive users are disabled -->
                         <div class="form-group">
-                            <label for="tracking_id">Tracking ID</label>
-                            <input type="text" id="tracking_id" name="tracking_id" 
-                                   placeholder="Enter tracking ID" 
-                                   value="<?php echo htmlspecialchars($tracking_id); ?>">
+                            <label for="status_filter">
+                                Status
+                                <small style="color: #6c757d; font-weight: normal;"></small>
+                            </label>
+                            <select id="status_filter" name="status_filter">
+                                <option value="">All Status</option>
+                                <option value="active" <?php echo ($status_filter == 'active') ? 'selected' : ''; ?>>
+                                    Active (Can Login)
+                                </option>
+                                <option value="inactive" <?php echo ($status_filter == 'inactive') ? 'selected' : ''; ?>>
+                                    Inactive (Disabled)
+                                </option>
+                            </select>
                         </div>
                         
+                        <!-- Date From: Show users created on or after this date -->
                         <div class="form-group">
-                            <label for="date_from">Created From</label>
+                            <label for="date_from">
+                                Date From
+                                <small style="color: #6c757d; font-weight: normal;">(Created Date)</small>
+                            </label>
                             <input type="date" id="date_from" name="date_from" 
                                    value="<?php echo htmlspecialchars($date_from); ?>">
                         </div>
                         
+                        <!-- Date To: Show users created on or before this date -->
                         <div class="form-group">
-                            <label for="date_to">Created To</label>
+                            <label for="date_to">
+                                Date To
+                                <small style="color: #6c757d; font-weight: normal;">(Created Date)</small>
+                            </label>
                             <input type="date" id="date_to" name="date_to" 
                                    value="<?php echo htmlspecialchars($date_to); ?>">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="status_filter">Status</label>
-                                 <select id="status_filter" name="status_filter">
-                                    <option value="">All Status</option>
-                                    <option value="waiting" <?php echo ($status_filter == 'waiting') ? 'selected' : ''; ?>>Waiting</option>
-                                    <option value="pickup" <?php echo ($status_filter == 'pickup') ? 'selected' : ''; ?>>Pickup</option>
-                                    <option value="processing" <?php echo ($status_filter == 'processing') ? 'selected' : ''; ?>>Processing</option>
-                                    <option value="dispatch" <?php echo ($status_filter == 'dispatch') ? 'selected' : ''; ?>>Dispatch</option>
-                                    <option value="courier dispatch" <?php echo ($status_filter == 'courier dispatch') ? 'selected' : ''; ?>>Courier Dispatch</option>
-                                    <option value="pending to deliver" <?php echo ($status_filter == 'pending to deliver') ? 'selected' : ''; ?>>Pending to Deliver</option>
-                                    <option value="delivered" <?php echo ($status_filter == 'delivered') ? 'selected' : ''; ?>>Delivered</option>
-                                    <option value="done" <?php echo ($status_filter == 'done') ? 'selected' : ''; ?>>Completed</option>
-                                    <!-- <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option> -->
-                                    <!-- <option value="no_answer" <?php echo ($status_filter == 'no_answer') ? 'selected' : ''; ?>>No Answer</option> -->
-                                    <option value="return" <?php echo ($status_filter == 'return') ? 'selected' : ''; ?>>Return</option>
-                                    <option value="return pending" <?php echo ($status_filter == 'return pending') ? 'selected' : ''; ?>>Return Pending</option>
-                                    <option value="return complete" <?php echo ($status_filter == 'return complete') ? 'selected' : ''; ?>>Return Complete</option>
-                                    <option value="return_handover" <?php echo ($status_filter == 'return_handover') ? 'selected' : ''; ?>>Return Handover</option>
-                                    <option value="return transfer" <?php echo ($status_filter == 'return transfer') ? 'selected' : ''; ?>>Return Transfer</option>
-                                    <option value="transfer" <?php echo ($status_filter == 'transfer') ? 'selected' : ''; ?>>Transfer</option>
-                                    <!-- <option value="cancel" <?php echo ($status_filter == 'cancel') ? 'selected' : ''; ?>>Cancel</option> -->
-                                    <option value="removed" <?php echo ($status_filter == 'removed') ? 'selected' : ''; ?>>Removed</option>
-                                    <option value="damaged" <?php echo ($status_filter == 'damaged') ? 'selected' : ''; ?>>Damaged</option>
-                                    <option value="hold" <?php echo ($status_filter == 'hold') ? 'selected' : ''; ?>>Hold</option>
-                                </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="pay_status_filter">Payment Status</label>
-                            <select id="pay_status_filter" name="pay_status_filter">
-                                <option value="">All Payment Status</option>
-                                <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
-                                <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
-                            </select>
                         </div>
                         
                         <div class="form-group">
@@ -431,271 +559,141 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                     <i class="fas fa-times"></i>
                                     Clear
                                 </button>
-                                <button type="button" class="search-btn" onclick="exportToCSV()" style="background: #28a745;">
-                                    <i class="fas fa-file-export"></i>
-                                     Export
-                                </button>
                             </div>
                         </div>
                     </form>
                 </div>
 
-                 <!-- Order Count Display -->
-                <div class="order-count-container">
-                    <div class="order-count-number"><?php echo number_format($totalRows); ?></div>
-                    <div class="order-count-dash">-</div>
-                    <div class="order-count-subtitle">
-                        <?php echo ($current_user_role == 1) ? 'Total Orders' : 'Total  Orders'; ?>
+                <!-- Header Actions: User Count and Export Button -->
+                <div class="header-actions">
+                    <div>
+                        <div class="order-count-container" style="margin: 0;">
+                            <div class="order-count-number"><?php echo number_format($totalRows); ?></div>
+                            <div class="order-count-dash">-</div>
+                            <div class="order-count-subtitle">Total Users</div>
+                        </div>
+                        <?php if (!empty($search) || !empty($role_filter) || !empty($status_filter) || !empty($date_from) || !empty($date_to)): ?>
+                            <div class="filter-info" style="margin-top: 5px;">
+                                <i class="fas fa-filter"></i> Filters applied
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Export Success Report Button -->
+                    <div>
+                        <button type="button" class="export-btn" onclick="exportSuccessReport()">
+                            <i class="fas fa-file-excel"></i>
+                            Export Success Report
+                        </button>
                     </div>
                 </div>
-                
-      <div class="sync-buttons-container">
-    <button id="syncRoyalBtn" class="btn btn-sm bulk-dispatch-btn">
-        <i class="fas fa-sync-alt"></i> Sync Royal Status
-    </button>
 
-    <button id="syncTransexpBtn" class="btn btn-sm bulk-dispatch-btn">
-        <i class="fas fa-sync-alt"></i> Sync Trans Status
-    </button>
-
-    <button id="syncKoombiyoBtn" class="btn btn-sm bulk-dispatch-btn">
-        <i class="fas fa-sync-alt"></i> Sync Koombiyo Status
-    </button>
-</div>
-
-
-                <!-- Orders Table - MODIFIED to include Created Time column -->
+                <!-- Users Table -->
                 <div class="table-wrapper">
                     <table class="orders-table">
                         <thead>
                             <tr>
-                                <th>Order ID</th>
-                                <th>Updated Time</th>
-                                <th>Customer Name</th>
-                                <th>Total Amount</th>
-                                <th>Status</th>
-                                <th>Pay Status</th>
-                                <th>Tracking Number</th>
-                                <th>Paid by</th>
-                                 <?php if ($current_user_role == 1): ?>
-                                    <th>Processed By</th>
-                                <?php endif; ?>
+                                <th>User Info</th>
+                                <th>Contact & NIC</th>
+                                <th>Role & Status</th>
+                                <th>Success Rate</th>
+                                <th>Created</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="ordersTableBody">
+                        <tbody id="usersTableBody">
                             <?php if ($result && $result->num_rows > 0): ?>
-                                <?php while ($row = $result->fetch_assoc()): ?>
+                                <?php while ($row = $result->fetch_assoc()): 
+                                    $successRate = calculateSuccessRate($row['dispatched_orders'], $row['delivered_orders']);
+                                    $badgeClass = $successRate['display'] === 'N/A' ? 'success-rate-na' : getSuccessRateBadgeClass($successRate['rate']);
+                                ?>
                                     <tr>
-                                        <!-- Order ID -->
-                                        <td class="order-id">
-                                            <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
-                                        </td>
-                                        
-                                        <!-- NEW: Updated Time Column -->
-                                       <td class="updated-time">
-                                            <?php
-                                            if (isset($row['order_updated_at']) && !empty($row['order_updated_at'])) {
-                                                $updatedAt = new DateTime($row['order_updated_at']);
-                                                echo '<span class="updated-date">' . $updatedAt->format('Y-m-d') . '</span>';
-                                                echo '<span class="updated-time-only">' . $updatedAt->format('H:i:s') . '</span>';
-                                            } else {
-                                                echo '<span style="color: #999; font-style: italic;">N/A</span>';
-                                            }
-                                            ?>
-                                        </td>
-
-                                        
-                                        <!-- Customer Name with ID -->
+                                        <!-- User Info -->
                                         <td class="customer-name">
-                                            <?php
-                                            $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
-                                            $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
-                                            echo $customerName . ($customerId ? " ($customerId)" : "");
-                                            ?>
-                                        </td>
-                                       
-                                        <!-- Total Amount with Currency -->
-                                        <td class="amount">
-                                            <?php
-                                            $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
-                                            $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
-                                            $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
-                                            echo $currencySymbol . number_format($amount, 2);
-                                            ?>
+                                            <div class="customer-info">
+                                                <h6 style="margin: 0; font-size: 14px; font-weight: 600;"><?php echo htmlspecialchars($row['username']); ?></h6>
+                                                <small style="color: #6c757d; font-size: 12px;">ID: <?php echo htmlspecialchars($row['user_id']); ?></small>
+                                            </div>
                                         </td>
                                         
-                                        <!-- Order Status Badge -->
+                                        <!-- Contact Info & NIC -->
                                         <td>
-                                            <?php
-                                            $status = isset($row['status']) ? $row['status'] : '';
-                                            $statusText = '';
-                                            $badgeClass = '';
-                                            
-                                          switch ($status) {
-                                                case 'waiting':
-                                                    $statusText = 'Waiting';
-                                                    $badgeClass = 'status-waiting';
-                                                    break;
-                                                case 'pickup':
-                                                    $statusText = 'Pickup';
-                                                    $badgeClass = 'status-pickup';
-                                                    break;
-                                                case 'processing':
-                                                    $statusText = 'Processing';
-                                                    $badgeClass = 'status-processing';
-                                                    break;
-                                                case 'dispatch':
-                                                    $statusText = 'Dispatched';
-                                                    $badgeClass = 'status-dispatched';
-                                                    break;
-                                                case 'courier dispatch':
-                                                    $statusText = 'Courier Dispatched';
-                                                    $badgeClass = 'status-courier-dispatched';
-                                                    break;
-                                                case 'pending to deliver':
-                                                case 'reschedule':
-                                                case 'date changed':
-                                                case 'rearranged':
-                                                    $statusText = 'Pending to Deliver';
-                                                    $badgeClass = 'status-pending-deliver';
-                                                    break;
-                                                case 'delivered':
-                                                    $statusText = 'Delivered';
-                                                    $badgeClass = 'status-delivered';
-                                                    break;
-                                                case 'done':
-                                                    $statusText = 'Completed';
-                                                    $badgeClass = 'status-completed';
-                                                    break;
-                                                case 'pending':
-                                                    $statusText = 'Pending';
-                                                    $badgeClass = 'status-pending';
-                                                    break;
-                                                case 'no_answer':
-                                                    $statusText = 'No Answer';
-                                                    $badgeClass = 'status-no-answer';
-                                                    break;
-                                                case 'return':
-                                                    $statusText = 'Return';
-                                                    $badgeClass = 'status-return';
-                                                    break;
-                                                case 'return pending':
-                                                    $statusText = 'Return Pending';
-                                                    $badgeClass = 'status-return-pending';
-                                                    break;
-                                                case 'return complete':
-                                                    $statusText = 'Return Complete';
-                                                    $badgeClass = 'status-return-complete';
-                                                    break;
-                                                case 'return_handover': 
-                                                    $statusText = 'Return Handover';
-                                                    $badgeClass = 'status-return-handover';
-                                                    break;
-                                                case 'return transfer':
-                                                    $statusText = 'Return Transfer';
-                                                    $badgeClass = 'status-return-transfer';
-                                                    break;
-                                                case 'transfer':
-                                                    $statusText = 'Transfer';
-                                                    $badgeClass = 'status-transfer';
-                                                    break;
-                                                case 'cancel':
-                                                    $statusText = 'Cancelled';
-                                                    $badgeClass = 'status-cancelled';
-                                                    break;
-                                                case 'removed':
-                                                    $statusText = 'Removed';
-                                                    $badgeClass = 'status-removed';
-                                                    break;
-                                                case 'damaged':
-                                                    $statusText = 'Damaged';
-                                                    $badgeClass = 'status-damaged';
-                                                    break;
-                                                case 'hold':
-                                                    $statusText = 'On Hold';
-                                                    $badgeClass = 'status-hold';
-                                                    break;
-                                                default:
-                                                    $statusText = $status;
-                                                    $badgeClass = 'status-default';
-                                            }
-                                            ?>
-                                            <span class="status-badge <?php echo $badgeClass; ?>"><?php echo $statusText; ?></span>
+                                            <div style="line-height: 1.4;">
+                                                <div style="font-weight: 500; margin-bottom: 2px;"><?php echo htmlspecialchars($row['phone'] ?: 'N/A'); ?></div>
+                                                <div style="font-size: 12px; color: #6c757d; margin-bottom: 2px;"><?php echo htmlspecialchars($row['email']); ?></div>
+                                                <?php if (!empty($row['nic'])): ?>
+                                                    <div style="font-size: 11px; color: #007bff; font-weight: 500;">NIC: <?php echo htmlspecialchars($row['nic']); ?></div>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                         
-                                        <!-- Payment Status Badge -->
+                                        <!-- Role & Status -->
                                         <td>
-                                            <?php
-                                            $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
-                                            if ($payStatus == 'paid'): ?>
-                                                <span class="status-badge pay-status-paid">Paid</span>
-                                            <?php else: ?>
-                                                <span class="status-badge pay-status-unpaid">Unpaid</span>
-                                            <?php endif; ?>
+                                            <div style="line-height: 1.4;">
+                                                <div style="font-weight: 500; margin-bottom: 4px; color: #495057;">
+                                                    <?php echo htmlspecialchars($row['role'] ?: 'User'); ?>
+                                                </div>
+                                                <?php if ($row['status'] === 'active'): ?>
+                                                    <span class="status-badge pay-status-paid">Active</span>
+                                                <?php else: ?>
+                                                    <span class="status-badge pay-status-unpaid">Inactive</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                         
-                                        <!-- Tracking Number -->
-                                        <td class="tracking-number">
-                                            <?php
-                                            if (isset($row['tracking_number']) && !empty($row['tracking_number'])) {
-                                                echo htmlspecialchars($row['tracking_number']);
-                                            } else {
-                                                echo '<span style="color: #999; font-style: italic;">Not assigned</span>';
-                                            }
-                                            ?>
-                                        </td>
-                                        
-                                        <!-- Processed By User -->
+                                        <!-- Success Rate -->
                                         <td>
-                                            <?php
-                                            echo isset($row['paid_by_name']) ? htmlspecialchars($row['paid_by_name']) : 'N/A';
-                                            ?>
+                                            <div style="line-height: 1.6;">
+                                                <span class="success-rate-badge <?php echo $badgeClass; ?>">
+                                                    <?php echo $successRate['display']; ?>
+                                                </span>
+                                                <div class="order-stats">
+                                                    <span class="order-stats-item">
+                                                        <span class="order-stats-label">Dispatched:</span> <?php echo $row['dispatched_orders']; ?>
+                                                    </span>
+                                                    <span class="order-stats-item">
+                                                        <span class="order-stats-label">Delivered:</span> <?php echo $row['delivered_orders']; ?>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
                                         
-                                         <!-- User Column - CONDITIONAL: Only show for admin users -->
-                                        <?php if ($current_user_role == 1): ?>
-                                            <td>
-                                                <?php
-                                                $userName = isset($row['user_name']) ? htmlspecialchars($row['user_name']) : 'N/A';
-                                                $interface = isset($row['interface']) ? $row['interface'] : '';
-                                                $userId = isset($row['user_id']) ? htmlspecialchars($row['user_id']) : '';
-                                                
-                                                echo $userName;
-                                                
-                                                // Display user ID in small text
-                                                if ($userId) {
-                                                    echo "<br><span style='color: #666; font-size: 0.8em;'>ID: $userId</span>";
-                                                }
-                                                
-                                                // Display (leads) if interface is 'leads'
-                                                if ($interface == 'leads') {
-                                                    echo "<br><span style='color: #666; font-size: 0.9em;'>(leads)</span>";
-                                                }
-                                                ?>
-                                            </td>
-                                        <?php endif; ?>
+                                        <!-- Created -->
+                                        <td>
+                                            <div style="font-size: 12px; line-height: 1.4;">
+                                                <div style="font-weight: 500;"><?php echo date('M d, Y', strtotime($row['created_at'])); ?></div>
+                                                <div style="color: #6c757d;"><?php echo date('h:i A', strtotime($row['created_at'])); ?></div>
+                                            </div>
+                                        </td>
                                         
-                                     
-                                            <!-- Action Buttons -->
-                                            <td class="actions">
-                                                <button class="action-btn view-btn" title="View Order Details" 
-                                                        onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
+                                        <!-- Action Buttons - ONLY VIEW -->
+                                        <td class="actions">
+                                            <div class="action-buttons-group">
+                                                <button type="button" class="action-btn view-btn view-user-btn"
+                                                        data-user-id="<?= $row['user_id'] ?>"
+                                                        data-username="<?= htmlspecialchars($row['username']) ?>"
+                                                        data-user-email="<?= htmlspecialchars($row['email']) ?>"
+                                                        data-user-phone="<?= htmlspecialchars($row['phone']) ?>"
+                                                        data-user-nic="<?= htmlspecialchars($row['nic']) ?>"
+                                                        data-user-role="<?= htmlspecialchars($row['role']) ?>"
+                                                        data-user-status="<?= htmlspecialchars($row['status']) ?>"
+                                                        data-user-created="<?= htmlspecialchars($row['created_at']) ?>"
+                                                        data-dispatched-orders="<?= $row['dispatched_orders'] ?>"
+                                                        data-delivered-orders="<?= $row['delivered_orders'] ?>"
+                                                        data-success-rate="<?= $successRate['display'] ?>"
+                                                        title="View User Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                
-                                                <!-- NEW PRINT BUTTON -->
-                                                <button class="action-btn print-btn" title="Print Order" 
-                                                        onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-                                                    <i class="fas fa-print"></i>
-                                                </button>
-                                            </td>
+                                            </div>
+                                        </td>
                                     </tr>
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="10" class="text-center" style="padding: 40px; text-align: center; color: #666;">
-                                        No orders found (excluding pending and canceled orders)
+                                    <td colspan="6" class="text-center" style="padding: 40px; text-align: center; color: #
+                                    666;">
+                                        <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                        No users found
                                     </td>
                                 </tr>
                             <?php endif; ?>
@@ -710,20 +708,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                     </div>
                     <div class="pagination-controls">
                         <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&role_filter=<?php echo urlencode($role_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&role_filter=<?php echo urlencode($role_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&user_id_filter=<?php echo urlencode($user_id_filter); ?>&tracking_id=<?php echo urlencode($tracking_id); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&role_filter=<?php echo urlencode($role_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
@@ -733,519 +731,140 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         </div>
     </div>
 
-   
-    <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
-
-  <script>
-// MODIFIED: Enhanced JavaScript functionality with always-show payment slip button for paid orders
-
-let currentOrderId = null;
-let currentInterface = null;
-let currentPaymentSlip = null; // Store payment slip filename
-let currentPayStatus = null; // Store payment status
-
- // NEW: Current user role from PHP
-        const currentUserRole = <?php echo $current_user_role; ?>;
-        const currentUserId = <?php echo $current_user_id; ?>;
-
-
-// Clear all filter inputs - Updated to include user_id_filter
-function clearFilters() {
-    document.getElementById('order_id_filter').value = '';
-    document.getElementById('customer_name_filter').value = '';
-    document.getElementById('user_id_filter').value = '';
-    document.getElementById('tracking_id').value = '';
-    document.getElementById('date_from').value = '';
-    document.getElementById('date_to').value = '';
-    document.getElementById('status_filter').value = '';
-    document.getElementById('pay_status_filter').value = '';
-
-    // Only clear user_id_filter for admin users (if it exists)
-            const userIdFilter = document.getElementById('user_id_filter');
-            if (userIdFilter && currentUserRole == 1) {
-                userIdFilter.value = '';
-            }
-    
-    window.location.href = window.location.pathname;
-}
-
-// MODIFIED: Enhanced openOrderModal function
-function openOrderModal(orderId, interface = null) {
-    if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to view order details.');
-        return;
-    }
-    
-    console.log('Opening modal for Order ID:', orderId, 'Interface:', interface);
-    
-    currentOrderId = orderId.trim();
-    currentInterface = interface;
-    
-    const modal = document.getElementById('orderModal');
-    const modalContent = document.getElementById('modalContent');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const viewPaymentSlipBtn = document.getElementById('viewPaymentSlipBtn');
-    
-    // Show modal
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // Show loading state
-    modalContent.innerHTML = `
-        <div class="modal-loading">
-            <i class="fas fa-spinner fa-spin"></i>
-            Loading ${interface === 'leads' ? 'lead' : 'order'} details for Order ID: ${currentOrderId}...
-        </div>
-    `;
-    downloadBtn.style.display = 'none';
-    viewPaymentSlipBtn.style.display = 'none';
-    
-    // Determine which PHP file to use based on interface
-    const phpFile = (interface === 'leads') ? '../leads/leads_download.php' : 'download_order_page.php';
-    const fetchUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId);
-    
-    console.log('Fetching from:', fetchUrl);
-    
-    fetch(fetchUrl, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.text();
-    })
-    .then(data => {
-        console.log('Data received:', data.length, 'characters');
-        if (data.trim() === '') {
-            throw new Error('No data received from server');
-        }
-        modalContent.innerHTML = data;
-        downloadBtn.style.display = 'inline-flex';
-        
-        // MODIFIED: Check for payment slip and update button visibility
-        checkPaymentSlipAvailability();
-    })
-    .catch(error => {
-        console.error('Error loading order details:', error);
-        const itemType = (interface === 'leads') ? 'lead' : 'order';
-        modalContent.innerHTML = `
-            <div class="modal-error" style="text-align: center; padding: 20px; color: #dc3545;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 10px;"></i>
-                <h4>Error Loading ${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Details</h4>
-                <p>Order ID: ${currentOrderId}</p>
-                <p>Error: ${error.message}</p>
-                <p>Please check if the ${phpFile} file exists and is accessible.</p>
-                <button onclick="retryLoadOrder()" class="btn btn-primary" style="margin-top: 10px;">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
+    <!-- User Details Modal -->
+    <div id="userDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>User Details</h4>
+                <span class="close" onclick="closeUserModal()">&times;</span>
             </div>
-        `;
-    });
-}
+            <div class="modal-body">
+                <div class="customer-detail-row">
+                    <span class="detail-label">User ID:</span>
+                    <span class="detail-value" id="modal-user-id"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value" id="modal-username"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value" id="modal-user-email"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Phone:</span>
+                    <span class="detail-value" id="modal-user-phone"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">NIC Number:</span>
+                    <span class="detail-value" id="modal-user-nic"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Role:</span>
+                    <span class="detail-value" id="modal-user-role"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">
+                        <span id="modal-user-status" class="status-badge"></span>
+                    </span>
+                </div>
+                <div class="customer-detail-row" style="border-top: 2px solid #e9ecef; margin-top: 15px; padding-top: 15px;">
+                    <span class="detail-label">Success Rate:</span>
+                    <span class="detail-value">
+                        <span id="modal-success-rate" class="success-rate-badge"></span>
+                    </span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Dispatched Orders:</span>
+                    <span class="detail-value" id="modal-dispatched-orders"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Delivered Orders:</span>
+                    <span class="detail-value" id="modal-delivered-orders"></span>
+                </div>
+                <div class="customer-detail-row" style="border-top: 2px solid #e9ecef; margin-top: 15px; padding-top: 15px;">
+                    <span class="detail-label">Created:</span>
+                    <span class="detail-value" id="modal-user-created"></span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-// MODIFIED: Function to check payment slip availability - always show button for paid orders
-function checkPaymentSlipAvailability() {
-    if (!currentOrderId) return;
-    
-    // Fetch payment slip information from server
-    fetch('get_payment_slip_info.php?order_id=' + encodeURIComponent(currentOrderId), {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            currentPaymentSlip = data.payment_slip;
-            currentPayStatus = data.pay_status;
-            
-            const viewPaymentSlipBtn = document.getElementById('viewPaymentSlipBtn');
-            
-            // MODIFIED: Show button for all paid orders, regardless of slip availability
-            if (currentPayStatus === 'paid') {
-                viewPaymentSlipBtn.style.display = 'inline-flex';
-            } else {
-                viewPaymentSlipBtn.style.display = 'none';
-            }
-        } else {
-            console.log('No payment slip information available');
-        }
-    })
-    .catch(error => {
-        console.error('Error checking payment slip:', error);
-    });
-}
-
-// MODIFIED: Function to view payment slip with no-slip message
-function viewPaymentSlip() {
-    // Check if payment slip exists
-    if (!currentPaymentSlip || currentPaymentSlip.trim() === '') {
-        alert('This order has no payment slip.');
-        return;
-    }
-    
-    // Construct the payment slip URL
-    const slipUrl = '/order_management/dist/uploads/payment_slips/' + encodeURIComponent(currentPaymentSlip);
-    
-    // Open payment slip in new tab
-    window.open(slipUrl, '_blank');
-}
-
-// Retry loading order 
-function retryLoadOrder() {
-    if (currentOrderId) {
-        openOrderModal(currentOrderId, currentInterface);
-    }
-}
-
-// Close order modal 
-function closeOrderModal() {
-    const modal = document.getElementById('orderModal');
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    currentOrderId = null;
-    currentInterface = null;
-    currentPaymentSlip = null;
-    currentPayStatus = null;
-}
-
-// Download order 
-function downloadOrder() {
-    if (!currentOrderId) {
-        alert('No order selected for download.');
-        return;
-    }
-    
-    const phpFile = (currentInterface === 'leads') ? '../leads/leads_download.php' : 'download_order.php';
-    const downloadUrl = phpFile + '?id=' + encodeURIComponent(currentOrderId) + '&download=1';
-    
-    console.log('Downloading from:', downloadUrl);
-    window.open(downloadUrl, '_blank');
-}
-
-// Close modal when clicking outside 
-document.getElementById('orderModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeOrderModal();
-    }
-});
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeOrderModal();
-    }
-});
-
-// Initialize page functionality when DOM is loaded 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Orders page loaded, initializing...');
-    
-    const tableRows = document.querySelectorAll('.orders-table tbody tr');
-    tableRows.forEach(row => {
-        row.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateX(2px)';
-        });
-        
-        row.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateX(0)';
-        });
-    });
-    
-    const modal = document.getElementById('orderModal');
-    const modalContent = document.getElementById('modalContent');
-    if (!modal || !modalContent) {
-        console.error('Modal elements not found! Check HTML structure.');
-    }
-});
-
-
-// Print order function
-function printOrder(orderId) {
-    if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to print order.');
-        return;
-    }
-    
-    console.log('Printing Order ID:', orderId);
-    
-    // Construct the print URL
-    const printUrl = 'download_order_print.php?id=' + encodeURIComponent(orderId.trim());
-    
-    // Open print page in new window
-    const printWindow = window.open(printUrl, '_blank');
-    
-    // Optional: Auto-print when page loads (uncomment if needed)
-    // printWindow.onload = function() {
-    //     printWindow.print();
-    // };
-}
-
-
-//SYNC BUTTON FUNCTION START HERE
-document.getElementById("syncRoyalBtn").addEventListener("click", function() {
-    let btn = this;
-    btn.disabled = true; // Disable to prevent multiple clicks
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-
-    fetch('/order_management/dist/api/royalexpress_webhook.php')
-        .then(response => response.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Royal Status';
-
-            let message = '';
-
-            // Success message
-            if (data.success) {
-                message += `<div class="alert alert-success mb-2"><strong>${data.updated_orders}</strong> orders updated successfully.</div>`;
-            }
-
-            // Error messages
-            if (data.errors && data.errors.length > 0) {
-                message += `<div class="alert alert-danger"><strong>${data.errors.length}</strong> errors occurred:<br>`;
-                message += data.errors.join('<br>');
-                message += `</div>`;
-            }
-
-            // Show popup message
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = message;
-            document.body.appendChild(tempDiv);
-            setTimeout(() => tempDiv.remove(), 5000); // Remove after 5s
-
-            // Auto-refresh table or page after sync
-            if (data.success) {
-                setTimeout(() => {
-                    // Option 1: Reload the page
-                    window.location.reload();
-
-                    // Option 2: Or fetch and reload only the table via AJAX
-                    // fetchOrdersTable(); // You can implement a JS function to reload table only
-                }, 1500);
-            }
-        })
-        .catch(error => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Royal Status';
-            alert("Error syncing Royal Express: " + error.message);
-        });
-});
-
-// SYNC BUTTON FUNCTION START HERE (Transexpress)
-document.getElementById("syncTransexpBtn").addEventListener("click", function() {
-    let btn = this;
-    btn.disabled = true; // Disable to prevent multiple clicks
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-
-    fetch('/order_management/dist/api/transexp_webhook.php') // adjust path if needed
-        .then(response => response.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Transexpress Status';
-
-            let message = '';
-
-            // Success message
-            if (data.success) {
-                message += `<div class="alert alert-success mb-2"><strong>${data.updated_orders}</strong> orders updated successfully.</div>`;
-            }
-
-            // Error messages
-            if (data.errors && data.errors.length > 0) {
-                message += `<div class="alert alert-danger"><strong>${data.errors.length}</strong> errors occurred:<br>`;
-                
-                // Format errors nicely
-                data.errors.forEach(err => {
-                    message += `OrderID: ${err.order_id}, Waybill: ${err.waybill}, Error: ${err.error}<br>`;
-                });
-
-                message += `</div>`;
-            }
-
-            // Show popup message
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = message;
-            document.body.appendChild(tempDiv);
-            setTimeout(() => tempDiv.remove(), 5000); // Remove after 5s
-
-            // Auto-refresh table or page after sync
-            if (data.success) {
-                setTimeout(() => {
-                    window.location.reload(); // Reload the page
-                    // Or implement AJAX table reload if needed
-                }, 1500);
-            }
-        })
-        .catch(error => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Transexpress Status';
-            alert("Error syncing Transexpress: " + error.message);
-        });
-});
-// SYNC BUTTON FUNCTION START HERE (Koombiyo)
-document.getElementById("syncKoombiyoBtn").addEventListener("click", function() {
-    let btn = this;
-    btn.disabled = true; // Disable to prevent multiple clicks
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-
-    fetch('/order_management/dist/api/koombiyo_webhook.php') // adjust path if needed
-        .then(response => response.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Koombiyo Status';
-
-            let message = '';
-
-            // // Success message
-            // if (data.success && data.updated_orders > 0) {
-            //     message += `<div class="alert alert-success alert-dismissible fade show" role="alert">
-            //                     <strong>${data.updated_orders}</strong> orders updated successfully.
-            //                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            //                 </div>`;
-            // }
-
-            // Error messages section commented out
-            /*
-            if (data.errors && data.errors.length > 0) {
-                message += `<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <strong>${data.errors.length}</strong> errors occurred:<br>`;
-                
-                data.errors.forEach(err => {
-                    message += `OrderID: ${err.order_id}, Waybill: ${err.waybill ?? 'N/A'}, Error: ${err.error}<br>`;
-                });
-
-                message += `<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
-            }
-            */
-
-            // Show popup message
-            const tempDiv = document.createElement('div');
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.top = '20px';
-            tempDiv.style.right = '20px';
-            tempDiv.style.zIndex = '9999';
-            tempDiv.style.maxWidth = '400px';
-            tempDiv.innerHTML = message;
-            document.body.appendChild(tempDiv);
-
-            // Auto-remove popup after 7 seconds
-            setTimeout(() => tempDiv.remove(), 7000);
-
-            // Auto-refresh page after sync
-            if (data.success) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            }
-        })
-        .catch(error => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Koombiyo Status';
-            alert("Error syncing Koombiyo: " + error.message);
-        });
-});
-// Updated exportToCSV function that reads current filter values directly
-function exportToCSV() {
-    // Create URLSearchParams object
-    const params = new URLSearchParams();
-    
-    // Add export flag
-    params.set('export', '1');
-    
-    // Get all filter values directly from form inputs
-    const orderId = document.getElementById('order_id_filter')?.value.trim();
-    const customerName = document.getElementById('customer_name_filter')?.value.trim();
-    const userId = document.getElementById('user_id_filter')?.value.trim();
-    const trackingId = document.getElementById('tracking_id')?.value.trim();
-    const dateFrom = document.getElementById('date_from')?.value.trim();
-    const dateTo = document.getElementById('date_to')?.value.trim();
-    const status = document.getElementById('status_filter')?.value.trim();
-    const payStatus = document.getElementById('pay_status_filter')?.value.trim();
-    
-    // Add parameters only if they have values
-    if (orderId) params.set('order_id_filter', orderId);
-    if (customerName) params.set('customer_name_filter', customerName);
-    if (userId) params.set('user_id_filter', userId);
-    if (trackingId) params.set('tracking_id', trackingId);
-    if (dateFrom) params.set('date_from', dateFrom);
-    if (dateTo) params.set('date_to', dateTo);
-    if (status) params.set('status_filter', status);
-    if (payStatus) params.set('pay_status_filter', payStatus);
-    
-    // Create export URL with all filter parameters
-    const exportUrl = 'export_orders.php?' + params.toString();
-    
-    console.log('Exporting to:', exportUrl);
-    console.log('Filters:', {
-        orderId, customerName, userId, trackingId, 
-        dateFrom, dateTo, status, payStatus
-    });
-    
-    // Trigger download
-    window.location.href = exportUrl;
-}
-
-// Alternative: If you want to show a confirmation message before export
-function exportToCSVWithConfirm() {
-    // Get filter values
-    const filters = [];
-    
-    const orderId = document.getElementById('order_id_filter')?.value.trim();
-    const customerName = document.getElementById('customer_name_filter')?.value.trim();
-    const userId = document.getElementById('user_id_filter')?.value.trim();
-    const trackingId = document.getElementById('tracking_id')?.value.trim();
-    const dateFrom = document.getElementById('date_from')?.value.trim();
-    const dateTo = document.getElementById('date_to')?.value.trim();
-    const status = document.getElementById('status_filter')?.value.trim();
-    const payStatus = document.getElementById('pay_status_filter')?.value.trim();
-    
-    // Build filter description
-    if (orderId) filters.push(`Order ID: ${orderId}`);
-    if (customerName) filters.push(`Customer: ${customerName}`);
-    if (userId) filters.push(`User ID: ${userId}`);
-    if (trackingId) filters.push(`Tracking: ${trackingId}`);
-    if (dateFrom) filters.push(`From: ${dateFrom}`);
-    if (dateTo) filters.push(`To: ${dateTo}`);
-    if (status) filters.push(`Status: ${status}`);
-    if (payStatus) filters.push(`Payment: ${payStatus}`);
-    
-    // Show confirmation
-    const filterText = filters.length > 0 
-        ? `Export with filters:\n${filters.join('\n')}` 
-        : 'Export all orders (no filters applied)';
-    
-    if (confirm(filterText + '\n\nContinue?')) {
-        // Create URLSearchParams object
-        const params = new URLSearchParams();
-        params.set('export', '1');
-        
-        // Add parameters
-        if (orderId) params.set('order_id_filter', orderId);
-        if (customerName) params.set('customer_name_filter', customerName);
-        if (userId) params.set('user_id_filter', userId);
-        if (trackingId) params.set('tracking_id', trackingId);
-        if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo) params.set('date_to', dateTo);
-        if (status) params.set('status_filter', status);
-        if (payStatus) params.set('pay_status_filter', payStatus);
-        
-        // Trigger download
-        window.location.href = 'export_orders.php?' + params.toString();
-    }
-}
-
-</script>
-    <!-- Include Footer and Scripts -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
+    <!-- Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+
+    <script>
+        /* ================================
+           FILTER CLEAR
+        ================================= */
+        function clearFilters() {
+            window.location.href = window.location.pathname;
+        }
+
+        /* ================================
+           EXPORT SUCCESS REPORT
+        ================================= */
+        function exportSuccessReport() {
+            // Get current filter values
+            const search = document.getElementById('search').value;
+            const roleFilter = document.getElementById('role_filter').value;
+            const statusFilter = document.getElementById('status_filter').value;
+            const dateFrom = document.getElementById('date_from').value;
+            const dateTo = document.getElementById('date_to').value;
+            
+            // Build export URL with all filters
+            let exportUrl = window.location.pathname + '?export=success_report';
+            
+            if (search) exportUrl += '&search=' + encodeURIComponent(search);
+            if (roleFilter) exportUrl += '&role_filter=' + encodeURIComponent(roleFilter);
+            if (statusFilter) exportUrl += '&status_filter=' + encodeURIComponent(statusFilter);
+            if (dateFrom) exportUrl += '&date_from=' + encodeURIComponent(dateFrom);
+            if (dateTo) exportUrl += '&date_to=' + encodeURIComponent(dateTo);
+            
+            // Redirect to export URL (will download CSV file)
+            window.location.href = exportUrl;
+        }
+
+        /* ================================
+           USER DETAILS MODAL
+        ================================= */
+        document.querySelectorAll('.view-user-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById('modal-user-id').innerText = this.dataset.userId;
+                document.getElementById('modal-username').innerText = this.dataset.username;
+                document.getElementById('modal-user-email').innerText = this.dataset.userEmail || 'N/A';
+                document.getElementById('modal-user-phone').innerText = this.dataset.userPhone || 'N/A';
+                document.getElementById('modal-user-nic').innerText = this.dataset.userNic || 'N/A';
+                document.getElementById('modal-user-role').innerText = this.dataset.userRole || 'User';
+
+                const statusBadge = document.getElementById('modal-user-status');
+                statusBadge.innerText = this.dataset.userStatus;
+                statusBadge.className = 'status-badge ' +
+                    (this.dataset.userStatus === 'active' ? 'pay-status-paid' : 'pay-status-unpaid');
+
+                document.getElementById('modal-success-rate').innerText = this.dataset.successRate;
+                document.getElementById('modal-dispatched-orders').innerText = this.dataset.dispatchedOrders;
+                document.getElementById('modal-delivered-orders').innerText = this.dataset.deliveredOrders;
+                document.getElementById('modal-user-created').innerText = this.dataset.userCreated;
+
+                document.getElementById('userDetailsModal').style.display = 'block';
+            });
+        });
+
+        function closeUserModal() {
+            document.getElementById('userDetailsModal').style.display = 'none';
+        }
+
+        /* ================================
+           CLOSE MODALS ON OUTSIDE CLICK
+        ================================= */
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+    </script>
 
 </body>
 </html>
