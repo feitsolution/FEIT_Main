@@ -113,7 +113,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'address line 1', 
             'address line 2', 
             'product code', 
-            'total amount', 
             'other'
         ];
         
@@ -166,7 +165,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $productCode = trim($row[$headerMap['product code']] ?? '');
-                $totalAmount = trim($row[$headerMap['total amount']] ?? '');
                 $other = trim($row[$headerMap['other']] ?? '');
 
                 // ===============================
@@ -224,9 +222,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 if (empty($productCode)) {
                     throw new Exception("Product Code is required");
                 }
-                if (empty($totalAmount)) {
-                    throw new Exception("Total Amount is required");
-                }
                 if (empty($addressLine1)) {
                     throw new Exception("Address Line 1 is required");
                 }
@@ -240,13 +235,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0 (got: '$phoneNumber2')");
                 }
                 
-                // Validate total amount is numeric and positive
-                if (!is_numeric($totalAmount) || $totalAmount <= 0) {
-                    throw new Exception("Total Amount must be a positive number");
-                }
-                
-                // Convert total amount to decimal
-                $subtotal = (float)$totalAmount;
+
                 
                // Get city_id from city name
 $citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
@@ -285,6 +274,7 @@ $cityStmt->close();
                 $product = $productResult->fetch_assoc();
                 $productId = $product['id'];
                 $unitPrice = (float)$product['lkr_price'];
+                $subtotal = $unitPrice;
                 $productStmt->close();
 
                 // Check if customer exists by phone1, phone_2, or email
@@ -642,7 +632,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
-                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code, Total Amount</li>
+                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code</li>
+                                <li><strong>Note:</strong> Product Price is automatically fetched from the Product Code</li>
                                 <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
@@ -667,7 +658,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
                                 <li><strong>"City not found"</strong> → City name must match system database exactly</li>
                                 <li><strong>"Product code not found"</strong> → Verify product code exists and is active</li>
-                                <li><strong>"Total Amount must be positive"</strong> → Enter numeric value > 0</li>
                                 <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
                             </ul>
                             
