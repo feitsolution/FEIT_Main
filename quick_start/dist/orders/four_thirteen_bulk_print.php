@@ -1,8 +1,8 @@
 <?php
 /**
  * Four Thirteen Bulk Print (Simple Labels)
- * Prints 8 simple labels per A4 page (2 columns × 4 rows layout) - LANDSCAPE
- * Each label: 3.75" × 2" (95mm × 51mm)
+ * Prints 6 simple labels per A4 page (2 columns × 3 rows layout) - LANDSCAPE
+ * Each label: Larger size with maximized font sizes
  * FIXED: Full text display for city and products (no truncation)
  * FIXED: Removed tracking status indicator
  */
@@ -224,7 +224,7 @@ foreach ($orders as $order) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Bulk Print Labels (<?php echo count($orders); ?> orders) - A4 Landscape 8 Labels</title>
+    <title>Simple Bulk Print Labels (<?php echo count($orders); ?> orders) - A4 Landscape 6 Labels</title>
     
     <style>
         * {
@@ -267,27 +267,27 @@ foreach ($orders as $order) {
             margin: 0 auto;
         }
 
-        /* Page wrapper - A4 landscape for 8 labels (2 columns × 4 rows) */
+        /* Page wrapper - A4 landscape for 6 labels (2 columns × 3 rows) */
         .page-wrapper {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
             gap: 5mm;
             width: 297mm;
             height: 210mm;
-            padding: 10mm;
+            padding: 8mm;
         }
 
-        /* Individual label styling */
+        /* Individual label styling - LARGER SIZE */
         .simple-label {
             border: 2px dashed #333;
-            padding: 3mm;
+            padding: 4mm;
             display: flex;
             flex-direction: row;
             justify-content: space-between;
             align-items: stretch;
-            width: 135mm;
-            height: 45mm;
+            width: 138mm;
+            height: 62mm;
             background: white;
             position: relative;
         }
@@ -297,57 +297,69 @@ foreach ($orders as $order) {
             display: flex;
             flex-direction: column;
             flex: 1;
-            margin-right: 5mm;
+            /* margin-right: 2mm; */
             justify-content: space-between;
         }
 
-        /* From section */
+        /* From section - LARGER FONT */
         .from-section {
             border-bottom: 1px solid #ccc;
-            padding-bottom: 0mm;
-            margin-bottom: 1mm;
+            /* padding-bottom: 2mm; */
+            margin-bottom: 2mm;
         }
 
         .from-label {
             font-weight: bold;
-            font-size: 8px;
-            margin-bottom: 0mm;
+            font-size: 11px;
+            margin-bottom: 1mm;
             color: #333;
         }
 
         .from-details {
-            font-size: 8px;
-            line-height: 1.2;
+            font-size: 10px;
+            line-height: 1.3;
         }
 
-        /* To section */
+        .from-company {
+            display: inline;
+        }
+
+        /* To section - LARGER FONT */
         .to-section {
             flex-grow: 1;
         }
 
         .to-label {
             font-weight: bold;
-            font-size: 9px;
-            margin-bottom: 1mm;
+            font-size: 11px;
+            margin-bottom: 0.5mm;
             color: #333;
         }
 
         .to-details {
-            font-size: 8px;
-            line-height: 1.3;
+            font-size: 13px;
+            line-height: 1.2;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
-        /* City name - full display with wrapping */
+        .to-name,
+        .to-phone,
+        .to-address,
+        .to-city {
+            display: block;
+        }
+
+        /* City name - full display with wrapping - LARGER FONT */
         .city-name {
             display: block;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.3;
+            font-weight: 600;
         }
 
-        /* Products section styling */
+        /* Products section styling - LARGER FONT */
         .products-section {
             margin-top: 1mm;
             border-top: 1px dotted #ccc;
@@ -356,15 +368,15 @@ foreach ($orders as $order) {
 
         .products-label {
             font-weight: bold;
-            font-size: 7px;
+            font-size: 10px;
             color: #666;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
         .product-item {
-            font-size: 7px;
+            font-size: 11px;
             color: #333;
-            line-height: 1.3;
+            line-height: 1.4;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
@@ -389,13 +401,13 @@ foreach ($orders as $order) {
 
         .order-id {
             font-weight: bold;
-            font-size: 8px;
+            font-size: 15px;
             color: #000;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
         .order-date {
-            font-size: 10px;
+            font-size: 14px;
             color: #666;
         }
 
@@ -408,19 +420,19 @@ foreach ($orders as $order) {
         }
 
         .barcode-image {
-            height: 25mm;
-            max-width: 52mm;
+            height: 30mm;
+            max-width: 50mm;
             object-fit: contain;
         }
 
         .barcode-text {
-            font-size: 7px;
+            font-size: 8px;
             margin-top: 1mm;
             font-weight: bold;
         }
 
         .no-tracking-barcode {
-            font-size: 8px;
+            font-size: 9px;
             color: #dc3545;
             margin-bottom: 2mm;
         }
@@ -430,14 +442,14 @@ foreach ($orders as $order) {
         }
 
         .total-label {
-            font-size: 7px;
+            font-size: 12px;
             color: #666;
         }
 
         .total-amount {
             font-weight: bold;
-            font-size: 10px;
-            margin-top: 0.5mm;
+            font-size: 16px;
+            margin-top: 0mm;
             color: #000;
         }
 
@@ -463,14 +475,14 @@ foreach ($orders as $order) {
             
             .page-wrapper {
                 margin: 0;
-                padding: 10mm;
-                width: 295mm !important;
-                height: 207mm !important;
+                padding: 8mm;
+                width: 297mm !important;
+                height: 210mm !important;
             }
             
             .simple-label {
-                width: 135mm !important;
-                height: 45mm !important;
+                width: 138mm !important;
+                height: 62mm !important;
             }
 
             @page {
@@ -499,7 +511,7 @@ foreach ($orders as $order) {
             </div>
         <?php else: ?>
             <?php 
-            $labels_per_page = 8;
+            $labels_per_page = 6;
             $total_orders = count($orders);
             $current_page_labels = 0;
             ?>
@@ -544,11 +556,9 @@ foreach ($orders as $order) {
                     <div class="left-section">
                         <!-- From Section -->
                         <div class="from-section">
-                            <div class="from-label">From:</div>
                             <div class="from-details">
-                                <strong><?php echo htmlspecialchars($company['name']); ?></strong><br>
-                                <?php echo htmlspecialchars($company['address']); ?><br>
-                                <?php echo htmlspecialchars($company['phone']); ?>
+                                <strong>From: <?php echo htmlspecialchars($company['name']); ?></strong>, <?php echo htmlspecialchars($company['address']); ?><br>
+                                <span style="padding-left: 40px; display: inline-block;"><?php echo htmlspecialchars($company['phone']); ?></span>
                             </div>
                         </div>
 
@@ -556,8 +566,8 @@ foreach ($orders as $order) {
                         <div class="to-section">
                             <div class="to-label">To:</div>
                             <div class="to-details">
-                                <strong><?php echo htmlspecialchars($order['display_name']); ?></strong><br>
-                                <?php echo htmlspecialchars($order['display_mobile']); ?><br>
+                                <span class="to-name"><?php echo htmlspecialchars($order['display_name']); ?></span>
+                                <span class="to-phone"><?php echo htmlspecialchars($order['display_mobile']); ?></span>
                                 <?php 
                                 // Build address with only address lines (no city)
                                 $address_parts = [];
@@ -578,14 +588,16 @@ foreach ($orders as $order) {
                                     }
                                 }
                                 
-                                $address_only = implode(', ', array_filter($address_parts));
-                                if (empty($address_only)) {
-                                    $address_only = 'Address not available';
+                                // Display each address line separately
+                                if (!empty($address_parts)) {
+                                    foreach ($address_parts as $address_line) {
+                                        echo '<span class="to-address">' . htmlspecialchars($address_line) . '</span>';
+                                    }
+                                } else {
+                                    echo '<span class="to-address">Address not available</span>';
                                 }
-                                
-                                echo htmlspecialchars($address_only);
-                                ?><br>
-                                <span class="city-name"><?php 
+                                ?>
+                                <span class="to-city"><?php 
                                     $city_display = !empty($order['city_name']) ? $order['city_name'] : 'City not specified';
                                     echo htmlspecialchars($city_display);
                                 ?></span>
