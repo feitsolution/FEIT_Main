@@ -43,10 +43,7 @@ $offset = ($page - 1) * $limit;
  */
 $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
                o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
-               o.delivery_fee, o.discount, o.issue_date,
-               c.name as customer_name, c.phone as customer_phone, 
-               c.email as customer_email, c.city_id,
-               cr.courier_name as delivery_service,
+               o.delivery_fee, o.discount, o.issue_date, o.pay_status,
                
                -- City information from city_table
                ct.city_name,
