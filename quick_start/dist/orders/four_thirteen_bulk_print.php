@@ -659,10 +659,16 @@ foreach ($orders as $order) {
                             <?php endif; ?>
                         </div>
                         
-                        <div class="total-section">
+                      <div class="total-section">
+                        <?php if ($order['pay_status'] !== 'paid'): ?>
                             <div class="total-label">Total:</div>
                             <div class="total-amount"><?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?></div>
-                        </div>
+                        <?php else: ?>
+                            <div style="color: green; font-weight: bold; font-size: 14px; margin-top: 2mm;">
+                                ✔ PAID
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     </div>
                 </div>
 
