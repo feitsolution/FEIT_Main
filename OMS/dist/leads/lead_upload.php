@@ -9,12 +9,12 @@ session_start();
 // Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     ob_end_clean();
-    header("Location: /OMS/dist/pages/login.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 
 // Include the database connection file early
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
 // Initialize transaction flag
 $transactionStarted = false;
@@ -443,16 +443,16 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $orderTotalAmount = $totalAmountDecimal + $deliveryFee;
 
                 // Create order header
-                $orderSql = "INSERT INTO order_header (
-                    tenant_id, customer_id, user_id, issue_date, due_date, 
-                    subtotal, discount, total_amount, delivery_fee,
-                    notes, currency, status, pay_status, pay_date, created_by,
-                    product_code, full_name, mobile, mobile_2,
-                    address_line1, address_line2, city_id, zone_id, district_id,
-                    interface, call_log
-                ) VALUES (?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 
-                        ?, 0.00, ?, ?, ?, 'lkr', 'pending', 'unpaid', NULL, ?, 
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, 'leads', 0)";
+            $orderSql = "INSERT INTO order_header (
+                tenant_id, customer_id, user_id, issue_date, due_date, 
+                subtotal, discount, total_amount, delivery_fee,
+                notes, currency, status, pay_status, pay_date, created_by,
+                product_code, full_name, mobile, mobile_2,
+                address_line1, address_line2, city_id, zone_id, district_id,
+                interface, call_log
+            ) VALUES (?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY),  // ← CHANGED
+                    ?, 0.00, ?, ?, ?, 'lkr', 'pending', 'unpaid', NULL, ?, 
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, 'leads', 0)";
                 
                 $orderStmt = $conn->prepare($orderSql);
                 if (!$orderStmt) {
@@ -607,8 +607,8 @@ if ($selectedTenantId) {
     }
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -617,7 +617,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 <head>
     <title>Order Management Admin Portal - Lead Upload</title>
     
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/leads.css" id="main-style-link" />
@@ -826,7 +826,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 </style>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -917,7 +917,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                         <?php endif; ?>
                         
                         <div class="file-upload-section">
-                            <a href="/OMS/dist/templates/generate_template.php" class="choose-file-btn">
+                            <a href="/order_management/dist/templates/generate_template.php" class="choose-file-btn">
                                 Download CSV Template
                             </a>
 
@@ -1007,8 +1007,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
     </div>
 
     <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/footer.php');
-    include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/scripts.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php');
     ?>
 
     <script>
