@@ -121,7 +121,7 @@ if (!empty($searchConditions)) {
     $sql .= " AND " . implode(' AND ', $searchConditions);
 }
 
-$sql .= " ORDER BY o.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY o.order_id DESC LIMIT $limit";
 
 // Execute query
 $result = $conn->query($sql);
