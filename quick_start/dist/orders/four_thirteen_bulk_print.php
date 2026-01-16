@@ -34,9 +34,10 @@ $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 
 $tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'all';
 $tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
 
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($page - 1) * $limit;
+$limit = 500; // fixed limit
+// $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+// $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+// $offset = ($page - 1) * $limit;
 
 /**
  * BUILD QUERY TO FETCH ORDERS
@@ -71,7 +72,7 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
         FROM order_header o 
         LEFT JOIN customers c ON o.customer_id = c.customer_id
         LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
-        LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
+        LEFT JOIN city_table ct ON o.city_id = ct.city_id AND ct.is_active = 1
         WHERE o.interface IN ('individual', 'leads')";
 
 // Build search conditions
@@ -120,7 +121,7 @@ if (!empty($searchConditions)) {
     $sql .= " AND " . implode(' AND ', $searchConditions);
 }
 
-$sql .= " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY o.order_id DESC LIMIT $limit OFFSET $offset";
 
 // Execute query
 $result = $conn->query($sql);
