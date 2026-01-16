@@ -25,19 +25,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/connection/db_connection.
 /**
  * GET FILTER PARAMETERS FROM URL
  */
+
+// date
+// time_from
+// time_to
+// status_filter
+// date_filter
+// limit
 $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 $time_from = isset($_GET['time_from']) ? trim($_GET['time_from']) : '';
 $time_to = isset($_GET['time_to']) ? trim($_GET['time_to']) : '';
 $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 'all';
 
-// Tracking filter parameters
-$tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'all';
-$tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
-
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($page - 1) * $limit;
-
 /**
  * BUILD QUERY TO FETCH ORDERS
  */
@@ -72,55 +72,38 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
         LEFT JOIN customers c ON o.customer_id = c.customer_id
         LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
         LEFT JOIN city_table ct ON o.city_id = ct.city_id AND ct.is_active = 1
-        WHERE o.interface IN ('individual', 'leads')";
+        WHERE o.interface IN ('individual', 'leads') AND o.status = 'dispatch'";
 
 // Build search conditions
-$searchConditions = [];
 
-if (!empty($date)) {
-    $dateTerm = $conn->real_escape_string($date);
-    $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
+// Default date
+if ($date === "" || !isset($_GET['date'])) {
+    $date = date("Y-m-d");
 }
 
-if (!empty($time_from)) {
-    $timeFromTerm = $conn->real_escape_string($time_from);
-    $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
+// Normalize time inputs (HH:MM format)
+$time_from = preg_match('/^\d{1,2}:\d{2}$/', $time_from) ? $time_from : "";
+$time_to   = preg_match('/^\d{1,2}:\d{2}$/', $time_to) ? $time_to : "";
+
+// Default start and end
+$startDateTime = $date . " 00:00:00";
+$endDateTime   = $date . " 23:59:59";
+
+// Apply time range filter
+if ($time_from !== "" && $time_to !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " $time_to:59";
+} elseif ($time_from !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " 23:59:59";
+} elseif ($time_to !== "") {
+    $startDateTime = $date . " 00:00:00";
+    $endDateTime   = $date . " $time_to:59";
 }
 
-if (!empty($time_to)) {
-    $timeToTerm = $conn->real_escape_string($time_to);
-    $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
-}
+// Apply filter on selected date field
 
-if (!empty($status_filter) && $status_filter !== 'all') {
-    $statusTerm = $conn->real_escape_string($status_filter);
-    $searchConditions[] = "o.status = '$statusTerm'";
-}
-
-// Tracking filter conditions
-if (!empty($tracking_filter) && $tracking_filter !== 'all') {
-    switch ($tracking_filter) {
-        case 'with_tracking':
-            $searchConditions[] = "o.tracking_number IS NOT NULL AND o.tracking_number != '' AND TRIM(o.tracking_number) != ''";
-            break;
-        case 'without_tracking':
-            $searchConditions[] = "(o.tracking_number IS NULL OR o.tracking_number = '' OR TRIM(o.tracking_number) = '')";
-            break;
-        case 'specific_tracking':
-            if (!empty($tracking_number)) {
-                $trackingTerm = $conn->real_escape_string($tracking_number);
-                $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
-            }
-            break;
-    }
-}
-
-// Apply search conditions
-if (!empty($searchConditions)) {
-    $sql .= " AND " . implode(' AND ', $searchConditions);
-}
-
-$sql .= " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " AND o.updated_at BETWEEN '$startDateTime' AND '$endDateTime' ORDER BY o.order_id ASC LIMIT $limit";
 
 // Execute query
 $result = $conn->query($sql);
@@ -225,7 +208,7 @@ foreach ($orders as $order) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Bulk Print Labels (<?php echo count($orders); ?> orders) - A4 Landscape 6 Labels</title>
- 
+    
     <style>
         * {
             margin: 0;
@@ -281,7 +264,7 @@ foreach ($orders as $order) {
         /* Individual label styling - LARGER SIZE */
         .simple-label {
             border: 2px dashed #333;
-            padding: 4mm;
+            padding: 3mm;
             display: flex;
             flex-direction: row;
             justify-content: space-between;
@@ -508,28 +491,6 @@ foreach ($orders as $order) {
     </style>
 </head>
 <body>
-    <!-- Print Instructions (hidden when printing) -->
-    <!-- <div class="print-instructions">
-        <h3>Simple Bulk Print Instructions - A4 Landscape 8 Labels</h3>
-        <p><strong>Orders Found:</strong> <?php echo count($orders); ?> orders</p>
-        <p><strong>Labels Per Page:</strong> 8 labels (2 columns × 4 rows)</p>
-        <p><strong>Format:</strong> From, To, Products, Order ID, Order Date, Tracking Barcode, Total Amount</p>
-        <p><strong>Filters Applied:</strong></p>
-        <ul>
-            <?php if ($date): ?><li>Date: <?php echo htmlspecialchars($date); ?></li><?php endif; ?>
-            <?php if ($time_from): ?><li>Time From: <?php echo htmlspecialchars($time_from); ?></li><?php endif; ?>
-            <?php if ($time_to): ?><li>Time To: <?php echo htmlspecialchars($time_to); ?></li><?php endif; ?>
-            <?php if ($status_filter !== 'all'): ?><li>Status: <?php echo htmlspecialchars($status_filter); ?></li><?php endif; ?> -->
-            
-            <!-- NEW: Tracking filter display -->
-            <!-- <?php if ($tracking_filter !== 'all'): ?>
-                <li><strong>Tracking Filter:</strong> <?php echo htmlspecialchars(getTrackingFilterText($tracking_filter, $tracking_number)); ?></li>
-            <?php endif; ?>
-        </ul>
-        <button class="print-button" onclick="window.print()">🖨️ Print Labels</button>
-        <button class="print-button" onclick="window.close()" style="background: #6c757d;">❌ Close</button>
-    </div> -->
-
     <!-- Labels Container -->
     <div class="labels-container">
         <?php if (empty($orders)): ?>
@@ -697,7 +658,7 @@ foreach ($orders as $order) {
                             <?php endif; ?>
                         </div>
                         
-                        <div class="total-section">
+                      <div class="total-section">
                         <?php if ($order['pay_status'] !== 'paid'): ?>
                             <div class="total-label">Total:</div>
                             <div class="total-amount"><?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?></div>
@@ -706,7 +667,7 @@ foreach ($orders as $order) {
                                 ✔ PAID
                             </div>
                         <?php endif; ?>
-                        </div>
+                    </div>
                     </div>
                 </div>
 
