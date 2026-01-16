@@ -83,6 +83,8 @@ $roleBasedCondition = "";
 if ($current_user_role != 1) {
     // Non-admin users can only see their own orders
     $roleBasedCondition = " AND i.user_id = $current_user_id";
+}else{
+    $roleBasedCondition = "";
 }
 
 /**
@@ -126,10 +128,10 @@ $sql = "SELECT i.*,
 // Add tenant filter for non-main admin users
 if ($is_main_admin == 1){
    // Add ordering and pagination
-
+   $sql .= "$roleBasedCondition";
 }else{
     // Add ordering and pagination
-    $sql .= "  AND i.tenant_id = $teanent_id";
+    $sql .= "  AND i.tenant_id = $teanent_id $roleBasedCondition";
 }
 
 
@@ -221,7 +223,14 @@ $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
 // Fetch all users for the User ID dropdown
-$usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
+// Fetch users for the dropdown based on permissions
+if ($is_main_admin == 1 && $current_user_role == 1) {
+    // Super Main Admin can see all users
+    $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
+} else {
+    // Regular Admins (or others) can only see users in their tenant
+    $usersQuery = "SELECT id, name FROM users WHERE tenant_id = " . (int)$teanent_id . " ORDER BY name ASC";
+}
 $usersResult = $conn->query($usersQuery);
 
 // Include navigation components
@@ -347,7 +356,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 value="<?php echo htmlspecialchars($updated_date_to); ?>">
                         </div>
 
-                        <?php if ($is_main_admin == 1) { ?>
+                        <?php if (($is_admin == 1) && $is_main_admin) { ?>
                         <div class="form-group">
                             <label for="tenant_id_filter">Tenant ID</label>
                             <select id="tenant_id_filter" name="tenant_id_filter">
@@ -399,7 +408,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Total Amount</th>
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
-                                <?php if ($is_main_admin == 1) { ?>
+                                <?php if (($is_admin == 1) && $is_main_admin) { ?>
                                 <th>Tenant Company Name</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
@@ -462,7 +471,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 </td>
 
                                 <!-- Teanaent Company Name -->
-                                <?php if ($is_main_admin == 1) { ?>
+                                <?php if (($is_admin == 1) && $is_main_admin) { ?>
                                 <td class="customer-name">
                                     <div class="customer-info">
                                         <h6 style="margin: 0; font-size: 14px;">
