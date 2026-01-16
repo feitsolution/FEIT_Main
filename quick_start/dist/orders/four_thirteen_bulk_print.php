@@ -41,7 +41,7 @@ $offset = ($page - 1) * $limit;
 /**
  * BUILD QUERY TO FETCH ORDERS
  */
-$sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
+$sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2, o.notes,
                o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
                o.delivery_fee, o.discount, o.issue_date, o.pay_status,
                c.name as customer_name, c.phone as customer_phone, 
@@ -381,6 +381,15 @@ foreach ($orders as $order) {
             overflow-wrap: break-word;
         }
 
+        /* Notes section styling */
+        .notes-section {
+            margin-top: 1mm;
+            border-top: 1px dotted #ccc;
+            padding-top: 1mm;
+            font-size: 10px;
+            color: #000000ff;
+        }
+
         /* Right section - Order info, Barcode and Total */
         .right-section {
             display: flex;
@@ -634,6 +643,13 @@ foreach ($orders as $order) {
                                     echo implode(', ', $product_list);
                                     ?>
                                 </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Additional Note Section -->
+                            <?php if (!empty($order['notes'])): ?>
+                            <div class="notes-section">
+                                <strong>Note:</strong> <?php echo htmlspecialchars($order['notes']); ?>
                             </div>
                             <?php endif; ?>
                         </div>
