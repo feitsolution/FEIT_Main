@@ -78,20 +78,37 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
 // Build search conditions
 $searchConditions = [];
 
-if (!empty($date)) {
-    $dateTerm = $conn->real_escape_string($date);
-    $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
+// if (!empty($date)) {
+//     $dateTerm = $conn->real_escape_string($date);
+//     $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
+// }
+
+// if (!empty($time_from)) {
+//     $timeFromTerm = $conn->real_escape_string($time_from);
+//     $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
+// }
+
+// if (!empty($time_to)) {
+//     $timeToTerm = $conn->real_escape_string($time_to);
+//     $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
+// }
+
+
+// Apply time range filter
+if ($time_from !== "" && $time_to !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " $time_to:59";
+} elseif ($time_from !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " 23:59:59";
+} elseif ($time_to !== "") {
+    $startDateTime = $date . " 00:00:00";
+    $endDateTime   = $date . " $time_to:59";
 }
 
-if (!empty($time_from)) {
-    $timeFromTerm = $conn->real_escape_string($time_from);
-    $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
-}
+// Apply filter on selected date field
+$searchConditions[] = "o.updated_at BETWEEN '$startDateTime' AND '$endDateTime'";
 
-if (!empty($time_to)) {
-    $timeToTerm = $conn->real_escape_string($time_to);
-    $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
-}
 
 if (!empty($status_filter) && $status_filter !== 'all') {
     $statusTerm = $conn->real_escape_string($status_filter);
