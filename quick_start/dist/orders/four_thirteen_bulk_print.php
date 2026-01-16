@@ -31,8 +31,8 @@ $time_to = isset($_GET['time_to']) ? trim($_GET['time_to']) : '';
 $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 'all';
 
 // Tracking filter parameters
-$tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'all';
-$tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
+// $tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'all';
+// $tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
 
 $limit = 500; // fixed limit
 // $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
@@ -98,28 +98,31 @@ if (!empty($status_filter) && $status_filter !== 'all') {
     $searchConditions[] = "o.status = '$statusTerm'";
 }
 
-// Tracking filter conditions
-if (!empty($tracking_filter) && $tracking_filter !== 'all') {
-    switch ($tracking_filter) {
-        case 'with_tracking':
-            $searchConditions[] = "o.tracking_number IS NOT NULL AND o.tracking_number != '' AND TRIM(o.tracking_number) != ''";
-            break;
-        case 'without_tracking':
-            $searchConditions[] = "(o.tracking_number IS NULL OR o.tracking_number = '' OR TRIM(o.tracking_number) = '')";
-            break;
-        case 'specific_tracking':
-            if (!empty($tracking_number)) {
-                $trackingTerm = $conn->real_escape_string($tracking_number);
-                $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
-            }
-            break;
-    }
-}
+// // Tracking filter conditions
+// if (!empty($tracking_filter) && $tracking_filter !== 'all') {
+//     switch ($tracking_filter) {
+//         case 'with_tracking':
+//             $searchConditions[] = "o.tracking_number IS NOT NULL AND o.tracking_number != '' AND TRIM(o.tracking_number) != ''";
+//             break;
+//         case 'without_tracking':
+//             $searchConditions[] = "(o.tracking_number IS NULL OR o.tracking_number = '' OR TRIM(o.tracking_number) = '')";
+//             break;
+//         case 'specific_tracking':
+//             if (!empty($tracking_number)) {
+//                 $trackingTerm = $conn->real_escape_string($tracking_number);
+//                 $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
+//             }
+//             break;
+//     }
+// }
 
-// Apply search conditions
-if (!empty($searchConditions)) {
-    $sql .= " AND " . implode(' AND ', $searchConditions);
-}
+// $where[] = "o.tracking_number IS NOT NULL AND o.tracking_number != ''";
+
+
+// // Apply search conditions
+// if (!empty($searchConditions)) {
+//     $sql .= " AND " . implode(' AND ', $searchConditions);
+// }
 
 $sql .= " ORDER BY o.order_id DESC LIMIT $limit";
 
