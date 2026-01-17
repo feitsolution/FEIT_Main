@@ -48,7 +48,7 @@ $order_query = "SELECT
                 i.slip AS payment_slip
             FROM order_header i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
-            LEFT JOIN city_table city ON c.city_id = city.city_id
+            LEFT JOIN city_table city ON i.city_id = city.city_id
             LEFT JOIN payments p ON i.order_id = p.order_id
             LEFT JOIN roles r ON p.pay_by = r.id
             LEFT JOIN users u ON i.user_id = u.id
@@ -140,16 +140,9 @@ if ($branding_result && $branding_result->num_rows > 0) {
     
     // Set logo URL - use from database if available, otherwise use default
     if (!empty($company['logo_url'])) {
-        // If logo_url is a full path, use it directly; otherwise prepend the base path
-        if (strpos($company['logo_url'], 'http') === 0) {
-            $logo_url = $company['logo_url'];
-        } else {
-            // Assuming logo_url stores relative path like 'uploads/logos/logo.png'
-            $logo_url = '/quick_start/dist/' . $company['logo_url'];
-        }
+        $logo_url = $company['logo_url'];
     } else {
-        // Fallback to default logo
-        $logo_url = '../assets/images/lily.jpeg';
+        $logo_url = '';
     }
 } else {
     // Fallback to default company info if branding not found
@@ -159,7 +152,7 @@ if ($branding_result && $branding_result->num_rows > 0) {
         'email' => 'info@feitsolutions.com',
         'hotline' => '011-2824524'
     ];
-    $logo_url = '../assets/images/lily.jpeg';
+    $logo_url = '';
 }
 
 // Function to get the color for payment status
@@ -465,9 +458,10 @@ $column_count = $has_any_discount ? 5 : 4;
 
         <div class="order-header">
             <div class="company-logo">
+                <?php if (!empty($logo_url)): ?>
                 <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo"
-                     onerror="this.onerror=null; this.src='../assets/images/lily.jpeg';">
+                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo">
+                <?php endif; ?>
             </div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>

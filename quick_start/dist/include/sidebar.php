@@ -147,7 +147,6 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../orders/order_list.php"> Processed Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/pending_order_list.php">Pending Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/dispatch_order_list.php">Dispatch Orders</a></li>
-            <li class="pc-item"><a class="pc-link" href="../orders/couriers.php">Courier Management</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/cancel_order_list.php">Cancel Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/complete_mark_upload.php">Completed Mark Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/payment_report.php"> Payment Report</a></li>
@@ -156,6 +155,13 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../orders/return_handover_order_list.php">Return Handover Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/label_print.php">Label Print</a></li>
           </ul>
+        </li>
+
+        <li class="pc-item pc-hasmenu">
+            <a href="#!" class="pc-link"><span class="pc-micon"> <i data-feather="truck"></i></span><span class="pc-mtext">Courier Management</span><span class="pc-arrow"><i class="ti ti-chevron-right"></i></span></a>
+            <ul class="pc-submenu">
+                <li class="pc-item"><a class="pc-link" href="../orders/couriers.php">Courier List</a></li>
+            </ul>
         </li>
 
         <li class="pc-item pc-hasmenu">

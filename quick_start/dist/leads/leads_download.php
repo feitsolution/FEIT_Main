@@ -38,21 +38,10 @@ if ($branding_result && $branding_result->num_rows > 0) {
     // ✅ ALWAYS USE LOGO FROM DATABASE
     // ==========================================
     if (!empty($branding['logo_url'])) {
-        // Check if it's a full URL (starts with http/https)
-        if (strpos($branding['logo_url'], 'http') === 0) {
-            $logo_url = $branding['logo_url'];
-        } 
-        // Check if it already has the full path
-        else if (strpos($branding['logo_url'], '/order_management/') === 0) {
-            $logo_url = $branding['logo_url']; // Already has full path
-        }
-        // Otherwise, it's a relative path from dist folder
-        else {
-            $logo_url = '/quick_start/dist/' . ltrim($branding['logo_url'], '/');
-        }
+        $logo_url = $branding['logo_url'];
     } else {
         // If logo_url is empty in DB, use fallback and log error
-        $logo_url = '../assets/images/logo-white.svg';
+        $logo_url = ' ';
         error_log("WARNING: No logo_url found in branding table for active branding record");
     }
     
@@ -65,8 +54,8 @@ if ($branding_result && $branding_result->num_rows > 0) {
     ];
 } else {
     // If no active branding record found
-    $logo_url = '../assets/images/logo-white.svg';
-    error_log("ERROR: No active branding record found in database");
+    $logo_url = '';
+
     
     // Fallback company info
     $company = [
@@ -303,8 +292,7 @@ $column_count = $has_any_discount ? 5 : 4;
         <div class="order-header">
             <div class="company-logo">
                 <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo"
-                     onerror="this.onerror=null; this.src='../assets/images/logo-white.svg';">
+                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo">
             </div>
             <div class="order-info">
                 <div class="order-title">

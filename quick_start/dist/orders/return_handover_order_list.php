@@ -212,7 +212,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Handover Orders - Lily Collection Admin Portal</title>
+    <title>Return Handover Orders - Quick Start Admin Portal</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/head.php'); ?>
     
