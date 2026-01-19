@@ -38,7 +38,7 @@ $sql = "UPDATE order_header
         WHERE tracking_number = ?";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("sss", $status_update, $update_time, $waybill_id);
+$stmt->bind_param("sss", $status_update, $last_update_time, $waybill_id);
 
 if ($stmt->execute()) {
     // Check if any row was updated
@@ -67,6 +67,3 @@ if ($stmt->execute()) {
 $stmt->close();
 $conn->close();
 ?>
-
-
-

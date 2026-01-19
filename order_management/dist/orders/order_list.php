@@ -94,7 +94,10 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
             WHERE i.interface IN ('individual', 'leads') AND i.status NOT IN ('pending', 'cancel')$roleBasedCondition";
 
 // Main query with all required joins - Updated to use user_id instead of created_by
-$sql = "SELECT i.*, c.name as customer_name, 
+$sql = "SELECT i.*, 
+               -- Customer info: Use order_header full_name, fallback to customers table
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
                p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
                u1.name as paid_by_name,
                u2.name as user_name,

@@ -29,7 +29,7 @@ $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] ==
 $order_query = "SELECT 
                 i.*, 
                 i.pay_status AS order_pay_status, 
-                c.name AS customer_name, 
+                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
                 CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
                 c.email AS customer_email, 
                 c.phone AS customer_phone,
@@ -48,7 +48,7 @@ $order_query = "SELECT
                 i.slip AS payment_slip
             FROM order_header i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
-            LEFT JOIN city_table city ON c.city_id = city.city_id
+            LEFT JOIN city_table city ON i.city_id = city.city_id
             LEFT JOIN payments p ON i.order_id = p.order_id
             LEFT JOIN roles r ON p.pay_by = r.id
             LEFT JOIN users u ON i.user_id = u.id
@@ -140,16 +140,9 @@ if ($branding_result && $branding_result->num_rows > 0) {
     
     // Set logo URL - use from database if available, otherwise use default
     if (!empty($company['logo_url'])) {
-        // If logo_url is a full path, use it directly; otherwise prepend the base path
-        if (strpos($company['logo_url'], 'http') === 0) {
-            $logo_url = $company['logo_url'];
-        } else {
-            // Assuming logo_url stores relative path like 'uploads/logos/logo.png'
-            $logo_url = '/order_management/dist/' . $company['logo_url'];
-        }
+        $logo_url = $company['logo_url'];
     } else {
-        // Fallback to default logo
-        $logo_url = '../assets/images/lily.jpeg';
+        $logo_url = '';
     }
 } else {
     // Fallback to default company info if branding not found
@@ -159,7 +152,7 @@ if ($branding_result && $branding_result->num_rows > 0) {
         'email' => 'info@feitsolutions.com',
         'hotline' => '011-2824524'
     ];
-    $logo_url = '../assets/images/lily.jpeg';
+    $logo_url = '';
 }
 
 // Function to get the color for payment status
@@ -465,9 +458,10 @@ $column_count = $has_any_discount ? 5 : 4;
 
         <div class="order-header">
             <div class="company-logo">
+                <?php if (!empty($logo_url)): ?>
                 <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo"
-                     onerror="this.onerror=null; this.src='../assets/images/lily.jpeg';">
+                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo">
+                <?php endif; ?>
             </div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>
@@ -532,12 +526,14 @@ $column_count = $has_any_discount ? 5 : 4;
             <thead>
                 <tr>
                     <th width="5%">#</th>
-                    <th width="<?php echo $has_any_discount ? '35%' : '40%'; ?>">PRODUCT</th>
-                    <th width="<?php echo $has_any_discount ? '30%' : '40%'; ?>">DESCRIPTION</th>
+            <th width="<?php echo $has_any_discount ? '25%' : '30%'; ?>">PRODUCT</th>
+            <th width="<?php echo $has_any_discount ? '25%' : '30%'; ?>">DESCRIPTION</th>
+            <th width="8%" style="text-align: center;">QTY</th>
+            <th width="12%" style="text-align: right;">UNIT PRICE</th>
                     <?php if ($has_any_discount): ?>
-                        <th width="15%" style="text-align: right;">DISCOUNT</th>
+                <th width="12%" style="text-align: right;">DISCOUNT</th>
                     <?php endif; ?>
-                    <th width="15%" style="text-align: right;">PRICE</th>
+            <th width="13%" style="text-align: right;">TOTAL</th>
                 </tr>
             </thead>
             <tbody>
@@ -545,29 +541,38 @@ $column_count = $has_any_discount ? 5 : 4;
                 $i = 1;
                 if (count($items) > 0):
                     foreach ($items as $item):
-                        $original_price = $item['original_price'] ?? 0;
-                        $item_price = $item['item_price'] ?? 0;
-                        $item_discount = $item['item_discount'] ?? 0;
+                // Get quantity from database
+                $quantity = isset($item['quantity']) ? intval($item['quantity']) : 1;
+                $unit_price = isset($item['unit_price']) ? floatval($item['unit_price']) : 0;
+                $item_discount = isset($item['discount']) ? floatval($item['discount']) : 0;
+                $total_price = isset($item['total_amount']) ? floatval($item['total_amount']) : 0;
+                
+                // Calculate total before discount for display
+                $total_before_discount = $unit_price * $quantity;
                 ?>
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php echo htmlspecialchars($item['product_name']); ?></td>
                             <td><?php echo htmlspecialchars($item['product_description']); ?></td>
+                    <td style="text-align: center; font-weight: 600;">
+                        <?php echo $quantity; ?>
+                    </td>
+                    <td style="text-align: right;">
+                        <?php echo $currencySymbol . ' ' . number_format($unit_price, 2); ?>
+                    </td>
                             <?php if ($has_any_discount): ?>
-                                <td style="text-align: right;">
-                                    <?php echo $currencySymbol . ' ' . number_format($item_discount, 2); ?>
-                                </td>
-                            <?php endif; ?>
                             <td style="text-align: right;">
                                 <?php 
-                                // Show original price with discount info if applicable
                                 if ($item_discount > 0) {
-                                    echo $currencySymbol . ' ' . number_format($original_price, 2);
-                                    echo '<br><span class="item-discount">(After discount: ' . $currencySymbol . ' ' . number_format($item_price, 2) . ')</span>';
+                                echo $currencySymbol . ' ' . number_format($item_discount, 2);
                                 } else {
-                                    echo $currencySymbol . ' ' . number_format($item_price, 2);
+                                echo '-';
                                 }
                                 ?>
+                        </td>
+                    <?php endif; ?>
+                    <td style="text-align: right; font-weight: 600;">
+                        <?php echo $currencySymbol . ' ' . number_format($total_price, 2); ?>
                             </td>
                         </tr>
                     <?php endforeach;
@@ -578,7 +583,7 @@ $column_count = $has_any_discount ? 5 : 4;
                 <?php endif; ?>
 
                 <tr class="total-row">
-                    <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Sub Total :</td>
+            <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;">Sub Total :</td>
                     <td class="total-value">
                         <?php echo $currencySymbol . ' ' . number_format($subtotal_before_discounts, 2); ?>
                     </td>
@@ -586,7 +591,7 @@ $column_count = $has_any_discount ? 5 : 4;
 
                 <?php if ($has_any_discount): ?>
                     <tr class="total-row">
-                        <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Item Discounts :</td>
+                <td colspan="6" style="text-align: right; border-right: none;">Total Discounts :</td>
                         <td class="total-value">
                             <?php echo $currencySymbol . ' ' . number_format($total_item_discounts, 2); ?>
                         </td>
@@ -595,7 +600,7 @@ $column_count = $has_any_discount ? 5 : 4;
 
                 <?php if ($delivery_fee > 0): ?>
                     <tr class="total-row delivery-fee-row">
-                        <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Delivery Fee :</td>
+                <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;">Delivery Fee :</td>
                         <td class="total-value">
                             <?php echo $currencySymbol . ' ' . number_format($delivery_fee, 2); ?>
                         </td>
@@ -603,13 +608,15 @@ $column_count = $has_any_discount ? 5 : 4;
                 <?php endif; ?>
 
                 <tr class="total-row">
-                    <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Total :</td>
+            <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;"><strong> Total :</strong></td>
                     <td class="total-value">
+                <strong>
                         <?php 
                         // Calculate final total ensuring delivery fee is included
                         $final_total = $subtotal_before_discounts - $total_item_discounts + $delivery_fee;
                         echo $currencySymbol . ' ' . number_format($final_total, 2); 
                         ?>
+                </strong>
                     </td>
                 </tr>
             </tbody>

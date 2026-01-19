@@ -241,7 +241,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                     </label>
 
                                     <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description" required><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
+                                        placeholder="Enter product description" required><?php echo
+                                        trim(preg_replace('/\s+/', ' ', $product['description'])); ?> </textarea>
 
                                     <div class="error-feedback" id="description-error"></div>
 
@@ -291,7 +292,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             status: '<?php echo $product['status']; ?>',
             lkr_price: '<?php echo number_format($product['lkr_price'], 2, '.', ''); ?>',
             product_code: '<?php echo addslashes($product['product_code']); ?>',
-            description: '<?php echo addslashes($product['description'] ?? ''); ?>'
+            description: '<?php echo preg_replace('/\s+/', ' ', $product['description'] ?? '') ?>'
         };
 
         $(document).ready(function() {

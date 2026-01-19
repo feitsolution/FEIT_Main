@@ -445,6 +445,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Product processing
             $products = $_POST['order_product'];
             $product_prices = $_POST['order_product_price'];
+            $quantities = $_POST['order_product_quantity'] ?? [];
             $discounts = $_POST['order_product_discount'] ?? [];
             $product_descriptions = $_POST['order_product_description'] ?? [];
 
@@ -458,17 +459,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if (empty($product_id)) continue;
                 
                 $original_price = floatval($product_prices[$key] ?? 0);
+                $quantity = intval($quantities[$key] ?? 1);
+                if ($quantity < 1) $quantity = 1;
+                
                 $discount = floatval($discounts[$key] ?? 0);
                 $description = $product_descriptions[$key] ?? '';
                 
-                $discount = min($discount, $original_price);
-                $subtotal_before_discounts += $original_price;
+                // Discount is per line item total or per unit? 
+                // Based on UI logic: subtotal = (price * qty) - discount
+                // So discount is applied to the total for that line item
+                // But let's verify logic in create_order.php JS:
+                // let subtotal = (price * quantity) - discount;
+                
+                // Ensure discount doesn't exceed total line price
+                $line_total_price = $original_price * $quantity;
+                $discount = min($discount, $line_total_price);
+                
+                $subtotal_before_discounts += $line_total_price;
                 $total_discount += $discount;
                 $product_codes[] = $product_id;
                 
                 $order_items[] = [
                     'product_id' => $product_id,
                     'original_price' => $original_price,
+                    'quantity' => $quantity,
                     'discount' => $discount,
                     'description' => $description
                 ];
@@ -554,9 +568,9 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
             
         // Order items insertion
         $insertItemSql = "INSERT INTO order_items (
-            order_id, product_id, unit_price, discount, 
+            order_id, product_id, unit_price, quantity, discount, 
             total_amount, pay_status, status, description
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($insertItemSql);
         
@@ -565,16 +579,17 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
         }
 
         foreach ($order_items as $item) {
-            // Calculate the price after discount
-            $item_price_after_discount = $item['original_price'] - $item['discount'];
+            // Calculate the price after discount for the line
+            $item_total_amount = ($item['original_price'] * $item['quantity']) - $item['discount'];
             
             $stmt->bind_param(
-                "iiddssss", 
+                "iididssss", 
                 $order_id, 
                 $item['product_id'], 
-                $item['original_price'],      // unit_price (original price)
+                $item['original_price'],      // unit_price
+                $item['quantity'],            // quantity
                 $item['discount'], 
-                $item_price_after_discount,   // total_amount (price after discount)
+                $item_total_amount,           // total_amount (line total)
                 $pay_status, 
                 $status,     
                 $item['description']

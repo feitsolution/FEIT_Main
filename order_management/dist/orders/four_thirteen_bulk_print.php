@@ -25,25 +25,25 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connec
 /**
  * GET FILTER PARAMETERS FROM URL
  */
+
+// date
+// time_from
+// time_to
+// status_filter
+// date_filter
+// limit
 $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 $time_from = isset($_GET['time_from']) ? trim($_GET['time_from']) : '';
 $time_to = isset($_GET['time_to']) ? trim($_GET['time_to']) : '';
 $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 'all';
 
-// Tracking filter parameters
-$tracking_filter = isset($_GET['tracking_filter']) ? trim($_GET['tracking_filter']) : 'all';
-$tracking_number = isset($_GET['tracking_number']) ? trim($_GET['tracking_number']) : '';
-
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($page - 1) * $limit;
-
 /**
  * BUILD QUERY TO FETCH ORDERS
  */
-$sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
+$sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2, o.notes,
                o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
-               o.delivery_fee, o.discount, o.issue_date,
+               o.delivery_fee, o.discount, o.issue_date, o.pay_status,
                c.name as customer_name, c.phone as customer_phone, 
                c.email as customer_email, c.city_id,
                cr.courier_name as delivery_service,
@@ -71,56 +71,39 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
         FROM order_header o 
         LEFT JOIN customers c ON o.customer_id = c.customer_id
         LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
-        LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
-        WHERE o.interface IN ('individual', 'leads')";
+        LEFT JOIN city_table ct ON o.city_id = ct.city_id AND ct.is_active = 1
+        WHERE o.interface IN ('individual', 'leads') AND o.status = 'dispatch'";
 
 // Build search conditions
-$searchConditions = [];
 
-if (!empty($date)) {
-    $dateTerm = $conn->real_escape_string($date);
-    $searchConditions[] = "DATE(o.updated_at) = '$dateTerm'";
+// Default date
+if ($date === "" || !isset($_GET['date'])) {
+    $date = date("Y-m-d");
 }
 
-if (!empty($time_from)) {
-    $timeFromTerm = $conn->real_escape_string($time_from);
-    $searchConditions[] = "TIME(o.updated_at) >= '$timeFromTerm'";
+// Normalize time inputs (HH:MM format)
+$time_from = preg_match('/^\d{1,2}:\d{2}$/', $time_from) ? $time_from : "";
+$time_to   = preg_match('/^\d{1,2}:\d{2}$/', $time_to) ? $time_to : "";
+
+// Default start and end
+$startDateTime = $date . " 00:00:00";
+$endDateTime   = $date . " 23:59:59";
+
+// Apply time range filter
+if ($time_from !== "" && $time_to !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " $time_to:59";
+} elseif ($time_from !== "") {
+    $startDateTime = $date . " $time_from:00";
+    $endDateTime   = $date . " 23:59:59";
+} elseif ($time_to !== "") {
+    $startDateTime = $date . " 00:00:00";
+    $endDateTime   = $date . " $time_to:59";
 }
 
-if (!empty($time_to)) {
-    $timeToTerm = $conn->real_escape_string($time_to);
-    $searchConditions[] = "TIME(o.updated_at) <= '$timeToTerm'";
-}
+// Apply filter on selected date field
 
-if (!empty($status_filter) && $status_filter !== 'all') {
-    $statusTerm = $conn->real_escape_string($status_filter);
-    $searchConditions[] = "o.status = '$statusTerm'";
-}
-
-// Tracking filter conditions
-if (!empty($tracking_filter) && $tracking_filter !== 'all') {
-    switch ($tracking_filter) {
-        case 'with_tracking':
-            $searchConditions[] = "o.tracking_number IS NOT NULL AND o.tracking_number != '' AND TRIM(o.tracking_number) != ''";
-            break;
-        case 'without_tracking':
-            $searchConditions[] = "(o.tracking_number IS NULL OR o.tracking_number = '' OR TRIM(o.tracking_number) = '')";
-            break;
-        case 'specific_tracking':
-            if (!empty($tracking_number)) {
-                $trackingTerm = $conn->real_escape_string($tracking_number);
-                $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
-            }
-            break;
-    }
-}
-
-// Apply search conditions
-if (!empty($searchConditions)) {
-    $sql .= " AND " . implode(' AND ', $searchConditions);
-}
-
-$sql .= " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " AND o.updated_at BETWEEN '$startDateTime' AND '$endDateTime' ORDER BY o.order_id ASC LIMIT $limit";
 
 // Execute query
 $result = $conn->query($sql);
@@ -281,7 +264,7 @@ foreach ($orders as $order) {
         /* Individual label styling - LARGER SIZE */
         .simple-label {
             border: 2px dashed #333;
-            padding: 4mm;
+            padding: 3mm;
             display: flex;
             flex-direction: row;
             justify-content: space-between;
@@ -379,6 +362,15 @@ foreach ($orders as $order) {
             line-height: 1.4;
             word-wrap: break-word;
             overflow-wrap: break-word;
+        }
+
+        /* Notes section styling */
+        .notes-section {
+            margin-top: 1mm;
+            border-top: 1px dotted #ccc;
+            padding-top: 1mm;
+            font-size: 10px;
+            color: #000000ff;
         }
 
         /* Right section - Order info, Barcode and Total */
@@ -636,6 +628,13 @@ foreach ($orders as $order) {
                                 </div>
                             </div>
                             <?php endif; ?>
+
+                            <!-- Additional Note Section -->
+                            <?php if (!empty($order['notes'])): ?>
+                            <div class="notes-section">
+                                <strong>Note:</strong> <?php echo htmlspecialchars($order['notes']); ?>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -659,10 +658,16 @@ foreach ($orders as $order) {
                             <?php endif; ?>
                         </div>
                         
-                        <div class="total-section">
+                      <div class="total-section">
+                        <?php if ($order['pay_status'] !== 'paid'): ?>
                             <div class="total-label">Total:</div>
                             <div class="total-amount"><?php echo $currency_symbol . ' ' . number_format($total_amount, 2); ?></div>
-                        </div>
+                        <?php else: ?>
+                            <div style="color: green; font-weight: bold; font-size: 14px; margin-top: 2mm;">
+                                ✔ PAID
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     </div>
                 </div>
 

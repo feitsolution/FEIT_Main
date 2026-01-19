@@ -473,6 +473,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     </div>
 </div>
 
+<!-- Footer -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/footer.php'); ?>
+
 <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/scripts.php'); ?>
 </body>
 </html>

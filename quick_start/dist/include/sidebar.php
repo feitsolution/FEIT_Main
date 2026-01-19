@@ -201,7 +201,7 @@ if (!function_exists('get_logo_with_fallback')) {
             }
         }
         
-        if ($is_admin): ?>
+        if ($is_admin == 1): ?>
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
             <span class="pc-micon"> <i data-feather="type"></i></span>
@@ -260,11 +260,12 @@ if (!function_exists('get_logo_with_fallback')) {
           </ul>
         </li>
         
+        <?php if ($is_admin == 1): ?>
         <li class="pc-item pc-caption">
           <label>Branding</label>
           <i data-feather="monitor"></i>
         </li>
-        
+
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
             <span class="pc-micon"> <i data-feather="settings"></i></span>
@@ -275,7 +276,7 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../settings/branding.php">Edit Branding</a></li>
           </ul>
         </li>
-        
+        <?php endif; ?>
       </ul>
     </div>
   </div>

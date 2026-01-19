@@ -13,6 +13,36 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+/**
+ * Handle Failed Rows CSV Download
+ */
+if (isset($_GET['download_errors']) && isset($_SESSION['failed_rows_data'])) {
+    $failedRows = $_SESSION['failed_rows_data'];
+    
+    // Set headers for download
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="failed_leads_import_' . date('Y-m-d_H-i-s') . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    $output = fopen('php://output', 'w');
+    
+    // Add UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    // Write header (original columns + error reason)
+    if (!empty($failedRows)) {
+        fputcsv($output, array_keys($failedRows[0]));
+        
+        foreach ($failedRows as $row) {
+            fputcsv($output, $row);
+        }
+    }
+    
+    fclose($output);
+    exit();
+}
+
 // Include the database connection file early
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
 
@@ -32,6 +62,9 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details) {
 
 // Process CSV upload if form is submitted
 if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
+    // Clear previous failed rows
+    unset($_SESSION['failed_rows_data']);
+    
     try {
         // Validate file upload
         if ($_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
@@ -112,7 +145,13 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'email', 
             'address line 1', 
             'address line 2', 
+            'phone number 2', 
+            'city', 
+            'email', 
+            'address line 1', 
+            'address line 2', 
             'product code', 
+            'quantity',
             'other'
         ];
         
@@ -139,6 +178,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         $successCount = 0;
         $errorCount = 0;
         $errorMessages = [];
+        $failedRowsData = [];
         $rowNumber = 1;
         $successfulOrderIds = [];
         
@@ -164,7 +204,22 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $email = trim($row[$headerMap['email']] ?? '');
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
+                $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
+                $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $productCode = trim($row[$headerMap['product code']] ?? '');
+                
+                $quantityInput = isset($headerMap['quantity']) ? trim($row[$headerMap['quantity']] ?? '') : '';
+                
+                // Allow empty or 0, default to 1
+                if ($quantityInput === '' || $quantityInput === '0') {
+                    $quantity = 1;
+                } else {
+                    if (!is_numeric($quantityInput) || (int)$quantityInput < 0) {
+                        throw new Exception("Quantity must be a positive number (got: '$quantityInput')");
+                    }
+                    $quantity = (int)$quantityInput;
+                }
+                
                 $other = trim($row[$headerMap['other']] ?? '');
 
                 // ===============================
@@ -196,8 +251,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
 
                 // Normalize email for DB
-                $emailForDb = '-';
-                if (!empty($email) && !in_array(strtolower($email), ['-', 'null', 'n/a', 'na', ''])) {
+                $emailForDb = null;
+                if (!empty($email) && !in_array(strtolower($email), ['-', 'null', 'n/a', 'na', '', ' -'])) {
                     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                         throw new Exception("Invalid email format: '$email'");
                     }
@@ -301,7 +356,7 @@ $cityStmt->close();
                 }
              
                 // Check Email if provided
-                if (!empty($emailForDb) && $emailForDb !== '-') {
+                if (!empty($emailForDb)) {
                     $customerCheckConditions[] = "email = ?";
                     $customerCheckParams[] = $emailForDb;
                     $customerCheckTypes .= 's';
@@ -408,11 +463,11 @@ $orderId = $conn->insert_id;
 $orderStmt->close();
                 
                 // Create order item
-                $quantity = 1;
+                // Quantity is already determined above
                 $itemTotalAmount = $unitPrice * $quantity;
                 $itemSql = "INSERT INTO order_items (
-                    order_id, product_id, unit_price, discount, total_amount, pay_status, status, description
-                ) VALUES (?, ?, ?, 0.00, ?, 'unpaid', 'pending', ?)";
+                    order_id, product_id, unit_price, discount, total_amount, quantity, pay_status, status, description
+                ) VALUES (?, ?, ?, 0.00, ?, ?, 'unpaid', 'pending', ?)";
                 
                 $itemStmt = $conn->prepare($itemSql);
                 if (!$itemStmt) {
@@ -420,8 +475,8 @@ $orderStmt->close();
                 }
                 $description = "Product: $productCode";
                 
-                $itemStmt->bind_param("iidds", 
-                    $orderId, $productId, $unitPrice, $itemTotalAmount, $description
+                $itemStmt->bind_param("iiddis", 
+                    $orderId, $productId, $unitPrice, $itemTotalAmount, $quantity, $description
                 );
                 
                 if (!$itemStmt->execute()) {
@@ -436,12 +491,27 @@ $orderStmt->close();
                 
             } catch (Exception $e) {
                 $errorCount++;
-                $errorMessages[] = "Row $rowNumber: " . $e->getMessage();
+                $errorMessage = $e->getMessage();
+                $errorMessages[] = "Row $rowNumber: " . $errorMessage;
+                
+                // Capture row data for error download
+                $failedRow = [];
+                foreach ($headers as $index => $headerName) {
+                    $failedRow[$headerName] = $row[$index] ?? '';
+                }
+                $failedRow['Error Reason'] = $errorMessage;
+                $failedRowsData[] = $failedRow;
+                
                 continue;
             }
         }
         
         fclose($handle);
+        
+        // Store failed rows in session
+        if (!empty($failedRowsData)) {
+            $_SESSION['failed_rows_data'] = $failedRowsData;
+        }
         
         // Commit transaction
         $conn->commit();
@@ -563,6 +633,23 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     color: #721c24;
     margin-bottom: 0.5rem;
 }
+
+.download-errors-btn {
+    display: inline-block;
+    background-color: #dc3545;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 1rem;
+    transition: background-color 0.2s;
+}
+
+.download-errors-btn:hover {
+    background-color: #c82333;
+    color: white;
+}
 </style>
 
 <body>
@@ -586,8 +673,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                         <p><strong>Successfully imported:</strong> <?php echo $_SESSION['import_result']['success']; ?> records</p>
                         <?php if ($_SESSION['import_result']['errors'] > 0): ?>
                             <p><strong>Failed imports:</strong> <?php echo $_SESSION['import_result']['errors']; ?> records</p>
+                            
+                            <!-- NEW: Download Failed Rows Button -->
+                            <?php if (isset($_SESSION['failed_rows_data'])): ?>
+                                <a href="?download_errors=1" class="download-errors-btn">
+                                    📥 Download Failed Rows CSV
+                                </a>
+                                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                                    <em>Download the CSV file containing only the failed rows with error reasons. Fix the issues and re-upload.</em>
+                                </p>
+                            <?php endif; ?>
+                            
                             <?php if (!empty($_SESSION['import_result']['messages'])): ?>
-                                <details>
+                                <details style="margin-top: 1rem;">
                                     <summary style="cursor: pointer; font-weight: bold;">View Error Details</summary>
                                     <div class="error-section">
                                         <ul class="mt-2">
@@ -634,7 +732,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
                                 <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code</li>
                                 <li><strong>Note:</strong> Product Price is automatically fetched from the Product Code</li>
-                                <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Optional fields:</strong> Quantity, Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Quantity Rule:</strong> Defaults to 1 if empty or 0</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
