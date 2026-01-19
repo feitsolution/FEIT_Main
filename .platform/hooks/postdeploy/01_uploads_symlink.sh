@@ -7,7 +7,7 @@ mkdir -p $SHARED
 chown -R webapp:webapp $SHARED
 chmod -R 775 $SHARED
 
-for APP in lily_collection 
+for APP in lily_collection order_management quick_start
 do
   DIST="/var/app/current/$APP/dist/uploads"
 
