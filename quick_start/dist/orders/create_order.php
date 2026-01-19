@@ -176,6 +176,66 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     color: #999;
     text-align: center;
 }
+
+.quantity-col {
+    width: 100px;
+    min-width: 80px;
+}
+
+.quantity-col input {
+    text-align: center;
+    font-weight: 500;
+}
+
+.row-highlight {
+    background-color: #fff3cd !important;
+    transition: background-color 0.5s ease;
+}
+
+#product-alert-container {
+    margin-bottom: 15px;
+}
+
+.duplicate-product-alert {
+    display: flex;
+    align-items: center;
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 15px;
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.duplicate-product-alert .alert-icon {
+    font-size: 20px;
+    margin-right: 15px;
+}
+
+.duplicate-product-alert .alert-message {
+    flex-grow: 1;
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.duplicate-product-alert .alert-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #856404;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    padding: 0;
+    margin-left: 10px;
+}
+
+.duplicate-product-alert .alert-close:hover {
+    opacity: 1;
+}
+
 </style>
 
 <body>
@@ -427,6 +487,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                             <h5 class="section-title">Products</h5>
                         </div>
                         <div class="section-body">
+                            <div id="product-alert-container"></div>
                             <div style="overflow-x: auto;">
                                 <table class="products-table" id="order_table">
                                     <thead>
@@ -434,6 +495,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                             <th class="action-col">Action</th>
                                             <th class="product-col">Product</th>
                                             <th class="description-col">Description</th>
+                                            <th class="quantity-col">Quantity</th>
                                             <th class="price-col">Price</th>
                                             <th class="discount-col">Discount</th>
                                             <th class="subtotal-col">Subtotal</th>
@@ -461,6 +523,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                             </td>
                                             <td class="description-col">
                                                 <input type="text" name="order_product_description[]" class="form-control product-description">
+                                            </td>
+                                            <td class="quantity-col">
+                                                <input type="number" name="order_product_quantity[]" class="form-control quantity" value="1" min="1" step="1">
                                             </td>
                                             <td class="price-col">
                                                 <div class="input-group">
@@ -714,8 +779,7 @@ const PhoneValidator = {
         
         try {
             const response = await fetch(`check_phone.php?phone=${encodeURIComponent(phone)}&customer_id=${currentCustomerId}`);
-            const data = await response.json();
-            return data;
+            return await response.json();
         } catch (error) {
             console.error('Error checking phone:', error);
             return { exists: false };
@@ -1146,12 +1210,52 @@ document.getElementById('customer_phone_2').addEventListener('paste', function(e
 const ProductManager = {
     updatePrice: (row) => {
         const productSelect = row.querySelector('.product-select');
+        const selectedValue = productSelect.value;
         const selectedOption = productSelect.options[productSelect.selectedIndex];
         
-        if (!productSelect.value) return;
+        if (!selectedValue) {
+            // Clear fields if no product is selected
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+            
+            
+            ProductManager.updateTotals();
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+
+        const productName = selectedOption.text;
+
+        // Check for duplicates
+        let existingRow = null;
+        document.querySelectorAll('#order_table tbody tr').forEach(tr => {
+            const select = tr.querySelector('.product-select');
+            if (tr !== row && select && select.value === selectedValue) {
+                existingRow = tr;
+            }
+        });
+
+        if (existingRow) {
+            ProductManager.showDuplicateAlert(productName, existingRow);
+
+            // Clear new row selection
+            productSelect.value = '';
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
 
         const priceField = row.querySelector('.price');
         const descriptionField = row.querySelector('.product-description');
+        const quantityInput = row.querySelector('.quantity');
         const description = selectedOption.getAttribute('data-description') || '';
         const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
 
@@ -1162,8 +1266,56 @@ const ProductManager = {
         ProductManager.checkForProducts();
     },
 
+    showDuplicateAlert: (productName, existingRow) => {
+        const alertContainer = document.getElementById('product-alert-container');
+        
+        // Remove any existing alerts
+        alertContainer.innerHTML = '';
+        
+        // Create new alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'duplicate-product-alert';
+        alertDiv.innerHTML = `
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-message">
+                <strong>Product Already Added!</strong><br>
+                "${productName}" is already in your order. Please increase the quantity of the existing item instead of adding it again.
+            </div>
+            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+        `;
+        
+        alertContainer.appendChild(alertDiv);
+        
+        // Highlight existing row with yellow background
+        if (existingRow) {
+            existingRow.style.backgroundColor = '#fff3cd';
+            existingRow.style.transition = 'background-color 0.3s';
+            
+            // Scroll to the existing row
+            existingRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                existingRow.style.backgroundColor = '';
+            }, 3000);
+        }
+        
+        // Auto-hide alert after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transition = 'opacity 0.3s';
+                setTimeout(() => alertDiv.remove(), 300);
+            }
+        }, 5000);
+        
+        // Scroll to alert
+        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
     updateRowTotal: (row) => {
         let price = parseFloat(row.querySelector('.price').value) || 0;
+        let quantity = parseFloat(row.querySelector('.quantity').value) || 1;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
         if (discount > price) {
@@ -1171,7 +1323,13 @@ const ProductManager = {
             row.querySelector('.discount').value = discount;
         }
 
-        let subtotal = price - discount;
+        quantity = parseInt(row.querySelector('.quantity').value) || 1;
+        if (quantity < 1) {
+            quantity = 1;
+            row.querySelector('.quantity').value = 1;
+        }
+
+        let subtotal = (price * quantity) - discount;
         row.querySelector('.subtotal').value = subtotal.toFixed(2);
         ProductManager.updateTotals();
     },
@@ -1204,10 +1362,11 @@ const ProductManager = {
                 row.querySelector('.discount').value = rowDiscount;
             }
 
-            let rowSubtotal = rowPrice - rowDiscount;
+            let rowQuantity = parseInt(row.querySelector('.quantity').value) || 1;
+            let rowSubtotal = (rowPrice * rowQuantity) - rowDiscount;
             row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
 
-            subtotal += rowPrice;
+            subtotal += (rowPrice * rowQuantity);
             totalDiscount += rowDiscount;
         });
 
@@ -1261,6 +1420,13 @@ if (hasProducts) {
                     ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
                     isValid = false;
                 }
+                
+                const quantityInput = row.querySelector('.quantity');
+                const quantity = parseInt(quantityInput.value) || 0;
+                if (quantity < 1) {
+                    ValidationUtils.showError(quantityInput, 'Qty must be >= 1', 'product-validation-error');
+                    isValid = false;
+                }
             }
         });
 
@@ -1290,6 +1456,8 @@ if (hasProducts) {
                 input.value = '0.00';
             } else if (input.classList.contains('discount')) {
                 input.value = '0';
+            } else if (input.classList.contains('quantity')) {
+                input.value = '1';
             } else if (input.classList.contains('subtotal')) {
                 input.value = '0.00';
             } else {
@@ -1312,6 +1480,7 @@ if (hasProducts) {
             row.querySelector('.product-select').value = '';
             row.querySelector('.product-description').value = '';
             row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
             row.querySelector('.discount').value = '0';
             row.querySelector('.subtotal').value = '0.00';
             ProductManager.checkForProducts();
@@ -1558,7 +1727,7 @@ const CustomerModal = {
                     e.target.value = e.target.value.replace(/[^0-9]/g, '');
                 }
                 
-                if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
+                if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
                     ProductManager.updateRowTotal(e.target.closest('tr'));
                     FormValidator.validateAndToggleSubmit();
                 }
@@ -1587,11 +1756,9 @@ const CustomerModal = {
                     if (!DateValidator.validate()) issues.push('Order dates');
                     if (!ProductManager.validate()) issues.push('Product information');
                     if (!ProductManager.hasValidProduct()) issues.push('At least one complete product');
-                    // Check email validation errors
-                
-                if (document.querySelectorAll('.email-validation-error').length > 0) {
-                    isValid = false;
-                }
+                    if (document.querySelectorAll('.email-validation-error').length > 0) {
+                        // Email error already shown, just prevent submission
+                    }
 
                     alert('Please fix the following issues:\n- ' + issues.join('\n- '));
                     return false;

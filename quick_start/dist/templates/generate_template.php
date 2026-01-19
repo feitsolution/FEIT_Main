@@ -24,6 +24,7 @@ $header = [
     'Address Line 1',
     'Address Line 2',
     'Product Code',
+    'Quantity',
     'Other'
 ];
 

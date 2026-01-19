@@ -13,6 +13,36 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+/**
+ * Handle Failed Rows CSV Download
+ */
+if (isset($_GET['download_errors']) && isset($_SESSION['failed_rows_data'])) {
+    $failedRows = $_SESSION['failed_rows_data'];
+    
+    // Set headers for download
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="failed_leads_import_' . date('Y-m-d_H-i-s') . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    $output = fopen('php://output', 'w');
+    
+    // Add UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    // Write header (original columns + error reason)
+    if (!empty($failedRows)) {
+        fputcsv($output, array_keys($failedRows[0]));
+        
+        foreach ($failedRows as $row) {
+            fputcsv($output, $row);
+        }
+    }
+    
+    fclose($output);
+    exit();
+}
+
 // Include the database connection file early
 include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/connection/db_connection.php');
 
@@ -30,41 +60,11 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details) {
     }
 }
 
-// NEW: Handle CSV export of failed rows
-if (isset($_GET['download_errors']) && isset($_SESSION['failed_rows_data'])) {
-    $failedData = $_SESSION['failed_rows_data'];
-    
-    // Set headers for CSV download
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="failed_leads_' . date('Y-m-d_His') . '.csv"');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-    
-    // Open output stream
-    $output = fopen('php://output', 'w');
-    
-    // Add BOM for Excel UTF-8 compatibility
-    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    
-    // Write header row with error column
-    $headerRow = array_merge($failedData['headers'], ['Error Reason']);
-    fputcsv($output, $headerRow);
-    
-    // Write failed rows with their error messages
-    foreach ($failedData['rows'] as $rowData) {
-        $rowWithError = array_merge($rowData['data'], [$rowData['error']]);
-        fputcsv($output, $rowWithError);
-    }
-    
-    fclose($output);
-    
-    // Clear the session data after download
-    unset($_SESSION['failed_rows_data']);
-    exit();
-}
-
 // Process CSV upload if form is submitted
 if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
+    // Clear previous failed rows
+    unset($_SESSION['failed_rows_data']);
+    
     try {
         // Validate file upload
         if ($_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
@@ -146,6 +146,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'address line 1', 
             'address line 2', 
             'product code', 
+            'quantity',
             'other'
         ];
         
@@ -168,11 +169,11 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             );
         }
         
-        // Initialize counters and storage for failed rows
+        // Initialize counters
         $successCount = 0;
         $errorCount = 0;
         $errorMessages = [];
-        $failedRowsData = []; // NEW: Store complete failed row data
+        $failedRowsData = [];
         $rowNumber = 1;
         $successfulOrderIds = [];
         
@@ -199,9 +200,26 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $productCode = trim($row[$headerMap['product code']] ?? '');
+                
+                $quantityInput = isset($headerMap['quantity']) ? trim($row[$headerMap['quantity']] ?? '') : '';
+                
+                // Allow empty or 0, default to 1
+                if ($quantityInput === '' || $quantityInput === '0') {
+                    $quantity = 1;
+                } else {
+                    if (!is_numeric($quantityInput) || (int)$quantityInput < 0) {
+                        throw new Exception("Quantity must be a positive number (got: '$quantityInput')");
+                    }
+                    $quantity = (int)$quantityInput;
+                }
+                
                 $other = trim($row[$headerMap['other']] ?? '');
 
-                // Phone number normalization
+                // ===============================
+                // FIX: Preserve leading 0 in phone numbers
+                // ===============================
+               
+                // Convert +94XXXXXXXXX → 0XXXXXXXXX
                 if (strlen($phoneNumber) === 12 && substr($phoneNumber, 0, 3) === '+94') {
                     $phoneNumber = '0' . substr($phoneNumber, 3);
                 } elseif (strlen($phoneNumber) === 11 && substr($phoneNumber, 0, 2) === '94') {
@@ -225,8 +243,9 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $phoneNumber2 = '0' . $phoneNumber2;
                 }
 
+                // Normalize email for DB
                 $emailForDb = null;
-                if (!empty($email) && !in_array(strtolower($email), ['-', 'null', 'n/a', 'na', ''])) {
+                if (!empty($email) && !in_array(strtolower($email), ['-', 'null', 'n/a', 'na', '', ' -'])) {
                     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                         throw new Exception("Invalid email format: '$email'");
                     }
@@ -264,23 +283,23 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0 (got: '$phoneNumber2')");
                 }
                 
-                // Get city_id from city name
-                $citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
-                $cityStmt = $conn->prepare($citySql);
-                if (!$cityStmt) {
-                    throw new Exception("Failed to prepare city query: " . $conn->error);
-                }
-                $cityStmt->bind_param("s", $city);
-                $cityStmt->execute();
-                $cityResult = $cityStmt->get_result();
+               // Get city_id from city name
+$citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
+$cityStmt = $conn->prepare($citySql);
+if (!$cityStmt) {
+    throw new Exception("Failed to prepare city query: " . $conn->error);
+}
+$cityStmt->bind_param("s", $city);
+$cityStmt->execute();
+$cityResult = $cityStmt->get_result();
 
-                if ($cityResult->num_rows === 0) {
-                    throw new Exception("City '$city' not found in database");
-                }
+if ($cityResult->num_rows === 0) {
+    throw new Exception("City '$city' not found in database");
+}
 
-                $cityData = $cityResult->fetch_assoc();
-                $cityId = $cityData['city_id'];
-                $cityStmt->close();
+$cityData = $cityResult->fetch_assoc();
+$cityId = $cityData['city_id'];
+$cityStmt->close();
                 
                 // Check if product exists and is active
                 $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND LOWER(status) = 'active'";
@@ -304,16 +323,21 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $subtotal = $unitPrice;
                 $productStmt->close();
 
-                // Check if customer exists
+                // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
+                $customerFound = false;
+                
+                // Build dynamic query based on available data
                 $customerCheckConditions = [];
                 $customerCheckParams = [];
                 $customerCheckTypes = '';
                 
+                // Check Phone Number 1 (always required)
                 $customerCheckConditions[] = "phone = ?";
                 $customerCheckParams[] = $phoneNumber;
                 $customerCheckTypes .= 's';
                 
+                // Check Phone Number 2 if provided
                 if (!empty($phoneNumber2)) {
                     $customerCheckConditions[] = "phone = ?";
                     $customerCheckConditions[] = "phone_2 = ?";
@@ -322,12 +346,14 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $customerCheckTypes .= 'ss';
                 }
              
-                if (!empty($emailForDb) && $emailForDb !== '-') {
+                // Check Email if provided
+                if (!empty($emailForDb)) {
                     $customerCheckConditions[] = "email = ?";
                     $customerCheckParams[] = $emailForDb;
                     $customerCheckTypes .= 's';
                 }
                 
+                // Build the query
                 $customerCheckSql = "SELECT customer_id FROM customers WHERE " . implode(' OR ', $customerCheckConditions) . " LIMIT 1";
                 $customerCheckStmt = $conn->prepare($customerCheckSql);
                 
@@ -335,13 +361,17 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Failed to prepare customer check query: " . $conn->error);
                 }
                 
+                // Bind parameters dynamically
                 $customerCheckStmt->bind_param($customerCheckTypes, ...$customerCheckParams);
                 $customerCheckStmt->execute();
                 $customerCheckResult = $customerCheckStmt->get_result();
                 
                 if ($customerCheckResult->num_rows > 0) {
+                    // Customer EXISTS - Use existing customer ID, NO UPDATE
                     $customerId = $customerCheckResult->fetch_assoc()['customer_id'];
+                    $customerFound = true;
                 } else {
+                    // Customer DOES NOT EXIST - Create NEW customer
                     $customerInsertSql = "INSERT INTO customers (name, email, phone, phone_2, address_line1, address_line2, city_id) 
                                          VALUES (?, ?, ?, ?, ?, ?, ?)";
                     $customerInsertStmt = $conn->prepare($customerInsertSql);
@@ -356,63 +386,79 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     
                     $customerId = $conn->insert_id;
                     $customerInsertStmt->close();
+                    $customerFound = false;
                 }
                 $customerCheckStmt->close();
 
-                // Fetch delivery fee
-                $deliveryFee = 0;
-                $brandingSql = "SELECT delivery_fee FROM branding WHERE active = 1 ORDER BY branding_id ASC LIMIT 1";
-                $brandingStmt = $conn->prepare($brandingSql);
-                if (!$brandingStmt) {
-                    throw new Exception("Failed to prepare branding query: " . $conn->error);
-                }
-                $brandingStmt->execute();
-                $brandingResult = $brandingStmt->get_result();
+                // Fetch branding info and delivery fee for this customer
+// Fetch delivery fee from active branding table (get first active branding entry)
+$deliveryFee = 0; // default initialization
+$brandingSql = "SELECT delivery_fee FROM branding WHERE active = 1 ORDER BY branding_id ASC LIMIT 1";
+$brandingStmt = $conn->prepare($brandingSql);
+if (!$brandingStmt) {
+    throw new Exception("Failed to prepare branding query: " . $conn->error);
+}
+$brandingStmt->execute();
+$brandingResult = $brandingStmt->get_result();
 
-                if ($brandingResult->num_rows > 0) {
-                    $brandingData = $brandingResult->fetch_assoc();
-                    $deliveryFee = (float)$brandingData['delivery_fee'];
-                } else {
-                    throw new Exception("No active branding configuration found. Please set up branding first.");
-                }
-                $brandingStmt->close();
+if ($brandingResult->num_rows > 0) {
+    $brandingData = $brandingResult->fetch_assoc();
+    $deliveryFee = (float)$brandingData['delivery_fee'];
+} else {
+    throw new Exception("No active branding configuration found. Please set up branding first.");
+}
+$brandingStmt->close();
 
-                $totalAmountWithDelivery = $subtotal + $deliveryFee;
-                $assignedUserId = $selectedUsers[array_rand($selectedUsers)];
+// Calculate total amount including delivery fee
+$totalAmountWithDelivery = $subtotal + $deliveryFee;
 
-                // Create order header
-                $orderSql = "INSERT INTO order_header (
-                    customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
-                    pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by
-                ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?)";
+// Randomly assign to one of the selected users
+$assignedUserId = $selectedUsers[array_rand($selectedUsers)];
 
-                $orderStmt = $conn->prepare($orderSql);
-                if (!$orderStmt) {
-                    throw new Exception("Failed to prepare order query: " . $conn->error);
-                }
-                $notes = !empty($other) ? $other : 'Imported from CSV';
+// Create order header with CSV data including delivery_fee
+$orderSql = "INSERT INTO order_header (
+    customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
+    pay_status, pay_by, total_amount, currency, status, product_code, interface, 
+    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by
+) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
+         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?)";
 
-                $orderStmt->bind_param("iidsdsssisssdi", 
-                    $customerId, $assignedUserId, $subtotal, $notes, $totalAmountWithDelivery, 
-                    $productCode, $phoneNumber, $phoneNumber2, $cityId, $addressLine1, 
-                    $addressLine2, $fullName, $deliveryFee, $loggedInUserId
-                );
+$orderStmt = $conn->prepare($orderSql);
+if (!$orderStmt) {
+    throw new Exception("Failed to prepare order query: " . $conn->error);
+}
+$notes = !empty($other) ? $other : 'Imported from CSV';
 
-                if (!$orderStmt->execute()) {
-                    throw new Exception("Failed to create order: " . $orderStmt->error);
-                }
+$orderStmt->bind_param("iidsdsssisssdi", 
+    $customerId,                // customer_id (int)
+    $assignedUserId,            // user_id (int)
+    $subtotal,                  // subtotal (decimal) - WITHOUT delivery
+    $notes,                     // notes (string)
+    $totalAmountWithDelivery,   // total_amount (decimal) - WITH delivery
+    $productCode,               // product_code (string)
+    $phoneNumber,               // mobile (string)
+    $phoneNumber2,              // mobile_2 (string)
+    $cityId,                    // city_id (int)
+    $addressLine1,              // address_line1 (string)
+    $addressLine2,              // address_line2 (string)
+    $fullName,                  // full_name (string)
+    $deliveryFee,               // delivery_fee (decimal)
+    $loggedInUserId             // created_by (int)
+);
 
-                $orderId = $conn->insert_id;
-                $orderStmt->close();
+if (!$orderStmt->execute()) {
+    throw new Exception("Failed to create order: " . $orderStmt->error);
+}
+
+$orderId = $conn->insert_id;
+$orderStmt->close();
                 
                 // Create order item
-                $quantity = 1;
+                // Quantity is already determined above
                 $itemTotalAmount = $unitPrice * $quantity;
                 $itemSql = "INSERT INTO order_items (
-                    order_id, product_id, unit_price, discount, total_amount, pay_status, status, description
-                ) VALUES (?, ?, ?, 0.00, ?, 'unpaid', 'pending', ?)";
+                    order_id, product_id, unit_price, discount, total_amount, quantity, pay_status, status, description
+                ) VALUES (?, ?, ?, 0.00, ?, ?, 'unpaid', 'pending', ?)";
                 
                 $itemStmt = $conn->prepare($itemSql);
                 if (!$itemStmt) {
@@ -420,8 +466,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $description = "Product: $productCode";
                 
-                $itemStmt->bind_param("iidds", 
-                    $orderId, $productId, $unitPrice, $itemTotalAmount, $description
+                $itemStmt->bind_param("iiddis", 
+                    $orderId, $productId, $unitPrice, $itemTotalAmount, $quantity, $description
                 );
                 
                 if (!$itemStmt->execute()) {
@@ -429,6 +475,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 
                 $itemStmt->close();
+                
+                // Track successful order ID
                 $successfulOrderIds[] = $orderId;
                 $successCount++;
                 
@@ -437,16 +485,24 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $errorMessage = $e->getMessage();
                 $errorMessages[] = "Row $rowNumber: " . $errorMessage;
                 
-                // NEW: Store the complete failed row data for CSV export
-                $failedRowsData[] = [
-                    'data' => $row,
-                    'error' => $errorMessage
-                ];
+                // Capture row data for error download
+                $failedRow = [];
+                foreach ($headers as $index => $headerName) {
+                    $failedRow[$headerName] = $row[$index] ?? '';
+                }
+                $failedRow['Error Reason'] = $errorMessage;
+                $failedRowsData[] = $failedRow;
+                
                 continue;
             }
         }
         
         fclose($handle);
+        
+        // Store failed rows in session
+        if (!empty($failedRowsData)) {
+            $_SESSION['failed_rows_data'] = $failedRowsData;
+        }
         
         // Commit transaction
         $conn->commit();
@@ -468,14 +524,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'errors' => $errorCount,
             'messages' => $errorMessages
         ];
-        
-        // NEW: Store failed rows data for CSV export
-        if (!empty($failedRowsData)) {
-            $_SESSION['failed_rows_data'] = [
-                'headers' => $headers, // Original headers from CSV
-                'rows' => $failedRowsData
-            ];
-        }
         
         // Redirect to avoid resubmission
         header("Location: " . $_SERVER['PHP_SELF']);
@@ -563,24 +611,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     border-radius: 5px;
 }
 
-.alert-success {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 5px;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 5px;
-}
-
 .error-section {
     background-color: #f8d7da;
     border: 1px solid #f5c6cb;
@@ -595,27 +625,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     margin-bottom: 0.5rem;
 }
 
-/* NEW: Download button styling */
 .download-errors-btn {
     display: inline-block;
     background-color: #dc3545;
     color: white;
-    padding: 0.5rem 1.5rem;
-    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: bold;
     margin-top: 1rem;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s;
 }
 
 .download-errors-btn:hover {
     background-color: #c82333;
     color: white;
-    text-decoration: none;
-}
-
-.download-errors-btn i {
-    margin-right: 0.5rem;
 }
 </style>
 
@@ -699,7 +723,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
                                 <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code</li>
                                 <li><strong>Note:</strong> Product Price is automatically fetched from the Product Code</li>
-                                <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Optional fields:</strong> Quantity, Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Quantity Rule:</strong> Defaults to 1 if empty or 0</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
