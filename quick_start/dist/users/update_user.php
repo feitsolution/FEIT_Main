@@ -274,7 +274,7 @@ try {
             jsonResponse(false, 'Database error occurred. Please try again.');
         }
         
-        $stmt->bind_param("ssssssiii", 
+        $stmt->bind_param("sssssssii", 
             $name, $email, $hashed_password, $mobile, $nic, $address, 
             $status, $role_id, $userId
         );
