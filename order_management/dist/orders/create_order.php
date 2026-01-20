@@ -525,21 +525,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                                 <input type="text" name="order_product_description[]" class="form-control product-description">
                                             </td>
                                             <td class="quantity-col">
-                                                <input type="number" name="order_product_quantity[]" class="form-control quantity" value="1" min="1" step="1">
+                                                <input type="number" name="order_product_quantity[]" class="form-control quantity" value="1" min="1" step="1" disabled>
                                             </td>
                                             <td class="price-col">
                                                 <div class="input-group">
                                                     <span class="input-group-text">Rs.</span>
-                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01">
+                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01" disabled>
                                                 </div>
                                             </td>
                                             <td class="discount-col">
-                                                        <input type="number" name="order_product_discount[]" class="form-control discount" placeholder="0.00" step="0.01">
+                                                        <input type="number" name="order_product_discount[]" class="form-control discount" placeholder="0.00" step="0.01" disabled>
                                             </td>
                                             <td class="subtotal-col">
                                                 <div class="input-group">
                                                     <span class="input-group-text">Rs.</span>
-                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" readonly>
+                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" disabled>
                                                 </div>
                                             </td>
                                         </tr>
@@ -548,7 +548,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
-                                <button type="button" id="add_product" class="btn-add-product">
+                                <button type="button" id="add_product" class="btn-add-product" disabled>
                                     <span>+</span> Add Product
                                 </button>
 
@@ -1216,6 +1216,10 @@ const ProductManager = {
             row.querySelector('.discount').value = '0';
             row.querySelector('.subtotal').value = '0.00';
             
+            // Disable fields
+            row.querySelector('.quantity').disabled = true;
+            row.querySelector('.price').disabled = true;
+            row.querySelector('.discount').disabled = true;
             
             ProductManager.updateTotals();
             FormValidator.validateAndToggleSubmit();
@@ -1256,6 +1260,11 @@ const ProductManager = {
 
         priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
         descriptionField.value = description;
+
+        // Enable fields
+        quantityInput.disabled = false;
+        priceField.disabled = false;
+        row.querySelector('.discount').disabled = false;
 
         ProductManager.updateRowTotal(row);
         ProductManager.checkForProducts();
@@ -1310,18 +1319,18 @@ const ProductManager = {
 
     updateRowTotal: (row) => {
         let price = parseFloat(row.querySelector('.price').value) || 0;
-        let quantity = parseFloat(row.querySelector('.quantity').value) || 1;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
+
+        // Handle Quantity - ensure it is at least 1
+        const qtyInput = row.querySelector('.quantity');
+        if (qtyInput.value !== "" && parseInt(qtyInput.value) < 1) {
+            qtyInput.value = 1;
+        }
+        let quantity = parseInt(qtyInput.value) || 1;
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
             row.querySelector('.discount').value = discount;
-        }
-
-        quantity = parseInt(row.querySelector('.quantity').value) || 1;
-        if (quantity < 1) {
-            quantity = 1;
-            row.querySelector('.quantity').value = 1;
         }
 
         let subtotal = (price * quantity) - discount;
@@ -1340,6 +1349,14 @@ const ProductManager = {
 
         const deliveryFeeRow = document.getElementById('delivery_fee_row');
         deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
+        
+        // Toggle Add Product button
+        const addProductBtn = document.getElementById('add_product');
+        if (addProductBtn) {
+            addProductBtn.disabled = !hasProducts;
+            addProductBtn.style.opacity = hasProducts ? '1' : '0.6';
+            addProductBtn.style.cursor = hasProducts ? 'pointer' : 'not-allowed';
+        }
         
         return hasProducts;
     },
@@ -1420,7 +1437,7 @@ const ProductManager = {
                 const quantityInput = row.querySelector('.quantity');
                 const quantity = parseInt(quantityInput.value) || 0;
                 if (quantity < 1) {
-                    ValidationUtils.showError(quantityInput, 'Qty must be >= 1', 'product-validation-error');
+                    ValidationUtils.showError(quantityInput, 'Quantity must be more than 0', 'product-validation-error');
                     isValid = false;
                 }
             }
@@ -1462,6 +1479,12 @@ const ProductManager = {
         });
         
         newRow.querySelector('.product-select').value = '';
+        
+        // Ensure fields in new row are disabled initially
+        newRow.querySelector('.quantity').disabled = true;
+        newRow.querySelector('.price').disabled = true;
+        newRow.querySelector('.discount').disabled = true;
+
         document.querySelector('#order_table tbody').appendChild(newRow);
     },
 
@@ -1479,6 +1502,12 @@ const ProductManager = {
             row.querySelector('.quantity').value = '1';
             row.querySelector('.discount').value = '0';
             row.querySelector('.subtotal').value = '0.00';
+            
+            // Disable fields
+            row.querySelector('.quantity').disabled = true;
+            row.querySelector('.price').disabled = true;
+            row.querySelector('.discount').disabled = true;
+            
             ProductManager.checkForProducts();
             ProductManager.updateTotals();
         }
@@ -1730,6 +1759,9 @@ const CustomerModal = {
                 }
                 
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
+                    if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) {
+                        e.target.value = 1;
+                    }
                     ProductManager.updateRowTotal(e.target.closest('tr'));
                     FormValidator.validateAndToggleSubmit();
                 }

@@ -41,8 +41,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Process customer details
         $customer_name = trim($_POST['customer_name']);
         $customer_email = $_POST['customer_email'] ?? '';
-        $customer_address = $_POST['customer_address'] ?? 'No. 12, Galle Road, Colombo, Sri Lanka';
-        $customer_phone = $_POST['customer_phone'] ?? '+94712345678';
+        $customer_address = $_POST['customer_address'] ?? '';
+        $customer_phone = $_POST['customer_phone'] ?? '';
         
         // Find or create customer
         $customer_id = 0;
@@ -66,9 +66,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         
         // Prepare invoice details
-        $invoice_date = date('Y-m-d');
-        $due_date = date('Y-m-d', strtotime('+30 days'));
-        $notes = "Once the invoice has been verified by the accounts payable team and recorded, the only task left is to send it for approval before releasing the payment";
+        $invoice_date = $_POST['invoice_date'] ?? date('Y-m-d');
+        $due_date = $_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days'));
+        $notes = $_POST['notes'] ?? 'Once the invoice has been verified by the accounts payable team and recorded, the only task left is to send it for approval before releasing the payment';
         
         // Get currency from form input instead of hardcoding it
         $currency = isset($_POST['invoice_currency']) ? strtolower($_POST['invoice_currency']) : 'lkr';

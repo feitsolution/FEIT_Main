@@ -663,6 +663,21 @@ $customerResult = $conn->query($customerSql);
                 }
             });
 
+            // Update due date when invoice date changes
+            $('input[name="invoice_date"]').on('change', function() {
+                const invoiceDate = new Date($(this).val());
+                if (!isNaN(invoiceDate.getTime())) {
+                    const dueDate = new Date(invoiceDate);
+                    dueDate.setDate(dueDate.getDate() + 30);
+                    
+                    const year = dueDate.getFullYear();
+                    const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(dueDate.getDate()).padStart(2, '0');
+                    
+                    $('input[name="due_date"]').val(`${year}-${month}-${day}`);
+                }
+            });
+
             // Update on price or discount change
             $(document).on('input', '.price, .discount', function () {
                 // Ensure discount is a whole number

@@ -221,6 +221,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/status-badge-colors.css" id="main-style-link" />
     <style>
 .print-btn {
     background-color: #28a745;
@@ -458,9 +459,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                                 case 'pending to deliver':
                                                 case 'reschedule':
                                                 case 'date changed':
-                                                case 'rearranged':
                                                     $statusText = 'Pending to Deliver';
                                                     $badgeClass = 'status-pending-deliver';
+                                                    break;
+                                                case 'rearrange':
+                                                    $statusText = 'Rearrange';
+                                                    $badgeClass = 'status-rearrange';
                                                     break;
                                                 case 'delivered':
                                                     $statusText = 'Delivered';
