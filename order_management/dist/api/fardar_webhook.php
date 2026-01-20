@@ -23,7 +23,7 @@ $last_update_time = isset($_POST["last_update_time"]) ? $_POST["last_update_time
 // $update_time = empty($last_update_time) ? date('Y-m-d H:i:s') : $last_update_time;
 
 // Map status
-if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed' || $delivery_status == 'Rearrange') {
+if ($delivery_status == 'Reschedule' || $delivery_status == 'Date Changed') {
     $status_update = 'Pending to Deliver';
 } elseif ($delivery_status == 'Dispatched') {
     $status_update = 'Courier Dispatch';

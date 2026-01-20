@@ -330,11 +330,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                     <option value="processing" <?php echo ($status_filter == 'processing') ? 'selected' : ''; ?>>Processing</option>
                                     <option value="dispatch" <?php echo ($status_filter == 'dispatch') ? 'selected' : ''; ?>>Dispatch</option>
                                     <option value="courier dispatch" <?php echo ($status_filter == 'courier dispatch') ? 'selected' : ''; ?>>Courier Dispatch</option>
+                                    <option value="rearrange" <?php echo ($status_filter == 'rearrange') ? 'selected' : ''; ?>>Rearrange</option>
                                     <option value="pending to deliver" <?php echo ($status_filter == 'pending to deliver') ? 'selected' : ''; ?>>Pending to Deliver</option>
                                     <option value="delivered" <?php echo ($status_filter == 'delivered') ? 'selected' : ''; ?>>Delivered</option>
                                     <option value="done" <?php echo ($status_filter == 'done') ? 'selected' : ''; ?>>Completed</option>
                                     <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="no_answer" <?php echo ($status_filter == 'no_answer') ? 'selected' : ''; ?>>No Answer</option>
                                     <option value="return" <?php echo ($status_filter == 'return') ? 'selected' : ''; ?>>Return</option>
                                     <option value="return pending" <?php echo ($status_filter == 'return pending') ? 'selected' : ''; ?>>Return Pending</option>
                                     <option value="return complete" <?php echo ($status_filter == 'return complete') ? 'selected' : ''; ?>>Return Complete</option>
