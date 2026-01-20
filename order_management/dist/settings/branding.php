@@ -10,8 +10,35 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header("Location: /order_management/dist/pages/login.php");
     exit();
 }
-// Check if user is admin (ID = 1)
-if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] != 1) {
+
+// Include the database connection file
+include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+
+// Check if user has admin role (role_id = 1) from database
+$userId = $_SESSION['user_id'];
+$checkAdminSql = "SELECT role_id FROM users WHERE id = ? LIMIT 1";
+$checkAdminStmt = $conn->prepare($checkAdminSql);
+$checkAdminStmt->bind_param("i", $userId);
+$checkAdminStmt->execute();
+$adminResult = $checkAdminStmt->get_result();
+
+if ($adminResult->num_rows > 0) {
+    $userData = $adminResult->fetch_assoc();
+    $userRoleId = (int)$userData['role_id'];
+    
+    // Only allow users with role_id = 1 (Admin)
+    // role_id = 1: Admin, role_id = 2: User/Moderator
+    if ($userRoleId !== 1) {
+        $checkAdminStmt->close();
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        header("Location: /order_management/dist/pages/access_denied.php");
+        exit();
+    }
+} else {
+    // User not found in database
+    $checkAdminStmt->close();
     if (ob_get_level()) {
         ob_end_clean();
     }
@@ -19,8 +46,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] != 1) {
     header("Location: /order_management/dist/pages/access_denied.php");
     exit();
 }
-// Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
+$checkAdminStmt->close();
 
 // Function to generate CSRF token
 function generateCSRFToken() {
@@ -460,7 +486,43 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                         <!-- Spacer or another field -->
                                     </div>
                                 </div>
-                            
+                                
+                                <!-- <h6 class="mb-3 mt-4">Color & Font Settings</h6>
+                                
+                                <div class="form-row">
+                                    <div class="form-column">
+                                        <div class="form-group">
+                                            <label for="primary_color" class="form-label">Primary Color</label>
+                                            <input type="color" class="form-control" id="primary_color" name="primary_color" 
+                                                   value="<?php echo htmlspecialchars($branding['primary_color']); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="form-column">
+                                        <div class="form-group">
+                                            <label for="secondary_color" class="form-label">Secondary Color</label>
+                                            <input type="color" class="form-control" id="secondary_color" name="secondary_color" 
+                                                   value="<?php echo htmlspecialchars($branding['secondary_color']); ?>">
+                                        </div>
+                                    </div>
+                                </div> -->
+                                
+                                <div class="form-row">
+                                    <div class="form-column">
+                                        <div class="form-group">
+                                            <!-- <label for="font_family" class="form-label">Font Family</label>
+                                            <select class="form-control" id="font_family" name="font_family">
+                                                <option value="Inter" <?php echo ($branding['font_family'] === 'Inter') ? 'selected' : ''; ?>>Inter</option>
+                                                <option value="Arial" <?php echo ($branding['font_family'] === 'Arial') ? 'selected' : ''; ?>>Arial</option>
+                                                <option value="Helvetica" <?php echo ($branding['font_family'] === 'Helvetica') ? 'selected' : ''; ?>>Helvetica</option>
+                                                <option value="Roboto" <?php echo ($branding['font_family'] === 'Roboto') ? 'selected' : ''; ?>>Roboto</option>
+                                                <option value="Open Sans" <?php echo ($branding['font_family'] === 'Open Sans') ? 'selected' : ''; ?>>Open Sans</option>
+                                            </select> -->
+                                        </div>
+                                    </div>
+                                    <div class="form-column">
+                                        <!-- Spacer -->
+                                    </div>
+                                </div>
                                 
                                 <h6 class="mb-3 mt-4">Logos and Icons</h6>
                                 

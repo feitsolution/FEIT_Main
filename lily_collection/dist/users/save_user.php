@@ -97,8 +97,8 @@ try {
     // Convert role to role_id
     $role_mapping = [
         'admin' => ['id' => 1, 'name' => 'Admin'],
-        'moderator' => ['id' => 2, 'name' => 'Moderator'],
-        'user' => ['id' => 3, 'name' => 'User']
+        'user' => ['id' => 2, 'name' => 'User'],
+        'moderator' => ['id' => 3, 'name' => 'Moderator']
     ];
     
     // Essential server-side validation (security-critical only)
@@ -107,7 +107,11 @@ try {
     // Required field checks (basic)
     if (empty($name)) $fieldErrors['full_name'] = "Full name is required.";
     if (empty($email)) $fieldErrors['email'] = "Email address is required.";
-    if (empty($password)) $fieldErrors['password'] = "Password is required.";
+    if (empty($password)) {
+        $fieldErrors['password'] = "Password is required.";
+    } elseif (strlen($password) < 6) {
+        $fieldErrors['password'] = "Password must be at least 6 characters long.";
+    }
     if (empty($mobile)) $fieldErrors['mobile'] = "Mobile number is required.";
     if (empty($nic)) $fieldErrors['nic'] = "NIC number is required.";
     if (empty($address)) $fieldErrors['address'] = "Address is required.";

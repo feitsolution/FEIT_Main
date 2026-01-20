@@ -152,8 +152,8 @@ try {
     // Convert role to role_id
     $role_mapping = [
         'admin' => ['id' => 1, 'name' => 'Admin'],
-        'moderator' => ['id' => 2, 'name' => 'Moderator'],
-        'user' => ['id' => 3, 'name' => 'User']
+        'user' => ['id' => 2, 'name' => 'User'],
+        'moderator' => ['id' => 3, 'name' => 'Moderator']
     ];
     
     // Essential server-side validation (security-critical only)
@@ -165,6 +165,7 @@ try {
     if (empty($mobile)) $fieldErrors['mobile'] = "Mobile number is required.";
     if (empty($nic)) $fieldErrors['nic'] = "NIC number is required.";
     if (empty($address)) $fieldErrors['address'] = "Address is required.";
+    if (!empty($password) && strlen($password) < 6) $fieldErrors['password'] = "Password must be at least 6 characters long.";
     if (!isset($role_mapping[$role])) $fieldErrors['role'] = "Please select a valid role.";
     
     // Email format validation (security critical)
@@ -273,7 +274,7 @@ try {
             jsonResponse(false, 'Database error occurred. Please try again.');
         }
         
-        $stmt->bind_param("ssssssiii", 
+        $stmt->bind_param("sssssssii", 
             $name, $email, $hashed_password, $mobile, $nic, $address, 
             $status, $role_id, $userId
         );

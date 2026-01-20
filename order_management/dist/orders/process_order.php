@@ -75,6 +75,13 @@ function getFdeStatusMessage($status_code, $api_type = 'new') {
     }
 }
 
+// Function to parse numeric inputs safely (stripping commas)
+function parse_numeric($value, $default = 0.00) {
+    if (is_array($value)) return $default;
+    $clean_value = str_replace(',', '', (string)$value);
+    return is_numeric($clean_value) ? floatval($clean_value) : $default;
+}
+
 // Function to set session message and redirect
 function setMessageAndRedirect($type, $message, $redirect_url = null) {
     $_SESSION["order_{$type}"] = $message;
@@ -451,18 +458,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $subtotal_before_discounts = 0;
             $total_discount = 0;
-            $delivery_fee = isset($_POST['delivery_fee']) ? floatval($_POST['delivery_fee']) : 0.00;
+            $delivery_fee = parse_numeric($_POST['delivery_fee'] ?? 0.00);
             $product_codes = [];
             $order_items = [];
 
             foreach ($products as $key => $product_id) {
                 if (empty($product_id)) continue;
                 
-                $original_price = floatval($product_prices[$key] ?? 0);
+                $original_price = parse_numeric($product_prices[$key] ?? 0);
                 $quantity = intval($quantities[$key] ?? 1);
                 if ($quantity < 1) $quantity = 1;
                 
-                $discount = floatval($discounts[$key] ?? 0);
+                $discount = parse_numeric($discounts[$key] ?? 0);
                 $description = $product_descriptions[$key] ?? '';
                 
                 // Discount is per line item total or per unit? 

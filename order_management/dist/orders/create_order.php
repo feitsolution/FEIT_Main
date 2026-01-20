@@ -534,7 +534,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                                 </div>
                                             </td>
                                             <td class="discount-col">
-                                                <input type="number" name="order_product_discount[]" class="form-control discount" value="0" min="0" step="1">
+                                                        <input type="number" name="order_product_discount[]" class="form-control discount" placeholder="0.00" step="0.01">
                                             </td>
                                             <td class="subtotal-col">
                                                 <div class="input-group">
@@ -571,7 +571,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                         <span class="totals-label">Delivery Fee:</span>
                                         <span class="totals-value">
                                             Rs. <span id="delivery_fee_display"><?php echo number_format($deliveryFee, 2); ?></span>
-                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo number_format($deliveryFee, 2); ?>">
+                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo $deliveryFee; ?>">
                                         </span>
                                     </div>
                                     <div class="totals-row">
@@ -742,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== VALIDATION UTILITIES ==========
     const ValidationUtils = {
-        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email),
         isValidPhone: (phone) => /^\d{10}$/.test(phone),
         isValidDate: (dateString) => {
             const date = new Date(dateString);
@@ -1313,8 +1313,8 @@ const ProductManager = {
         let quantity = parseFloat(row.querySelector('.quantity').value) || 1;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
-        if (discount > price) {
-            discount = price;
+        if (discount > (price * quantity)) {
+            discount = price * quantity;
             row.querySelector('.discount').value = discount;
         }
 
@@ -1345,50 +1345,51 @@ const ProductManager = {
     },
 
     updateTotals: () => {
-        let subtotal = 0;
+        let subtotalGross = 0; // Total before any discounts
         let totalDiscount = 0;
 
         document.querySelectorAll('#order_table tbody tr').forEach(row => {
             let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
+            let rowQuantity = parseInt(row.querySelector('.quantity').value) || 1;
             let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
 
-            if (rowDiscount > rowPrice) {
-                rowDiscount = rowPrice;
-                row.querySelector('.discount').value = rowDiscount;
+            // Ensure discount doesn't exceed item's gross value
+            if (rowDiscount > (rowPrice * rowQuantity)) {
+                rowDiscount = (rowPrice * rowQuantity);
+                row.querySelector('.discount').value = rowDiscount.toFixed(2); // Update field with corrected discount
             }
 
-            let rowQuantity = parseInt(row.querySelector('.quantity').value) || 1;
             let rowSubtotal = (rowPrice * rowQuantity) - rowDiscount;
             row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
 
-            subtotal += (rowPrice * rowQuantity);
-            totalDiscount += rowDiscount;
+            if (row.querySelector('.product-select').value !== '') {
+                subtotalGross += (rowPrice * rowQuantity);
+                totalDiscount += rowDiscount;
+            }
         });
 
-        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-        let subtotalAfterDiscount = subtotal - totalDiscount;
         const hasProducts = ProductManager.checkForProducts();
+        let finalDeliveryFee = 0;
 
-
-// ===== FIXED: Always apply delivery fee (no free delivery) =====
-let finalDeliveryFee = 0;
-
-if (hasProducts) {
-    finalDeliveryFee = deliveryFee;
-    document.getElementById('delivery_fee_display').textContent =
-        deliveryFee.toFixed(2);
-}
-
+        if (hasProducts) {
+            finalDeliveryFee = deliveryFee;
+            document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+        } else {
+            document.getElementById('delivery_fee_display').textContent = '0.00';
+        }
 
         // Update delivery fee hidden input
         document.getElementById('delivery_fee').value = finalDeliveryFee.toFixed(2);
 
         // Calculate final total
+        let subtotalAfterDiscount = subtotalGross - totalDiscount;
         let total = subtotalAfterDiscount + finalDeliveryFee;
+
+        document.getElementById('subtotal_display').textContent = subtotalGross.toFixed(2);
+        document.getElementById('subtotal_amount').value = subtotalGross.toFixed(2);
+        
+        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
+        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
 
         document.getElementById('total_display').textContent = total.toFixed(2);
         document.getElementById('total_amount').value = total.toFixed(2);
@@ -1719,7 +1720,13 @@ const CustomerModal = {
 
             document.addEventListener('input', (e) => {
                 if (e.target.classList.contains('discount')) {
-                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    // Allow numbers and decimal point
+                    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+                    // Ensure only one decimal point
+                    const parts = e.target.value.split('.');
+                    if (parts.length > 2) {
+                        e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                    }
                 }
                 
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
