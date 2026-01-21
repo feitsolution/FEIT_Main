@@ -394,7 +394,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
         }
     </style>
 
-    <link rel="icon" href="<?php echo !empty($branding['fav_icon_url']) ? $branding['fav_icon_url'] : '/quick_start/dist/assets/images/favicon.ico'; ?>" type="image/x-icon">
+
 </head>
 
 <body>

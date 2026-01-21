@@ -107,13 +107,14 @@
     <script src="../assets/js/icon/custom-icon.js"></script>
     <script src="../assets/js/plugins/feather.min.js"></script>
     <script src="../assets/js/component.js"></script>
-    <script src="../assets/js/theme.js"></script>
+    <!-- <script src="../assets/js/theme.js"></script> -->
     <script src="../assets/js/script.js"></script>
 
     <div class="floting-button fixed bottom-[50px] right-[30px] z-[1030]">
     </div>
 
     
+    <!--
     <script>
       layout_change('false');
     </script>
@@ -143,6 +144,7 @@
     <script>
       main_layout_change('vertical');
     </script>
+    -->
     
  
   </body>

@@ -163,9 +163,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Close connections
-$conn->close();
-$fe_conn->close();
+
 ?>
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
@@ -288,3 +286,8 @@ $fe_conn->close();
     </script>
 </body>
 </html>
+<?php
+// Close connections at the very end ensuring all includes have access to DB if needed
+if (isset($conn)) $conn->close();
+if (isset($fe_conn)) $fe_conn->close();
+?>
