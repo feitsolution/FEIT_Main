@@ -42,8 +42,7 @@ if ($adminResult->num_rows > 0) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    // Redirect to access denied page or dashboard
-    header("Location: /order_management/dist/pages/access_denied.php");
+    header("Location: /order_management/dist/pages/login.php");
     exit();
 }
 $checkAdminStmt->close();
@@ -395,7 +394,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         }
     </style>
 
-    <link rel="icon" href="<?php echo !empty($branding['fav_icon_url']) ? $branding['fav_icon_url'] : '/order_management/dist/assets/images/favicon.ico'; ?>" type="image/x-icon">
+
 </head>
 
 <body>
