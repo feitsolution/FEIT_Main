@@ -62,7 +62,7 @@ $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
 
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
