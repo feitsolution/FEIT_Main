@@ -134,12 +134,14 @@ try {
     $brandResult = $conn->query($brandQuery);
     if ($brandResult && $brandRow = $brandResult->fetch_assoc()) {
         if (!empty($brandRow['company_name'])) {
-            // Sanitize company name - allow only alphanumeric characters
-            $cleanCompanyName = preg_replace('/[^a-zA-Z0-9]/', '', $brandRow['company_name']);
-            if (!empty($cleanCompanyName)) {
-                $companyName = $cleanCompanyName . '_';
-            }
-        }
+        // Keep only letters and convert to lowercase
+        $cleanCompanyName = strtolower(
+            preg_replace('/[^a-zA-Z0-9]/', '', $brandRow['company_name'])
+        );
+        if (!empty($cleanCompanyName)) {
+            $companyName = $cleanCompanyName . '_';
+           }
+       }
     }
 
     // Generate unique filename
