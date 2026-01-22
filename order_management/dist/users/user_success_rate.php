@@ -60,7 +60,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
     // Build export query with same filters as main query
     $export_sql = "SELECT u.id as user_id, u.name as username, u.email, u.mobile as phone, 
                    u.nic, r.name as role, u.status, u.created_at,
-                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status NOT IN ('pending', 'cancel', 'dispatch')) as dispatched_orders,
+                   (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status NOT IN ('pending', 'cancel', 'dispatch', 'waiting')) as dispatched_orders,
                    (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status IN ('done', 'delivered')) as delivered_orders,
                    (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'cancel') as cancelled_orders,
                    (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status = 'pending') as pending_orders
@@ -219,7 +219,7 @@ $countSql = "SELECT COUNT(*) as total FROM users";
 // Main query with success rate calculation
 $sql = "SELECT u.id as user_id, u.name as username, u.email, u.mobile as phone, 
                u.nic, r.name as role, u.status, u.created_at,
-               (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status NOT IN ('pending', 'cancel', 'dispatch')) as dispatched_orders,
+               (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status NOT IN ('pending', 'cancel', 'dispatch', 'waiting')) as dispatched_orders,
                (SELECT COUNT(*) FROM order_header WHERE user_id = u.id AND status IN ('done', 'delivered')) as delivered_orders
         FROM users u 
         LEFT JOIN roles r ON u.role_id = r.id";
@@ -792,7 +792,7 @@ function getSuccessRateBadgeClass($rate) {
     </div>
 
     <!-- Scripts -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 
     <script>
         /* ================================
