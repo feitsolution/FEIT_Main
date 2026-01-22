@@ -136,33 +136,16 @@ if ($rbac->isAdmin()) {
     $stats['total_users'] = safeQuery($conn, "SELECT COUNT(*) as count FROM users");
 }
 
-// Total Customers - Only admin can see all customers, regular users see only their customers
-if ($rbac->isAdmin()) {
-    // Check if customers table exists
-    $tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_customers'] = safeQuery($conn, "SELECT COUNT(*) as count FROM customers");
-    }
-} else {
-    // For regular users, count customers from their orders only
-    $tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_customers'] = safeQuery($conn, 
-            "SELECT COUNT(DISTINCT c.customer_id) as count 
-             FROM customers c 
-             INNER JOIN order_header oh ON c.customer_id = oh.customer_id 
-             WHERE oh.user_id = $current_user_id"
-        );
-    }
+// Check if customers table exists
+$tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
+if ($tableExists && $tableExists->num_rows > 0) {
+    $stats['total_customers'] = safeQuery($conn, "SELECT COUNT(*) as count FROM customers");
 }
 
-// Total Products - Only admin can see all products
-if ($rbac->isAdmin()) {
-    // Check if products table exists
-    $tableExists = $conn->query("SHOW TABLES LIKE 'products'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_products'] = safeQuery($conn, "SELECT COUNT(*) as count FROM products");
-    }
+// Total Products - All users can see total products
+$tableExists = $conn->query("SHOW TABLES LIKE 'products'");
+if ($tableExists && $tableExists->num_rows > 0) {
+    $stats['total_products'] = safeQuery($conn, "SELECT COUNT(*) as count FROM products");
 }
 
 // Check if orders table exists
