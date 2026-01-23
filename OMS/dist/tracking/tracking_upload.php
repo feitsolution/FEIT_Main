@@ -541,27 +541,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 </div>
             </div>
             <div class="main-content-wrapper">
-                <div class="info-box">
-                    <h4>📋 Instructions</h4>
-                    <p><strong>How to upload tracking numbers:</strong></p>
-                    <ul>
-                        <li>Select a tenant from the dropdown menu</li>
-                        <li>Select a courier belonging to the selected tenant</li>
-                        <li>Download the CSV template below</li>
-                        <li>Fill in your tracking numbers in the template</li>
-                        <li>Upload the completed CSV file</li>
-                        <li>All tracking numbers will be added with 'unused' status</li>
-                    </ul>
-                    <p><strong>CSV Format Requirements:</strong></p>
-                    <ul>
-                        <li>Must have a header row with 'Tracking Number' column</li>
-                        <li>Tracking numbers must be 5-50 characters long</li>
-                        <li>Only alphanumeric characters, hyphens, and underscores allowed</li>
-                        <li>Maximum file size: 5MB</li>
-                        <li>Tracking numbers are unique per courier within each tenant</li>
-                    </ul>
-                </div>
-
                 <?php if (isset($_SESSION['import_result'])): ?>
                     <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
                         <h4>Processing Results</h4>
@@ -654,6 +633,26 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                             </button>
                         </div>
                     </form>
+                </div>
+                <div class="info-box">
+                    <h4>📋 Instructions</h4>
+                    <p><strong>How to upload tracking numbers:</strong></p>
+                    <ul>
+                        <li>Select a tenant from the dropdown menu</li>
+                        <li>Select a courier belonging to the selected tenant</li>
+                        <li>Download the CSV template below</li>
+                        <li>Fill in your tracking numbers in the template</li>
+                        <li>Upload the completed CSV file</li>
+                        <li>All tracking numbers will be added with 'unused' status</li>
+                    </ul>
+                    <p><strong>CSV Format Requirements:</strong></p>
+                    <ul>
+                        <li>Must have a header row with 'Tracking Number' column</li>
+                        <li>Tracking numbers must be 5-50 characters long</li>
+                        <li>Only alphanumeric characters, hyphens, and underscores allowed</li>
+                        <li>Maximum file size: 5MB</li>
+                        <li>Tracking numbers are unique per courier within each tenant</li>
+                    </ul>
                 </div>
             </div>
         </div>

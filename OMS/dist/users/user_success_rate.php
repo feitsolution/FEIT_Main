@@ -948,5 +948,8 @@ function getSuccessRateBadgeClass($rate) {
         }
     </script>
 
+    <!--Footer-->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/footer.php'); ?>
+
 </body>
 </html>

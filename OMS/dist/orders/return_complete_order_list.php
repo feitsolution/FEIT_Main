@@ -777,6 +777,9 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
         }
     });
     </script>
+
+    <!--Footer-->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/footer.php'); ?>
 </body>
 
 </html>
