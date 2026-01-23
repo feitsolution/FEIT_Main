@@ -63,12 +63,13 @@ if (isset($_GET['download_errors']) && isset($_SESSION['failed_rows_data'])) {
 }
 // Get logged-in user info
 $loggedInUserId = $_SESSION['user_id'];
-$isMainAdmin = $_SESSION['is_main_admin'] ?? 0;
-$loggedInTenantId = $_SESSION['tenant_id'] ?? 1;
+$isMainAdmin = $_SESSION['is_main_admin'];
+$role_id = $_SESSION['role_id'];
+$loggedInTenantId = $_SESSION['tenant_id'];
 
 // Handle tenant selection for main admin
 $selectedTenantId = null;
-if ($isMainAdmin == 1) {
+if ($isMainAdmin == 1 && $role_id === 1) {
     if (isset($_POST['selected_tenant'])) {
         $selectedTenantId = (int)$_POST['selected_tenant'];
         $_SESSION['upload_selected_tenant'] = $selectedTenantId;
@@ -333,12 +334,12 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $totalAmountDecimal = (float)$totalAmount;
                 
                 // Fetch product data
-                $productSql = "SELECT id, lkr_price, description FROM products WHERE product_code = ? AND status = 'active'";
+                $productSql = "SELECT id, lkr_price, description FROM products WHERE product_code = ? AND status = 'active' AND tenant_id = ?";
                 $productStmt = $conn->prepare($productSql);
                 if (!$productStmt) {
                     throw new Exception("Failed to prepare product query: " . $conn->error);
                 }
-                $productStmt->bind_param("s", $productCode);
+                $productStmt->bind_param("si", $productCode, $tenant_id);
                 $productStmt->execute();
                 $productResult = $productStmt->get_result();
                 
@@ -626,7 +627,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
 
 // Fetch tenants for main admin
 $tenants = [];
-if ($isMainAdmin == 1) {
+if ($isMainAdmin == 1 && $role_id === 1) {
     $tenantsSql = "SELECT tenant_id, company_name FROM tenants WHERE status = 'active' ORDER BY company_name ASC";
     $tenantsStmt = $conn->prepare($tenantsSql);
     if ($tenantsStmt) {
@@ -898,6 +899,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
             </div>
 
           <?php if (isset($_SESSION['import_result'])): ?>
+    <script>
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000);
+    </script>
     <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
         <h4>Import Results</h4>
         <p><strong>Successfully imported:</strong> <?php echo $_SESSION['import_result']['success']; ?> records</p>
@@ -959,7 +965,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 
             <div class="lead-upload-container">
                 
-                <?php if ($isMainAdmin == 1): ?>
+                <?php if ($isMainAdmin == 1 && $role_id === 1): ?>
                     <!-- Tenant Selection Form for Main Admin -->
                     <div class="tenant-selection-section">
                         <h6><i class="feather icon-briefcase"></i> Select Tenant</h6>
@@ -1067,7 +1073,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                         </div>
                     </form>
                 <?php else: ?>
-                    <?php if ($isMainAdmin == 1): ?>
+                    <?php if ($isMainAdmin == 1 && $role_id === 1): ?>
                         <div class="alert alert-info">
                             <i class="feather icon-info"></i> Please select a tenant above to begin uploading leads.
                         </div>
