@@ -17,6 +17,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/connection/db_connection.php');
 
 // Check if user is main admin
 $is_main_admin = $_SESSION['is_main_admin'];
+$role_id = $_SESSION['role_id'];
 $teanent_id = $_SESSION['tenant_id'];
 
 // FIXED: Only get co_id when form is submitted
@@ -94,13 +95,18 @@ function validateTrackingNumberInDB($trackingNumber, $conn, $co_id) {
     $cleanTracking = $formatValidation['clean_tracking'];
     
     // Check if tracking number exists in database with return complete status
-    $findTrackingSql = "SELECT order_id, status FROM order_header WHERE tracking_number = ? AND co_id = ? LIMIT 1";
-    $findTrackingStmt = $conn->prepare($findTrackingSql);
-    if (!$findTrackingStmt) {
-        return ['valid' => false, 'message' => 'Database error while validating tracking number'];
+    if ($GLOBALS['is_main_admin'] === 1 && $GLOBALS['role_id'] === 1) {
+        $findTrackingSql = "SELECT order_id, status FROM order_header WHERE tracking_number = ? AND co_id = ? LIMIT 1";
+        $findTrackingStmt = $conn->prepare($findTrackingSql);
+        if (!$findTrackingStmt) return ['valid' => false, 'message' => 'Database error'];
+        $findTrackingStmt->bind_param("si", $cleanTracking, $co_id);
+    } else {
+        $findTrackingSql = "SELECT order_id, status FROM order_header WHERE tracking_number = ? AND co_id = ? AND tenant_id = ? LIMIT 1";
+        $findTrackingStmt = $conn->prepare($findTrackingSql);
+        if (!$findTrackingStmt) return ['valid' => false, 'message' => 'Database error'];
+        $findTrackingStmt->bind_param("sii", $cleanTracking, $co_id, $GLOBALS['teanent_id']);
     }
     
-    $findTrackingStmt->bind_param("si", $cleanTracking, $co_id);
     $findTrackingStmt->execute();
     $trackingResult = $findTrackingStmt->get_result();
     
@@ -295,12 +301,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                 exit();
             }
             
-            // Prepare SQL statement to update order status from 'return complete' to 'return_handover'
-            $updateOrderSql = "UPDATE order_header SET status = 'return_handover', updated_at = NOW() WHERE order_id = ? AND status = 'return complete'";
-            $updateOrderStmt = $conn->prepare($updateOrderSql);
+            // Prepare SQL statement to update order status
+            if ($is_main_admin === 1 && $role_id === 1) {
+                $updateOrderSql = "UPDATE order_header SET status = 'return_handover', updated_at = NOW() WHERE order_id = ? AND status = 'return complete'";
+                $updateOrderStmt = $conn->prepare($updateOrderSql);
+            } else {
+                $updateOrderSql = "UPDATE order_header SET status = 'return_handover', updated_at = NOW() WHERE order_id = ? AND status = 'return complete' AND tenant_id = ?";
+                $updateOrderStmt = $conn->prepare($updateOrderSql);
+            }
             
             if (!$updateOrderStmt) {
-                $_SESSION['import_error'] = 'Database prepare error: ' . $conn->error;
+                $_SESSION['import_error'] = 'Database error: ' . $conn->error;
                 fclose($handle);
                 ob_end_clean();
                 header("Location: return_csv_upload.php");
@@ -359,9 +370,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                     continue;
                 }
                 
-                // Update order status from 'return complete' to 'return_handover'
+                // Update order status
                 try {
-                    $updateOrderStmt->bind_param("i", $trackingData['order_id']);
+                    if ($is_main_admin === 1 && $role_id === 1) {
+                        $updateOrderStmt->bind_param("i", $trackingData['order_id']);
+                    } else {
+                        $updateOrderStmt->bind_param("ii", $trackingData['order_id'], $teanent_id);
+                    }
                     
                     if ($updateOrderStmt->execute()) {
                         // Check if any rows were actually affected
@@ -400,8 +415,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             
             // Close statement
             $updateOrderStmt->close();
-            
-            // Remove the overall CSV processing log - only individual order logs will be created
             
             // Close the CSV file
             fclose($handle);
@@ -449,13 +462,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
-<html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
+<html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr"
+    data-pc-theme="light">
 
 <head>
     <title>Order Management Admin Portal - Return CSV Upload</title>
-    
+
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/head.php'); ?>
-    
+
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/leads.css" id="main-style-link" />
@@ -467,7 +481,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 
     <div class="pc-container">
         <div class="pc-content">
-            
+
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
@@ -481,39 +495,47 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 
                 <!-- Display import results/errors -->
                 <?php if (isset($_SESSION['import_result'])): ?>
-                    <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
-                        <h4>Processing Results</h4>
-                        <p><strong>Successfully updated to 'return_handover':</strong> <?php echo $_SESSION['import_result']['success']; ?> tracking numbers</p>
-                        <?php if ($_SESSION['import_result']['skipped'] > 0): ?>
-                            <p><strong>Skipped:</strong> <?php echo $_SESSION['import_result']['skipped']; ?> tracking numbers</p>
-                        <?php endif; ?>
-                        <?php if ($_SESSION['import_result']['errors'] > 0): ?>
-                            <p><strong>Failed:</strong> <?php echo $_SESSION['import_result']['errors']; ?> tracking numbers</p>
-                            <?php if (!empty($_SESSION['import_result']['messages'])): ?>
-                                <details>
-                                    <summary>View Error Details</summary>
-                                    <ul class="mt-2">
-                                        <?php foreach ($_SESSION['import_result']['messages'] as $message): ?>
-                                            <li><?php echo htmlspecialchars($message); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </details>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        <?php if (!empty($_SESSION['import_result']['warnings'])): ?>
-                            <details>
-                                <summary>View Warnings</summary>
-                                <ul class="mt-2">
-                                    <?php foreach ($_SESSION['import_result']['warnings'] as $warning): ?>
-                                        <li><?php echo htmlspecialchars($warning); ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </details>
-                        <?php endif; ?>
-                    </div>
-                    <?php unset($_SESSION['import_result']); ?>
+                <div
+                    class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
+                    <h4>Processing Results</h4>
+                    <p><strong>Successfully updated to 'return_handover':</strong>
+                        <?php echo $_SESSION['import_result']['success']; ?> tracking numbers</p>
+                    <?php if ($_SESSION['import_result']['skipped'] > 0): ?>
+                    <p><strong>Skipped:</strong> <?php echo $_SESSION['import_result']['skipped']; ?> tracking numbers
+                    </p>
+                    <?php endif; ?>
+                    <?php if ($_SESSION['import_result']['errors'] > 0): ?>
+                    <p><strong>Failed:</strong> <?php echo $_SESSION['import_result']['errors']; ?> tracking numbers</p>
+                    <?php if (!empty($_SESSION['import_result']['messages'])): ?>
+                    <details>
+                        <summary>View Error Details</summary>
+                        <ul class="mt-2">
+                            <?php foreach ($_SESSION['import_result']['messages'] as $message): ?>
+                            <li><?php echo htmlspecialchars($message); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </details>
+                    <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if (!empty($_SESSION['import_result']['warnings'])): ?>
+                    <details>
+                        <summary>View Warnings</summary>
+                        <ul class="mt-2">
+                            <?php foreach ($_SESSION['import_result']['warnings'] as $warning): ?>
+                            <li><?php echo htmlspecialchars($warning); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </details>
+                    <?php endif; ?>
+                </div>
+                <script>
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 5000);
+                </script>
+                <?php unset($_SESSION['import_result']); ?>
                 <?php endif; ?>
-                
+
                 <?php if (isset($_SESSION['import_error'])): ?>
                     <div class="alert alert-danger">
                         <strong>Error:</strong> <?php echo $_SESSION['import_error']; ?>
@@ -553,49 +575,52 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                         <!-- Download CSV Template Section -->
                         <div class="file-upload-section">
                             <a href="/OMS/dist/templates/return_csv.php" class="choose-file-btn">
-                                 Download CSV Template
+                                Download CSV Template
                             </a>
                             <div class="customer-form-group">
                                 <label for="co_id" class="form-label">
                                     Select Courier
                                 </label>
-                                <?php if ($is_main_admin == 1) { 
+                                <?php if ($is_main_admin === 1 && $role_id === 1) { 
                                     // Fetch active couriers for dropdown
                                     $courierSql = "SELECT co_id, tenant_id, courier_id, courier_name FROM couriers WHERE status = 'active' ORDER BY courier_name ASC";
                                 } else { 
                                     $courierSql = "SELECT co_id, tenant_id, courier_id, courier_name FROM couriers WHERE status = 'active' AND tenant_id = $teanent_id ORDER BY courier_name ASC";                   
                                 }
                                 $courierResult = $conn->query($courierSql); ?>
-                                <select class="form-select" id="co_id" name="co_id" required>
-                                    <option value="">Select Courier</option>
-                                    <?php
-                                    if ($courierResult && $courierResult->num_rows > 0) {
-                                        while ($courier = $courierResult->fetch_assoc()) {
-                                            echo "<option value='{$courier['co_id']}'>" . htmlspecialchars($courier['courier_name']) . " - " . htmlspecialchars($courier['courier_id']) . " - " . htmlspecialchars(TenantName($courier['tenant_id'])) . "</option>";
+                                    <select class="form-select" id="co_id" name="co_id" required>
+                                        <option value="">Select Courier</option>
+                                        <?php
+                                        if ($courierResult && $courierResult->num_rows > 0) {
+                                            while ($courier = $courierResult->fetch_assoc()) {
+                                                $tenant_suffix = ($is_main_admin === 1 && $role_id === 1) ? " - " . TenantName($courier['tenant_id']) : "";
+                                                echo "<option value='{$courier['co_id']}'>" . htmlspecialchars($courier['courier_name']) . " - " . htmlspecialchars($courier['courier_id']) . $tenant_suffix . "</option>";
+                                            }
                                         }
-                                    }
-                                    ?>
-                                </select>
+                                        ?>
+                                    </select>
                                 <div class="error-feedback" id="courier-error"></div>
                             </div>
 
                             <div class="file-upload-box">
                                 <p><strong>Select CSV File</strong></p>
                                 <p id="file-name">No file selected</p>
-                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;" required>
-                                <button type="button" class="choose-file-btn" onclick="document.getElementById('csv_file').click()">
-                                     Choose File
+                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;"
+                                    required>
+                                <button type="button" class="choose-file-btn"
+                                    onclick="document.getElementById('csv_file').click()">
+                                    Choose File
                                 </button>
                             </div>
                         </div>
-                        
+
                         <hr>
-                        
+
                         <!-- Action Buttons -->
                         <div class="action-buttons">
                             <button type="button" class="action-btn reset-btn" id="resetBtn"> Reset</button>
                             <button type="submit" class="action-btn import-btn" id="importBtn">
-                               Update to Return Handover
+                                Update to Return Handover
                             </button>
                         </div>
                     </form>
@@ -608,7 +633,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 
     <!-- Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/scripts.php'); ?>
-    
+
     <script>
         // Form validation
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
@@ -652,11 +677,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 return false;
             }
             
-            // Show loading state
-            const importBtn = document.getElementById('importBtn');
             importBtn.disabled = true;
             importBtn.innerHTML = ' Processing...';
             
+            // Auto-refresh after success message
+            setTimeout(function() {
+            }, 5000);
+
             return true;
         });
         
@@ -707,8 +734,23 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 fileNameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
             } else {
                 fileNameEl.textContent = 'No file selected';
+                return;
             }
-        });
+
+            // Check file size (5MB limit)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                alert('File size must be less than 5MB.');
+                this.value = '';
+                fileNameEl.textContent = 'No file selected';
+                return;
+            }
+
+            fileNameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        } else {
+            fileNameEl.textContent = 'No file selected';
+        }
+    });
     </script>
 
     <style>
@@ -823,4 +865,5 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
         }
     </style>
 </body>
+
 </html>
