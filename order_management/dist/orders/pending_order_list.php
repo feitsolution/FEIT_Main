@@ -61,6 +61,7 @@ $customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['custo
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
+$call_status_filter = isset($_GET['call_status_filter']) ? trim($_GET['call_status_filter']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -159,6 +160,11 @@ if (!empty($date_to)) {
 if (!empty($pay_status_filter)) {
     $payStatusTerm = $conn->real_escape_string($pay_status_filter);
     $searchConditions[] = "i.pay_status = '$payStatusTerm'";
+}
+// Call Answer filter
+if (!empty($call_status_filter !== '')) {
+    $callStatusTerm = $conn->real_escape_string($call_status_filter);
+    $searchConditions[] = "i.call_log = '$callStatusTerm'";
 }
 
 // Apply search conditions
@@ -277,6 +283,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
                                 <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
                                 <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
+                            </select>
+                        </div>
+
+                         <div class="form-group">
+                            <label for="call_status_filter">Call Answer</label>
+                            <select id="call_status_filter" name="call_status_filter">
+                                <option value="">Call Answer Status</option>
+                                <option value="0" <?php echo ($call_status_filter == '0') ? 'selected' : ''; ?>>No Answer</option>
+                                <option value="1" <?php echo ($call_status_filter == '1') ? 'selected' : ''; ?>>Answer</option>
+                                
                             </select>
                         </div>
                         
@@ -436,9 +452,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         </button>
         
     <?php if ($payStatus == 'unpaid'): ?>
-    <button class="action-btn paid-btn" title="Mark as Paid" 
+    <button class="action-btn paid-btn" title="Mark as Paid"
         onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-dollar-sign"></i>
+    </button>
+    <?php elseif ($payStatus == 'paid'): ?>
+    <button class="action-btn unpaid-btn" title="Unmark as Paid"
+        onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+        <i class="fas fa-undo"></i>
     </button>
 <?php endif; ?>
 
@@ -548,7 +569,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             document.getElementById('date_from').value = '';
             document.getElementById('date_to').value = '';
             document.getElementById('pay_status_filter').value = '';
-            
+            document.getElementById('call_status_filter').value = '';
             // Submit the form to clear filters
             window.location.href = window.location.pathname;
         }
@@ -773,6 +794,56 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
+// Unmark as Paid function
+function unmarkAsPaid(orderId) {
+    if (!orderId || orderId.trim() === '') {
+        alert('Order ID is required to unmark as paid.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to unmark this order as paid? This will remove the payment record.')) {
+        return;
+    }
+
+    // Show loading
+    const btn = event.target.closest('.unpaid-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    // Create FormData
+    const formData = new FormData();
+    formData.append('order_id', orderId.trim());
+    formData.append('action', 'unmark_paid');
+
+    // Send request
+    fetch('unmark_paid.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Order unmarked as paid successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-undo"></i>';
+            }
+        }
+    })
+    .catch(error => {
+        alert('Network error. Please try again.');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-undo"></i>';
+        }
+    });
+}
+
 // Close the Mark as Paid modal
 function closePaidModal() {
     const modal = document.getElementById('markPaidModal');
@@ -843,19 +914,16 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     const fileInput = document.getElementById('payment_slip');
     const submitBtn = document.getElementById('submitPaidBtn');
     
-    if (!fileInput.files[0]) {
-        alert('Please select a payment slip file');
-        return;
-    }
-    
     // Show loading state
     submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
     submitBtn.disabled = true;
-    
+
     // Create FormData object
     const formData = new FormData();
     formData.append('order_id', orderId);
-    formData.append('payment_slip', fileInput.files[0]);
+    if (fileInput.files[0]) {
+        formData.append('payment_slip', fileInput.files[0]);
+    }
     formData.append('action', 'mark_paid');
     
     // Send the request

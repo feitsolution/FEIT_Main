@@ -469,10 +469,17 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
                                     <?php if ($payStatus === 'unpaid'): ?>
                                         <!-- MARK AS PAID button - only show for unpaid orders -->
-                                        <button class="action-btn paid-btn" 
+                                        <button class="action-btn paid-btn"
                                                 title="Mark as Paid"
                                                 onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
                                             <i class="fas fa-dollar-sign"></i>
+                                        </button>
+                                    <?php elseif ($payStatus === 'paid'): ?>
+                                        <!-- UNMARK AS PAID button - only show for paid orders -->
+                                        <button class="action-btn unpaid-btn"
+                                                title="Unmark as Paid"
+                                                onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                            <i class="fas fa-undo"></i>
                                         </button>
                                     <?php endif; ?>
 
@@ -786,6 +793,56 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
+// Unmark as Paid function
+function unmarkAsPaid(orderId) {
+    if (!orderId || orderId.trim() === '') {
+        alert('Order ID is required to unmark as paid.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to unmark this order as paid? This will remove the payment record.')) {
+        return;
+    }
+
+    // Show loading
+    const btn = event.target.closest('.unpaid-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    // Create FormData
+    const formData = new FormData();
+    formData.append('order_id', orderId.trim());
+    formData.append('action', 'unmark_paid');
+
+    // Send request
+    fetch('unmark_paid.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Order unmarked as paid successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-undo"></i>';
+            }
+        }
+    })
+    .catch(error => {
+        alert('Network error. Please try again.');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-undo"></i>';
+        }
+    });
+}
+
 // Close the Mark as Paid modal
 function closePaidModal() {
     const modal = document.getElementById('markPaidModal');
@@ -1031,19 +1088,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const fileInput = document.getElementById('payment_slip');
             const submitBtn = document.getElementById('submitPaidBtn');
             
-            if (!fileInput.files[0]) {
-                alert('Please select a payment slip file');
-                return;
-            }
-            
             // Show loading state
             submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
             submitBtn.disabled = true;
-            
+
             // Create FormData object
             const formData = new FormData();
             formData.append('order_id', orderId);
-            formData.append('payment_slip', fileInput.files[0]);
+            if (fileInput.files[0]) {
+                formData.append('payment_slip', fileInput.files[0]);
+            }
             formData.append('action', 'mark_paid');
             
             // Send the request

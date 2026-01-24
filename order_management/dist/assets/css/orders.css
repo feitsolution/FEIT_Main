@@ -1463,6 +1463,15 @@
     background: #1e7e34;
 }
 
+.unpaid-btn {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.unpaid-btn:hover {
+    background-color: #5a6268;
+}
+
 .dispatch-btn {
     background: #ffc107;
     color: #212529;
