@@ -10,35 +10,8 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
-
-// Include the database connection file
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
-
-// Check if user has admin role (role_id = 1) from database
-$userId = $_SESSION['user_id'];
-$checkAdminSql = "SELECT role_id FROM users WHERE id = ? LIMIT 1";
-$checkAdminStmt = $conn->prepare($checkAdminSql);
-$checkAdminStmt->bind_param("i", $userId);
-$checkAdminStmt->execute();
-$adminResult = $checkAdminStmt->get_result();
-
-if ($adminResult->num_rows > 0) {
-    $userData = $adminResult->fetch_assoc();
-    $userRoleId = (int)$userData['role_id'];
-    
-    // Only allow users with role_id = 1 (Admin)
-    // role_id = 1: Admin, role_id = 2: User/Moderator
-    if ($userRoleId !== 1) {
-        $checkAdminStmt->close();
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-        header("Location: /lily_collection/dist/pages/access_denied.php");
-        exit();
-    }
-} else {
-    // User not found in database
-    $checkAdminStmt->close();
+// Check if user is admin (ID = 1)
+if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] != 1) {
     if (ob_get_level()) {
         ob_end_clean();
     }
@@ -46,7 +19,8 @@ if ($adminResult->num_rows > 0) {
     header("Location: /lily_collection/dist/pages/access_denied.php");
     exit();
 }
-$checkAdminStmt->close();
+// Include the database connection file
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
 // Function to generate CSRF token
 function generateCSRFToken() {
@@ -54,14 +28,6 @@ function generateCSRFToken() {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     return $_SESSION['csrf_token'];
-}
-
-// Function to log user actions
-function logUserAction($conn, $user_id, $action_type, $details = null, $inquiry_id = 0) {
-    $stmt = $conn->prepare("INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) VALUES (?, ?, ?, ?, NOW())");
-    $stmt->bind_param("isis", $user_id, $action_type, $inquiry_id, $details);
-    $stmt->execute();
-    $stmt->close();
 }
 
 // Initialize message variables
@@ -123,7 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Logo upload handling
     $logo_url = '';
-    $logo_uploaded = false;
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
         $allowed = array('jpg', 'jpeg', 'png', 'gif');
         $filename = $_FILES['logo']['name'];
@@ -140,7 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (move_uploaded_file($_FILES['logo']['tmp_name'], $destination)) {
                 $logo_url = '/lily_collection/dist/uploads/' . $new_name;
-                $logo_uploaded = true;
             } else {
                 $_SESSION['error_message'] = "Error uploading logo file.";
                 header("Location: " . $_SERVER['PHP_SELF']);
@@ -155,7 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Favicon upload handling
     $fav_icon_url = '';
-    $favicon_uploaded = false;
     if (isset($_FILES['fav_icon']) && $_FILES['fav_icon']['error'] == 0) {
         $allowed = array('jpg', 'jpeg', 'png', 'ico');
         $filename = $_FILES['fav_icon']['name'];
@@ -172,7 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (move_uploaded_file($_FILES['fav_icon']['tmp_name'], $destination)) {
                 $fav_icon_url = '/lily_collection/dist/uploads/' . $new_name;
-                $favicon_uploaded = true;
             } else {
                 $_SESSION['error_message'] = "Error uploading favicon file.";
                 header("Location: " . $_SERVER['PHP_SELF']);
@@ -186,13 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Check if we need to update or insert (UPSERT logic)
-    $check_query = "SELECT * FROM branding LIMIT 1";
+    $check_query = "SELECT branding_id FROM branding LIMIT 1";
     $check_result = $conn->query($check_query);
     
     if ($check_result && $check_result->num_rows > 0) {
-        // UPDATE existing record - Get old values first
-        $old_branding = $check_result->fetch_assoc();
-        $branding_id = $old_branding['branding_id'];
+        // UPDATE existing record
+        $row = $check_result->fetch_assoc();
+        $branding_id = $row['branding_id'];
         
         // Define core fields for UPDATE
         $update_sql_parts = [
@@ -228,53 +190,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $_SESSION['success_message'] = "Branding settings updated successfully!";
-            
-            // Build simple log details showing what changed
-            $changes = [];
-            
-            if ($old_branding['company_name'] != $company_name) {
-                $changes[] = "Company Name: '{$old_branding['company_name']}' to '{$company_name}'";
-            }
-            if ($old_branding['web_name'] != $web_name) {
-                $changes[] = "Website Name: '{$old_branding['web_name']}' to '{$web_name}'";
-            }
-            if ($old_branding['address'] != $address) {
-                $changes[] = "Address: '{$old_branding['address']}' to '{$address}'";
-            }
-            if ($old_branding['hotline'] != $hotline) {
-                $changes[] = "Hotline: '{$old_branding['hotline']}' to '{$hotline}'";
-            }
-            if ($old_branding['email'] != $email) {
-                $changes[] = "Email: '{$old_branding['email']}' to '{$email}'";
-            }
-            if ($old_branding['delivery_fee'] != $delivery_fee) {
-                $changes[] = "Delivery Fee: '{$old_branding['delivery_fee']}' to '{$delivery_fee}'";
-            }
-            if ($old_branding['primary_color'] != $primary_color) {
-                $changes[] = "Primary Color: '{$old_branding['primary_color']}' to '{$primary_color}'";
-            }
-            if ($old_branding['secondary_color'] != $secondary_color) {
-                $changes[] = "Secondary Color: '{$old_branding['secondary_color']}' to '{$secondary_color}'";
-            }
-            if ($old_branding['font_family'] != $font_family) {
-                $changes[] = "Font Family: '{$old_branding['font_family']}' to '{$font_family}'";
-            }
-            if ($logo_uploaded) {
-                $old_logo = !empty($old_branding['logo_url']) ? basename($old_branding['logo_url']) : 'None';
-                $new_logo = basename($logo_url);
-                $changes[] = "Logo: '{$old_logo}' to '{$new_logo}'";
-            }
-            if ($favicon_uploaded) {
-                $old_favicon = !empty($old_branding['fav_icon_url']) ? basename($old_branding['fav_icon_url']) : 'None';
-                $new_favicon = basename($fav_icon_url);
-                $changes[] = "Favicon: '{$old_favicon}' to '{$new_favicon}'";
-            }
-            
-            // Log only if there were actual changes
-            if (!empty($changes)) {
-                $log_details = implode("; ", $changes);
-                logUserAction($conn, $_SESSION['user_id'], 'branding_update', $log_details);
-            }
         } else {
             $_SESSION['error_message'] = "Error updating branding settings: " . $stmt->error;
         }
@@ -293,11 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $_SESSION['success_message'] = "Branding settings saved successfully! Note: Only one branding record is supported.";
-            
-            // Create simple log for first-time creation
-            $log_details = "Branding created: Company Name '{$company_name}', Website '{$web_name}'";
-            
-            logUserAction($conn, $_SESSION['user_id'], 'branding_create', $log_details);
         } else {
             $_SESSION['error_message'] = "Error saving branding settings: " . $stmt->error;
         }
@@ -486,43 +396,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         <!-- Spacer or another field -->
                                     </div>
                                 </div>
-                                
-                                <!-- <h6 class="mb-3 mt-4">Color & Font Settings</h6>
-                                
-                                <div class="form-row">
-                                    <div class="form-column">
-                                        <div class="form-group">
-                                            <label for="primary_color" class="form-label">Primary Color</label>
-                                            <input type="color" class="form-control" id="primary_color" name="primary_color" 
-                                                   value="<?php echo htmlspecialchars($branding['primary_color']); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="form-column">
-                                        <div class="form-group">
-                                            <label for="secondary_color" class="form-label">Secondary Color</label>
-                                            <input type="color" class="form-control" id="secondary_color" name="secondary_color" 
-                                                   value="<?php echo htmlspecialchars($branding['secondary_color']); ?>">
-                                        </div>
-                                    </div>
-                                </div> -->
-                                
-                                <div class="form-row">
-                                    <div class="form-column">
-                                        <div class="form-group">
-                                            <!-- <label for="font_family" class="form-label">Font Family</label>
-                                            <select class="form-control" id="font_family" name="font_family">
-                                                <option value="Inter" <?php echo ($branding['font_family'] === 'Inter') ? 'selected' : ''; ?>>Inter</option>
-                                                <option value="Arial" <?php echo ($branding['font_family'] === 'Arial') ? 'selected' : ''; ?>>Arial</option>
-                                                <option value="Helvetica" <?php echo ($branding['font_family'] === 'Helvetica') ? 'selected' : ''; ?>>Helvetica</option>
-                                                <option value="Roboto" <?php echo ($branding['font_family'] === 'Roboto') ? 'selected' : ''; ?>>Roboto</option>
-                                                <option value="Open Sans" <?php echo ($branding['font_family'] === 'Open Sans') ? 'selected' : ''; ?>>Open Sans</option>
-                                            </select> -->
-                                        </div>
-                                    </div>
-                                    <div class="form-column">
-                                        <!-- Spacer -->
-                                    </div>
-                                </div>
+                            
                                 
                                 <h6 class="mb-3 mt-4">Logos and Icons</h6>
                                 

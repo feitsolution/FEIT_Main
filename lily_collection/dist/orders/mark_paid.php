@@ -128,26 +128,8 @@ try {
         throw new Exception('Upload directory is not writable');
     }
     
-    // Get company name for filename prefix
-    $companyName = '';
-    $brandQuery = "SELECT company_name FROM branding WHERE active = 1 LIMIT 1";
-    $brandResult = $conn->query($brandQuery);
-
-    if ($brandResult && $brandRow = $brandResult->fetch_assoc()) {
-        if (!empty($brandRow['company_name'])) {
-        // Keep only letters and convert to lowercase
-        $cleanCompanyName = strtolower(
-            preg_replace('/[^a-zA-Z0-9]/', '', $brandRow['company_name'])
-        );
-
-        if (!empty($cleanCompanyName)) {
-            $companyName = $cleanCompanyName . '_';
-           }
-       }
-    }
-
     // Generate unique filename
-    $fileName = $companyName . 'payment_' . $orderId . '_' . time() . '.' . $fileExtension;
+    $fileName = 'payment_' . $orderId . '_' . time() . '.' . $fileExtension;
     $filePath = $uploadDir . $fileName;
     
     // Move uploaded file

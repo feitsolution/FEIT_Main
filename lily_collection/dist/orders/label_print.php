@@ -226,30 +226,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </div>
 
     <script>
-             // Print labels function
+        // Print labels function
         function printLabels(format) {
-            // Build parameters object with current filter values from the form
-            const params = new URLSearchParams();
-            
-            // Get values from form inputs
-            const date = document.getElementById('date').value;
-            const timeFrom = document.getElementById('time_from').value;
-            const timeTo = document.getElementById('time_to').value;
-            const statusFilter = document.querySelector('input[name="status_filter"]').value;
-            const dateFilter = document.querySelector('input[name="date_filter"]').value;
-            
-            // Add filter parameters
-            if (date) params.set('date', date);
-            if (timeFrom) params.set('time_from', timeFrom);
-            if (timeTo) params.set('time_to', timeTo);
-            params.set('status_filter', statusFilter);
-            params.set('date_filter', dateFilter);
-    
-            // Add format
+            // Get current filter parameters
+            const params = new URLSearchParams(window.location.search);
             params.set('format', format);
-            
-            // Set high limit to get all matching orders
-            params.set('limit', '1000');
+            params.delete('page'); // Remove pagination for print
+            params.delete('limit'); // Remove limit for print
 
             // Open print page in new window
             const printUrl = 'bulk_print.php?' + params.toString();
