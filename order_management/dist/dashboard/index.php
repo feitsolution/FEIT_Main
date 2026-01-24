@@ -609,10 +609,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     </a>
 </div>
 
-                <!-- Inventory & User Management Section - Admin Only -->
-                <div class="col-span-12 mt-6 admin-only">
+                <!-- Inventory & User Management Section -->
+                <?php if ($rbac->isAdmin()) { ?>
+                <div class="col-span-12 mt-6">
                     <h2 class="section-title">Inventory & User Management</h2>
                 </div>
+                <?php } else { ?>
+                <div class="col-span-12 mt-6">
+                    <h2 class="section-title">Inventory & Customer Management</h2>
+                </div>
+                <?php } ?>
 
                 <!-- Total Users - Admin Only -->
                 <div class="col-span-12 xl:col-span-4 md:col-span-6 admin-only">

@@ -156,13 +156,10 @@ if ($rbac->isAdmin()) {
     }
 }
 
-// Total Products - Only admin can see all products
-if ($rbac->isAdmin()) {
-    // Check if products table exists
-    $tableExists = $conn->query("SHOW TABLES LIKE 'products'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_products'] = safeQuery($conn, "SELECT COUNT(*) as count FROM products");
-    }
+// Total Products
+$tableExists = $conn->query("SHOW TABLES LIKE 'products'");
+if ($tableExists && $tableExists->num_rows > 0) {
+    $stats['total_products'] = safeQuery($conn, "SELECT COUNT(*) as count FROM products");
 }
 
 // Check if orders table exists
@@ -626,10 +623,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </a>
 </div>
 
-                <!-- Inventory & User Management Section - Admin Only -->
-                <div class="col-span-12 mt-6 admin-only">
+                <!-- Inventory & User Management Section -->
+                <?php if ($rbac->isAdmin()) { ?>
+                <div class="col-span-12 mt-6">
                     <h2 class="section-title">Inventory & User Management</h2>
                 </div>
+                <?php } else { ?>
+                <div class="col-span-12 mt-6">
+                    <h2 class="section-title">Inventory & Customer Management</h2>
+                </div>
+                <?php } ?>
 
                 <!-- Total Users - Admin Only -->
                 <div class="col-span-12 xl:col-span-4 md:col-span-6 admin-only">
