@@ -120,13 +120,8 @@ if (!empty($tracking_filter) && $tracking_filter !== 'all') {
                 $trackingTerm = $conn->real_escape_string($tracking_number);
                 $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
             }
+            break;
     }
-}
-
-// Role-based access: Admin (role_id 1) sees all, others see only their own orders
-if (isset($_SESSION['role_id']) && $_SESSION['role_id'] != 1) {
-    $current_user_id = (int)($_SESSION['user_id'] ?? 0);
-    $searchConditions[] = "o.user_id = $current_user_id";
 }
 
 // Apply search conditions
