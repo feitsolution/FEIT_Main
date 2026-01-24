@@ -80,7 +80,7 @@ $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1
         FROM order_header o 
         LEFT JOIN customers c ON o.customer_id = c.customer_id
         LEFT JOIN couriers cr ON o.courier_id = cr.courier_id
-        LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
+        LEFT JOIN city_table ct ON o.city_id = ct.city_id AND ct.is_active = 1
         WHERE o.interface IN ('individual', 'leads')";
 
 // Build search conditions
@@ -120,8 +120,13 @@ if (!empty($tracking_filter) && $tracking_filter !== 'all') {
                 $trackingTerm = $conn->real_escape_string($tracking_number);
                 $searchConditions[] = "o.tracking_number LIKE '%$trackingTerm%'";
             }
-            break;
     }
+}
+
+// Role-based access: Admin (role_id 1) sees all, others see only their own orders
+if (isset($_SESSION['role_id']) && $_SESSION['role_id'] != 1) {
+    $current_user_id = (int)($_SESSION['user_id'] ?? 0);
+    $searchConditions[] = "o.user_id = $current_user_id";
 }
 
 // Apply search conditions
