@@ -824,7 +824,7 @@ function unmarkAsPaid(orderId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Order unmarked as paid successfully!');
+            alert('Order marked as unpaid successfully!');
             window.location.reload();
         } else {
             alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
