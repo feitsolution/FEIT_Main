@@ -581,12 +581,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                         </div>
 
                         <div class="form-container">
-                            <?php if ($restricted_tenant_id > 0): ?>
-                                <!-- Restricted View: Hidden input for auto-loading -->
-                                <input type="hidden" id="tenant_id" name="tenant_id" value="<?php echo $restricted_tenant_id; ?>">
-                            <?php else: ?>
                             <div class="tenant-section">
                                 <label for="tenant_id" class="form-label">Select Tenant <span class="required">*</span></label>
+                                <?php if ($restricted_tenant_id > 0): ?>
+                                    <!-- Restricted View: Read-only dropdown or hidden input -->
+                                    <select id="tenant_id" name="tenant_id" class="form-select" readonly style="pointer-events: none; background-color: #e9ecef;">
+                                        <?php foreach ($tenants as $tenant): ?>
+                                            <option value="<?php echo $tenant['tenant_id']; ?>" selected>
+                                                <?php echo htmlspecialchars($tenant['company_name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php else: ?>
                                     <!-- Main Admin View: Full Selection -->
                                     <select id="tenant_id" name="tenant_id" class="form-select" required>
                                         <option value="">Select Tenant</option>
@@ -596,8 +602,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
                             
                             <div class="courier-section">
                                 <label for="courier_id" class="form-label">Select Courier <span class="required">*</span></label>

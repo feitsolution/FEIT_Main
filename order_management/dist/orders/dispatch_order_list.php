@@ -475,9 +475,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                             <i class="fas fa-dollar-sign"></i>
                                         </button>
                                     <?php elseif ($payStatus === 'paid'): ?>
-                                        <!-- Mark as Unpaid button - only show for paid orders -->
+                                        <!-- UNMARK AS PAID button - only show for paid orders -->
                                         <button class="action-btn unpaid-btn"
-                                                title="Mark as Unpaid"
+                                                title="Unmark as Paid"
                                                 onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
                                             <i class="fas fa-undo"></i>
                                         </button>
@@ -793,10 +793,10 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
-// Mark as Unpaid function
+// Unmark as Paid function
 function unmarkAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to Mark as Unpaid.');
+        alert('Order ID is required to unmark as paid.');
         return;
     }
 
