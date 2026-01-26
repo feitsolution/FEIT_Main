@@ -719,24 +719,67 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
     margin-bottom: 0.5rem;
 }
 
-.tenant-selection-section {
-    background-color: #f8f9fa;
-    border: 2px solid #dee2e6;
+.tenant-selector-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+     width: fit-content;
+     display: flex;
+     align-items: center;
 }
 
-.tenant-selection-section h6 {
-    font-size: 1.1rem;
+.tenant-selector-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.tenant-selector-label {
+    color: #495057;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    white-space: nowrap;
 }
 
-.tenant-selection-section .form-select {
-    /* font-size: 1rem; */
-    padding: 0.6rem;
+.tenant-selector-label i {
+    font-size: 16px;
+    color: #667eea;
+}
+
+.tenant-selector-dropdown form {
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.tenant-selector-dropdown select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background: #fff;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tenant-selector-dropdown select:hover {
+    border-color: #ccd1e8;
+}
+
+.tenant-selector-dropdown select:focus {
+    outline: none;
+    border-color: #ccd1e8;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .user-selection-section {
@@ -966,25 +1009,27 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
             <div class="lead-upload-container">
                 
                 <?php if ($isMainAdmin == 1 && $role_id === 1): ?>
-                    <!-- Tenant Selection Form for Main Admin -->
-                    <div class="tenant-selection-section">
-                        <h6><i class="feather icon-briefcase"></i> Select Tenant</h6>
-                        <p class="text-muted">Choose a tenant to upload leads for. Users from the selected tenant will be shown below.</p>
-                        <form method="POST" id="tenantSelectForm">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <select name="selected_tenant" id="tenantSelect" class="form-select" onchange="this.form.submit()">
+                    <!-- Tenant Selector Card -->
+                    <div class="tenant-selector-card">
+                        <div class="tenant-selector-content">
+                            <label class="tenant-selector-label">
+                               <i class="feather icon-briefcase"></i>
+                                Tenant:
+                            </label>
+                            <div class="tenant-selector-dropdown">
+                                <form method="POST" id="tenantSelectForm">
+                                    <select name="selected_tenant" id="tenantSelect" onchange="this.form.submit()">
                                         <option value="">-- Select Tenant --</option>
                                         <?php foreach ($tenants as $tenant): ?>
                                             <option value="<?php echo $tenant['tenant_id']; ?>" 
                                                 <?php echo ($selectedTenantId == $tenant['tenant_id']) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($tenant['company_name']); ?> (ID: <?php echo $tenant['tenant_id']; ?>)
+                                                <?php echo htmlspecialchars($tenant['company_name']); ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                </div>
+                                </form>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 <?php endif; ?>
 
