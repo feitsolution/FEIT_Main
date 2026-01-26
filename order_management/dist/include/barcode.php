@@ -1,102 +1,158 @@
 <?php
-/**
- * Barcode Generator (Code 128) - SVG Version
- * Generates an SVG image of a Code 128 barcode for a given text.
- * SVG is used for better compatibility as it doesn't require the GD extension.
- * Usage: barcode.php?code=TEXT_TO_ENCODE
- */
 
-class Barcode128SVG {
-    private $code128_patterns = [
-        '11011001100', '11001101100', '11001100110', '10010011000', '10010001100', '10001001100', '10011001000', '10011000100', '10001100100', '11001001000',
-        '11001000100', '11000100100', '10110011100', '10011011100', '10011001110', '10111001100', '10011101100', '10011100110', '11001110010', '11001011100',
-        '11001001110', '11011100100', '11001110100', '11101101110', '11101001100', '11100101100', '11100100110', '11101100100', '11100110100', '11100110010',
-        '11011011000', '11011000110', '11000110110', '10100011000', '10001011000', '10001000110', '10110001000', '10001101000', '10001100010', '11010001000',
-        '11000101000', '11000100010', '10110111000', '10110001110', '10001101110', '10111011000', '10111000110', '10001110110', '11101110110', '11010001110',
-        '11000101110', '11011101000', '11011100010', '11011101110', '11101011000', '11101000110', '11100010110', '11101101000', '11101100010', '11100011010',
-        '11101111010', '11001000010', '11110001010', '10100110000', '10100001100', '10010110000', '10010000110', '10000101100', '10000100110', '10110010000',
-        '10110000100', '10011010000', '10011000010', '10000110100', '10000110010', '11000010010', '11001010000', '11110111010', '11000010100', '10001111010',
-        '10100111100', '10010111100', '10010011110', '10111100100', '10011110100', '10011110010', '11110100100', '11110010100', '11110010010', '11011011110',
-        '11011110110', '11110110110', '10101111000', '10100011110', '10001011110', '10111101000', '10111100010', '11110101000', '11110100010', '10111011110',
-        '10111101110', '11101011110', '11110101110'
-    ];
+// Get parameters from URL
+$filepath = (isset($_GET["filepath"])?$_GET["filepath"]:"");
+$text = (isset($_GET["text"]) ? $_GET["text"] : (isset($_GET["code"]) ? $_GET["code"] : "0"));
+$size = (isset($_GET["size"])?$_GET["size"]:"120");
+$orientation = (isset($_GET["orientation"])?$_GET["orientation"]:"horizontal");
+$code_type = (isset($_GET["codetype"])?$_GET["codetype"]:"code128");
+$print = (isset($_GET["print"])&&$_GET["print"]=='true'?true:false);
+$sizefactor = (isset($_GET["sizefactor"])?$_GET["sizefactor"]:"2");
 
-    private $start_pattern = '11010000100'; // Start B pattern
-    private $stop_pattern = '1100011101011'; // Stop pattern
+// This function call can be copied into your project and can be made from anywhere in your code
+barcode( $filepath, $text, $size, $orientation, $code_type, $print, $sizefactor );
 
-    public function encodeText($text) {
-        $text = (string)$text;
-        
-        // Validate input - Code 128 supports ASCII 32-126
-        for ($i = 0; $i < strlen($text); $i++) {
-            $ord = ord($text[$i]);
-            if ($ord < 32 || $ord > 126) {
-                // Replace invalid characters with space
-                $text[$i] = ' ';
-            }
-        }
-        
-        // Start with Start B pattern
-        $encoded = $this->start_pattern;
-        $checksum = 104; // Start code value for Code B
-        
-        // Encode each character
-        for ($i = 0; $i < strlen($text); $i++) {
-            $char = $text[$i];
-            $ord = ord($char);
-            
-            // Code 128B uses characters 32-126
-            // Index = ASCII - 32
-            $index = $ord - 32;
-            
-            if ($index >= 0 && $index < count($this->code128_patterns)) {
-                $encoded .= $this->code128_patterns[$index];
-                $checksum += ($index * ($i + 1));
-            }
-        }
-        
-        // Calculate and add checksum
-        $check_index = $checksum % 103;
-        $encoded .= $this->code128_patterns[$check_index];
-        
-        // Add stop pattern
-        $encoded .= $this->stop_pattern;
-        
-        return $encoded;
+function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal", $code_type="code128", $print=false, $SizeFactor=1 ) {
+	$code_string = "";
+	// Translate the $text into barcode the correct $code_type
+	if ( in_array(strtolower($code_type), array("code128", "code128b")) ) {
+		$chksum = 104;
+		// Must not change order of array elements as the checksum depends on the array's key to validate final code
+		$code_array = array(" "=>"212222","!"=>"222122","\""=>"222221","#"=>"121223","$"=>"121322","%"=>"131222","&"=>"122213","'"=>"122312","("=>"132212",")"=>"221213","*"=>"221312","+"=>"231212",","=>"112232","-"=>"122132","."=>"122231","/"=>"113222","0"=>"123122","1"=>"123221","2"=>"223211","3"=>"221132","4"=>"221231","5"=>"213212","6"=>"223112","7"=>"312131","8"=>"311222","9"=>"321122",":"=>"321221",";"=>"312212","<"=>"322112","="=>"322211",">"=>"212123","?"=>"212321","@"=>"232121","A"=>"111323","B"=>"131123","C"=>"131321","D"=>"112313","E"=>"132113","F"=>"132311","G"=>"211313","H"=>"231113","I"=>"231311","J"=>"112133","K"=>"112331","L"=>"132131","M"=>"113123","N"=>"113321","O"=>"133121","P"=>"313121","Q"=>"211331","R"=>"231131","S"=>"213113","T"=>"213311","U"=>"213131","V"=>"311123","W"=>"311321","X"=>"331121","Y"=>"312113","Z"=>"312311","["=>"332111","\\"=>"314111","]"=>"221411","^"=>"431111","_"=>"111224","\`"=>"111422","a"=>"121124","b"=>"121421","c"=>"141122","d"=>"141221","e"=>"112214","f"=>"112412","g"=>"122114","h"=>"122411","i"=>"142112","j"=>"142211","k"=>"241211","l"=>"221114","m"=>"413111","n"=>"241112","o"=>"134111","p"=>"111242","q"=>"121142","r"=>"121241","s"=>"114212","t"=>"124112","u"=>"124211","v"=>"411212","w"=>"421112","x"=>"421211","y"=>"212141","z"=>"214121","{"=>"412121","|"=>"111143","}"=>"111341","~"=>"131141","DEL"=>"114113","FNC 3"=>"114311","FNC 2"=>"411113","SHIFT"=>"411311","CODE C"=>"113141","FNC 4"=>"114131","CODE A"=>"311141","FNC 1"=>"411131","Start A"=>"211412","Start B"=>"211214","Start C"=>"211232","Stop"=>"2331112");
+		$code_keys = array_keys($code_array);
+		$code_values = array_flip($code_keys);
+		for ( $X = 1; $X <= strlen($text); $X++ ) {
+			$activeKey = substr( $text, ($X-1), 1);
+			$code_string .= $code_array[$activeKey];
+			$chksum=($chksum + ($code_values[$activeKey] * $X));
+		}
+		$code_string .= $code_array[$code_keys[($chksum - (intval($chksum / 103) * 103))]];
+
+		$code_string = "211214" . $code_string . "2331112";
+	} elseif ( strtolower($code_type) == "code128a" ) {
+		$chksum = 103;
+		$text = strtoupper($text); // Code 128A doesn't support lower case
+		// Must not change order of array elements as the checksum depends on the array's key to validate final code
+		$code_array = array(" "=>"212222","!"=>"222122","\""=>"222221","#"=>"121223","$"=>"121322","%"=>"131222","&"=>"122213","'"=>"122312","("=>"132212",")"=>"221213","*"=>"221312","+"=>"231212",","=>"112232","-"=>"122132","."=>"122231","/"=>"113222","0"=>"123122","1"=>"123221","2"=>"223211","3"=>"221132","4"=>"221231","5"=>"213212","6"=>"223112","7"=>"312131","8"=>"311222","9"=>"321122",":"=>"321221",";"=>"312212","<"=>"322112","="=>"322211",">"=>"212123","?"=>"212321","@"=>"232121","A"=>"111323","B"=>"131123","C"=>"131321","D"=>"112313","E"=>"132113","F"=>"132311","G"=>"211313","H"=>"231113","I"=>"231311","J"=>"112133","K"=>"112331","L"=>"132131","M"=>"113123","N"=>"113321","O"=>"133121","P"=>"313121","Q"=>"211331","R"=>"231131","S"=>"213113","T"=>"213311","U"=>"213131","V"=>"311123","W"=>"311321","X"=>"331121","Y"=>"312113","Z"=>"312311","["=>"332111","\\"=>"314111","]"=>"221411","^"=>"431111","_"=>"111224","NUL"=>"111422","SOH"=>"121124","STX"=>"121421","ETX"=>"141122","EOT"=>"141221","ENQ"=>"112214","ACK"=>"112412","BEL"=>"122114","BS"=>"122411","HT"=>"142112","LF"=>"142211","VT"=>"241211","FF"=>"221114","CR"=>"413111","SO"=>"241112","SI"=>"134111","DLE"=>"111242","DC1"=>"121142","DC2"=>"121241","DC3"=>"114212","DC4"=>"124112","NAK"=>"124211","SYN"=>"411212","ETB"=>"421112","CAN"=>"421211","EM"=>"212141","SUB"=>"214121","ESC"=>"412121","FS"=>"111143","GS"=>"111341","RS"=>"131141","US"=>"114113","FNC 3"=>"114311","FNC 2"=>"411113","SHIFT"=>"411311","CODE C"=>"113141","CODE B"=>"114131","FNC 4"=>"311141","FNC 1"=>"411131","Start A"=>"211412","Start B"=>"211214","Start C"=>"211232","Stop"=>"2331112");
+		$code_keys = array_keys($code_array);
+		$code_values = array_flip($code_keys);
+		for ( $X = 1; $X <= strlen($text); $X++ ) {
+			$activeKey = substr( $text, ($X-1), 1);
+			$code_string .= $code_array[$activeKey];
+			$chksum=($chksum + ($code_values[$activeKey] * $X));
+		}
+		$code_string .= $code_array[$code_keys[($chksum - (intval($chksum / 103) * 103))]];
+
+		$code_string = "211412" . $code_string . "2331112";
+	} elseif ( strtolower($code_type) == "code39" ) {
+		$code_array = array("0"=>"111221211","1"=>"211211112","2"=>"112211112","3"=>"212211111","4"=>"111221112","5"=>"211221111","6"=>"112221111","7"=>"111211212","8"=>"211211211","9"=>"112211211","A"=>"211112112","B"=>"112112112","C"=>"212112111","D"=>"111122112","E"=>"211122111","F"=>"112122111","G"=>"111112212","H"=>"211112211","I"=>"112112211","J"=>"111122211","K"=>"211111122","L"=>"112111122","M"=>"212111121","N"=>"111121122","O"=>"211121121","P"=>"112121121","Q"=>"111111222","R"=>"211111221","S"=>"112111221","T"=>"111121221","U"=>"221111112","V"=>"122111112","W"=>"222111111","X"=>"121121112","Y"=>"221121111","Z"=>"122121111","-"=>"121111212","."=>"221111211"," "=>"122111211","$"=>"121212111","/"=>"121211121","+"=>"121112121","%"=>"111212121","*"=>"121121211");
+
+		// Convert to uppercase
+		$upper_text = strtoupper($text);
+
+		for ( $X = 1; $X<=strlen($upper_text); $X++ ) {
+			$code_string .= $code_array[substr( $upper_text, ($X-1), 1)] . "1";
+		}
+
+		$code_string = "1211212111" . $code_string . "121121211";
+	} elseif ( strtolower($code_type) == "code25" ) {
+		$code_array1 = array("1","2","3","4","5","6","7","8","9","0");
+		$code_array2 = array("3-1-1-1-3","1-3-1-1-3","3-3-1-1-1","1-1-3-1-3","3-1-3-1-1","1-3-3-1-1","1-1-1-3-3","3-1-1-3-1","1-3-1-3-1","1-1-3-3-1");
+
+		for ( $X = 1; $X <= strlen($text); $X++ ) {
+			for ( $Y = 0; $Y < count($code_array1); $Y++ ) {
+				if ( substr($text, ($X-1), 1) == $code_array1[$Y] )
+					$temp[$X] = $code_array2[$Y];
+			}
+		}
+
+		for ( $X=1; $X<=strlen($text); $X+=2 ) {
+			if ( isset($temp[$X]) && isset($temp[($X + 1)]) ) {
+				$temp1 = explode( "-", $temp[$X] );
+				$temp2 = explode( "-", $temp[($X + 1)] );
+				for ( $Y = 0; $Y < count($temp1); $Y++ )
+					$code_string .= $temp1[$Y] . $temp2[$Y];
+			}
+		}
+
+		$code_string = "1111" . $code_string . "311";
+	} elseif ( strtolower($code_type) == "codabar" ) {
+		$code_array1 = array("1","2","3","4","5","6","7","8","9","0","-","$",":","/",".","+","A","B","C","D");
+		$code_array2 = array("1111221","1112112","2211111","1121121","2111121","1211112","1211211","1221111","2112111","1111122","1112211","1122111","2111212","2121112","2121211","1121212","1122121","1212112","1112122","1112221");
+
+		// Convert to uppercase
+		$upper_text = strtoupper($text);
+
+		for ( $X = 1; $X<=strlen($upper_text); $X++ ) {
+			for ( $Y = 0; $Y<count($code_array1); $Y++ ) {
+				if ( substr($upper_text, ($X-1), 1) == $code_array1[$Y] )
+					$code_string .= $code_array2[$Y] . "1";
+			}
+		}
+		$code_string = "11221211" . $code_string . "1122121";
+	}
+
+	// Pad the edges of the barcode
+	$code_length = 20;
+	if ($print) {
+		$text_height = 30;
+	} else {
+		$text_height = 0;
+	}
+	
+	for ( $i=1; $i <= strlen($code_string); $i++ ){
+		$code_length = $code_length + (integer)(substr($code_string,($i-1),1));
     }
 
-    public function generateSVG($text, $height = 120, $barWidth = 2) {
-        $encoding = $this->encodeText($text);
-        
-        // Add quiet zones (10X on each side, where X is the narrowest bar width)
-        $quietZoneWidth = 10 * $barWidth;
-        $totalWidth = strlen($encoding) * $barWidth + (2 * $quietZoneWidth);
-        $totalHeight = $height;
-        
-        $svg = '<?xml version="1.0" standalone="no"?>' . "\n";
-        $svg .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' . "\n";
-        $svg .= '<svg width="' . $totalWidth . '" height="' . $totalHeight . '" viewBox="0 0 ' . $totalWidth . ' ' . $totalHeight . '" version="1.1" xmlns="http://www.w3.org/2000/svg">' . "\n";
-        $svg .= '  <rect width="100%" height="100%" fill="white" />' . "\n";
-        
-        // Draw barcode bars (starting after quiet zone)
-        $x = $quietZoneWidth;
-        for ($i = 0; $i < strlen($encoding); $i++) {
-            if ($encoding[$i] == '1') {
-                $svg .= '  <rect x="' . $x . '" y="0" width="' . $barWidth . '" height="' . $height . '" fill="black" />' . "\n";
-            }
-            $x += $barWidth;
-        }
-        
-        $svg .= '</svg>';
-        return $svg;
-    }
+	if ( strtolower($orientation) == "horizontal" ) {
+		$img_width = $code_length*$SizeFactor;
+		$img_height = $size;
+	} else {
+		$img_width = $size;
+		$img_height = $code_length*$SizeFactor;
+	}
+
+	// Generate SVG
+	$svg_width = $img_width;
+	$svg_height = $img_height + $text_height;
+	
+	$output = '<?xml version="1.0" standalone="no"?>' . "\n";
+	$output .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' . "\n";
+	$output .= '<svg width="' . $svg_width . '" height="' . $svg_height . '" viewBox="0 0 ' . $svg_width . ' ' . $svg_height . '" xmlns="http://www.w3.org/2000/svg" version="1.1">' . "\n";
+	$output .= '  <rect width="100%" height="100%" fill="white" />' . "\n";
+
+	$location = 10;
+	for ( $position = 1 ; $position <= strlen($code_string); $position++ ) {
+		$bar_width = (integer)(substr($code_string, ($position-1), 1));
+		$cur_size = $location + $bar_width;
+		
+		if ($position % 2 != 0) { // Odd positions are bars (black)
+			if ( strtolower($orientation) == "horizontal" ) {
+				$output .= '  <rect x="' . ($location*$SizeFactor) . '" y="0" width="' . ($bar_width*$SizeFactor) . '" height="' . $img_height . '" fill="black" />' . "\n";
+			} else {
+				$output .= '  <rect x="0" y="' . ($location*$SizeFactor) . '" width="' . $img_width . '" height="' . ($bar_width*$SizeFactor) . '" fill="black" />' . "\n";
+			}
+		}
+		$location = $cur_size;
+	}
+	
+	if ( $print ) {
+		// Basic text centered at the bottom
+		$text_x = ($svg_width / 2);
+		$text_y = $img_height + 20;
+		$output .= '  <text x="' . $text_x . '" y="' . $text_y . '" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="black">' . htmlspecialchars($text) . '</text>' . "\n";
+	}
+
+	$output .= '</svg>';
+
+	// Output or save
+	if ( $filepath=="" ) {
+		header('Content-Type: image/svg+xml');
+		header('Vary: Accept-Encoding');
+		echo $output;
+	} else {
+		file_put_contents($filepath, $output);
+	}
 }
 
-$code = isset($_GET['code']) ? $_GET['code'] : 'BARCODE';
-$gen = new Barcode128SVG();
-
-// Set appropriate headers
-header('Content-Type: image/svg+xml');
-header('Cache-Control: no-cache, must-revalidate');
-
-echo $gen->generateSVG($code);
+?>
