@@ -1,6 +1,17 @@
 <?php
 session_start(); // Start the session at the very beginning
 
+// Add anti-caching headers
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// Check if user is already logged in
+if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+    header("Location: /lily_collection/dist/dashboard/index.php");
+    exit();
+}
+
 // Include both database connection files
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/fe_it_db_connection.php');
@@ -172,6 +183,14 @@ $fe_conn->close();
 <head>
     <title>Login | Order Management Admin Portal</title>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
+    <script>
+        // Force reload if page is loaded from back-forward cache
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                window.location.reload();
+            }
+        });
+    </script>
 </head>
   <link rel="stylesheet" href="../assets/css/login.css" id="main-style-link" />
 
@@ -197,8 +216,8 @@ $fe_conn->close();
                     <div class="card sm:my-12 w-full shadow-none">
                         <div class="card-body ">
                             <div class="text-center mb-8">
-                                <!-- ✅ Branding logo -->
-                                <a href="#"><img src="<?php echo $logo_url; ?>" alt="Company Logo" /></a>
+                                <!-- Branding logo -->
+                                <a href="#"><img src="<?php echo $logo_url; ?>" alt="Company Logo" class="w-40 mx-auto" /></a>
                             </div>
 
                             <h4 class="text-center font-medium mb-4">Login</h4>
@@ -217,9 +236,9 @@ $fe_conn->close();
                                            value="<?php echo isset($_COOKIE['email']) ? $_COOKIE['email'] : ''; ?>" required />
                                 </div>
                                 <div class="mb-4">
-                                    <div class="password-container relative">
-                                        <input type="password" class="form-control" id="floatingInput1" name="password" placeholder="Password" required />
-                                        <span class="password-toggle absolute right-3 top-3 cursor-pointer" id="togglePassword">
+                                    <div class="relative flex items-center">
+                                        <input type="password" class="form-control pr-10" id="floatingInput1" name="password" placeholder="Password" required />
+                                        <span class="password-toggle absolute right-0 flex items-center pr-3" id="togglePassword" style="cursor: pointer;">
                                             <i class="fas fa-eye"></i>
                                         </span>
                                     </div>
@@ -227,7 +246,7 @@ $fe_conn->close();
 
                                 <div class="flex mt-1 justify-between items-center flex-wrap">
                                     <div class="form-check">
-                                        <input class="form-check-input input-primary" type="checkbox" name="remember" 
+                                        <input class="form-check-input input-primary" type="checkbox" name="remember" style="cursor: pointer;" 
                                                <?php echo isset($_COOKIE['email']) ? 'checked' : ''; ?> />
                                         <label class="form-check-label text-muted">Remember me?</label>
                                     </div>

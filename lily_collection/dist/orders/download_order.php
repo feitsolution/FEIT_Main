@@ -688,13 +688,13 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
         <?php if ($orderPayStatus != 'paid' && $orderPayStatus != 'partial'): ?>
             <div class="payment-info">
                 <div class="payment-methods">
-                    <h5>Payment Methods</h5>
+                    <!-- <h5>Payment Methods</h5>
                     <p>
                         Account Name: F E IT SOLUTIONS PVT (LTD)<br>
                         Account Number: 100810008655<br>
                         Account Type: LKR Current Account<br>
                         Bank Name: Nations Trust Bank PLC
-                    </p>
+                    </p> -->
                 </div>
                 <div class="signature">
                     <div class="signature-line">
