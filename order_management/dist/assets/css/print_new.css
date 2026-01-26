@@ -18,8 +18,8 @@ body {
 
 /* Receipt Container - 6 inch height × 4 inch width */
 .receipt-container {
-    width: 10.16cm;  /* 4 inches = 10.16cm */
-    height: 15.24cm; /* 6 inches = 15.24cm */
+    width: 10cm;   /* Approximately 4 inches */
+    height: 14.5cm;  /* Approximately 5.7 inches */
     max-width: 10.16cm;
     background: white;
     position: relative;
@@ -219,8 +219,8 @@ body {
 }
 
 .label-wrapper {
-    width: 10.16cm;   /* 4 inches = 10.16cm */
-    height: 15.24cm;  /* 6 inches = 15.24cm */
+    width: 10cm;    /* Approximately 4 inches */
+    height: 14.5cm;   /* Approximately 5.7 inches */
     break-inside: avoid;
     page-break-inside: avoid;
     margin: 0;
@@ -262,28 +262,23 @@ body {
     }
     
     .labels-container {
-        display: block;
-        gap: 0;
-        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* 2 labels per row */
+        grid-template-rows: repeat(2, 1fr);    /* 2 rows per page */
+        gap: 5mm; /* Space between labels */
+        padding: 5mm; /* Padding inside the A4 page */
+        width: calc(100% - 10mm); /* Adjust for padding */
+        height: calc(100% - 10mm); /* Adjust for padding */
     }
     
-    .label-wrapper {
-        display: block;
-        width: 100%;
-        height: 100vh;
+     .label-wrapper {
+         display: inline-block;
+        width: 10cm;
+        height: 14.5cm;
         margin: 0;
     }
     
-    /* Add page break after each label EXCEPT the last one */
-    .label-wrapper {
-        page-break-after: always;
-        break-after: always;
-    }
-    
-    .label-wrapper:last-child {
-        page-break-after: avoid !important;
-        break-after: avoid !important;
-    }
+
     
     .receipt-container {
         width: 100%;
@@ -315,7 +310,7 @@ body {
     
     /* One label per page - 6 inch height × 4 inch width (Portrait) */
     @page {
-        size: 4in 6in;  /* Width: 4 inches, Height: 6 inches */
-        margin: 0;
+        size: A4 portrait; /* A4 size, portrait orientation */
+        margin: 5mm; /* Small margin around the A4 page */
     }
 }

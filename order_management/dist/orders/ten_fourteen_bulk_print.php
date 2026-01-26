@@ -1,10 +1,10 @@
 <?php
 /**
- * Six by Four Bulk Print (6 inch × 4 inch Labels)
+ * Four Labels per A4 Page Print (Approximately 4 inch × 5.7 inch Labels)
  * Prints multiple orders based on filters from label print page
- * Each order is printed as a 6x4 inch label - ONE LABEL PER PAGE
+ * Each order is printed as a label, with 4 labels fitting on a single A4 page
  * Includes customer phone_2 field and payment status
- * Updated to use external print.css stylesheet
+ * Updated to use external print.css stylesheet for 4 labels per A4 layout
  */
 
 // Start session management
@@ -238,7 +238,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Six by Four Bulk Print - 6x4 inch Labels (<?php echo count($orders); ?> orders)</title>
+    <title>Four Labels per A4 Page Bulk Print (<?php echo count($orders); ?> orders)</title>
     
     <!-- Link to external CSS file -->
     <link rel="stylesheet" href="../assets/css/print_new.css">
@@ -315,7 +315,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                 $phone_2 = !empty($order['customer_phone_2']) ? htmlspecialchars($order['customer_phone_2']) : '';
                 ?>
                 
-                <div class="label-wrapper <?php echo ($index < count($orders) - 1) ? 'page-break-after' : ''; ?>">
+                 <div class="label-wrapper">
                     <div class="receipt-container">
                         <!-- Main Table Structure -->
                         <table class="main-table">
@@ -357,9 +357,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                                     <div class="barcode-section" style="margin-top: 2mm;">
                                         <?php if ($has_tracking): ?>
                                             <img src="<?php echo $barcode_url; ?>" alt="Tracking Barcode" class="barcode-image" onerror="this.style.display='none'">
-                                            <div style="font-size: 16px; margin-top: 2px; color: #000; font-weight: bold; font-family: sans-serif; text-align:center;">
-                                                <?php echo htmlspecialchars($order['tracking_number']); ?>
-                                            </div>
+                                            <div style="font-size: 6px; margin-top: 0.5mm; color: #666;"></div>
                                         <?php else: ?>
                                             <div class="no-tracking-barcode">
                                                 <div style="border: 1px dashed #dc2626; padding: 4px; text-align: center; font-size: 8px; color: #dc2626; background: #fef2f2;">
@@ -488,7 +486,7 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
 
         // Log loaded orders for debugging
         console.log('Six by Four bulk print loaded: <?php echo count($orders); ?> orders');
-        console.log('ONE LABEL PER PAGE - 6x4 inch format');
+        console.log('FOUR LABELS PER A4 PAGE - approximately 4x5.7 inch format');
         console.log('Customer phone_2 included in labels');
         console.log('Using external print.css stylesheet');
     </script>
