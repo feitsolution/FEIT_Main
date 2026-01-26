@@ -153,7 +153,7 @@ $has_tracking = !empty($tracking_number);
 $is_paid = !empty($order['pay_status']) && $order['pay_status'] === 'paid';
 
 function getBarcodeUrl($data) {
-    return "https://barcodeapi.org/api/code128/{$data}";
+    return "../include/barcode.php?code=" . urlencode($data);
 }
 
 function getQRCodeUrl($data) {

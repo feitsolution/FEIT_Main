@@ -192,7 +192,7 @@ function currencySymbol($c)
 
 function barcodeImg($d)
 {
-    return "https://barcodeapi.org/api/code128/" . urlencode($d);
+    return "../include/barcode.php?code=" . urlencode($d);
 }
 
 function formatProducts($order_id, $products_by_order)

@@ -172,7 +172,7 @@ function getCurrencySymbol($currency) {
 }
 
 function getBarcodeUrl($data) {
-    return "https://barcodeapi.org/api/code128/{$data}";
+    return "../include/barcode.php?code=" . $data;
 }
 
 function hasTracking($tracking_number) {
