@@ -502,7 +502,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $final_product_code = implode(',', $product_codes);
             $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
-           // Calculate total amount with delivery fee
+            // Calculate total amount with delivery fee
 $total_amount = $subtotal_after_discount + $delivery_fee;
 
            // ==========================================

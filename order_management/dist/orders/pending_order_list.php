@@ -450,6 +450,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
             <i class="fas fa-eye"></i>
         </button>
+
+        <a href="edit_order.php?id=<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
+   class="action-btn edit-btn"
+   title="Edit Order">
+    <i class="fas fa-edit"></i>
+</a>
         
     <?php if ($payStatus == 'unpaid'): ?>
     <button class="action-btn paid-btn" title="Mark as Paid"
@@ -457,7 +463,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         <i class="fas fa-dollar-sign"></i>
     </button>
     <?php elseif ($payStatus == 'paid'): ?>
-    <button class="action-btn unpaid-btn" title="Mark as Unpaid"
+    <button class="action-btn unpaid-btn" title="Unmark as Paid"
         onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-undo"></i>
     </button>
@@ -794,14 +800,14 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
-// Mark as Unpaid function
+// Unmark as Paid function
 function unmarkAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to Mark as Unpaid.');
+        alert('Order ID is required to unmark as paid.');
         return;
     }
 
-    if (!confirm('Are you sure you want to unmark this order as paid? This will remove the payment record.')) {
+    if (!confirm('Are you sure you want to mark this order as unpaid? This will remove the payment record.')) {
         return;
     }
 

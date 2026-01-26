@@ -30,10 +30,13 @@ $order_query = "SELECT
                 i.*, 
                 i.pay_status AS order_pay_status, 
                 COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
-                CONCAT_WS(', ', c.address_line1, c.address_line2) AS customer_address, 
+                COALESCE(
+                    NULLIF(CONCAT_WS(', ', NULLIF(i.address_line1, ''), NULLIF(i.address_line2, '')), ''),
+                    CONCAT_WS(', ', c.address_line1, c.address_line2)
+                ) AS customer_address, 
                 c.email AS customer_email, 
-                c.phone AS customer_phone,
-                c.phone_2 AS customer_phone_2,
+                COALESCE(NULLIF(i.mobile, ''), c.phone) AS customer_phone,
+                COALESCE(NULLIF(i.mobile_2, ''), c.phone_2) AS customer_phone_2,
                 city.city_name AS customer_city,
                 p.payment_id, 
                 p.amount_paid, 
@@ -631,13 +634,13 @@ $column_count = $has_any_discount ? 5 : 4;
         <?php if ($orderPayStatus != 'paid' && $orderPayStatus != 'partial'): ?>
             <div class="payment-info">
                 <div class="payment-methods">
-                    <h5>Payment Methods</h5>
+                    <!-- <h5>Payment Methods</h5>
                     <p>
                         Account Name: F E IT SOLUTIONS PVT (LTD)<br>
                         Account Number: 100810008655<br>
                         Account Type: LKR Current Account<br>
                         Bank Name: Nations Trust Bank PLC
-                    </p>
+                    </p> -->
                 </div>
                 <div class="signature">
                     <div class="signature-line">

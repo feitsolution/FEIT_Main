@@ -1454,6 +1454,16 @@
     background: #0056b3;
 }
 
+/* Edit button */
+.edit-btn {
+    background-color: #ffc107; /* warning yellow */
+    color: #212529;
+}
+
+.edit-btn:hover {
+    background-color: #e0a800;
+}
+
 .paid-btn {
     background: #28a745;
     color: white;

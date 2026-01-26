@@ -539,7 +539,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                             <td class="subtotal-col">
                                                 <div class="input-group">
                                                     <span class="input-group-text">Rs.</span>
-                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" disabled>
+                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" readonly>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1387,9 +1387,12 @@ const ProductManager = {
 
         const hasProducts = ProductManager.checkForProducts();
         let finalDeliveryFee = 0;
+        
+        // Calculate subtotal first to use in delivery logic
+        let subtotalAfterDiscount = subtotalGross - totalDiscount;
 
         if (hasProducts) {
-            finalDeliveryFee = deliveryFee;
+            finalDeliveryFee = deliveryFee; // Normal delivery fee
             document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
@@ -1399,7 +1402,6 @@ const ProductManager = {
         document.getElementById('delivery_fee').value = finalDeliveryFee.toFixed(2);
 
         // Calculate final total
-        let subtotalAfterDiscount = subtotalGross - totalDiscount;
         let total = subtotalAfterDiscount + finalDeliveryFee;
 
         document.getElementById('subtotal_display').textContent = subtotalGross.toFixed(2);
@@ -1484,6 +1486,7 @@ const ProductManager = {
         newRow.querySelector('.quantity').disabled = true;
         newRow.querySelector('.price').disabled = true;
         newRow.querySelector('.discount').disabled = true;
+        newRow.querySelector('.subtotal').readOnly = true;
 
         document.querySelector('#order_table tbody').appendChild(newRow);
     },
