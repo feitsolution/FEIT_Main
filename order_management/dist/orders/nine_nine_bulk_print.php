@@ -364,6 +364,9 @@ window.onload = function() {
         <img src="<?php echo barcodeImg($o['tracking_number']); ?>" 
              style="width:155px; height:auto;" 
              alt="<?php echo htmlspecialchars($o['tracking_number']); ?>">
+        <div style="font-size: 12px; margin-top: 2px; color: #000; font-weight: bold; font-family: sans-serif; text-align:center;">
+            <?php echo htmlspecialchars($o['tracking_number']); ?>
+        </div>
     </div>
 <?php endif; ?>
 

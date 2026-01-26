@@ -231,6 +231,9 @@ if (isset($order['pay_status']) && $order['pay_status'] !== 'paid') {
                                  alt="Tracking Barcode" 
                                  class="barcode-image"
                                  onerror="this.style.display='none'">
+                            <div style="font-size: 16px; margin-top: 2px; color: #000; font-weight: bold; font-family: sans-serif; text-align:center;">
+                                <?php echo htmlspecialchars($order['tracking_number']); ?>
+                            </div>
                         </div>
                     <?php else: ?>
                         <div style="color:#dc2626; font-weight:bold; margin-top:2mm;">No Tracking Assigned</div>

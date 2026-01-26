@@ -46,10 +46,12 @@ class Barcode128SVG {
         return $encoding;
     }
 
-    public function generateSVG($text, $height = 120, $barWidth = 3, $fontSize = 32) {
+    public function generateSVG($text, $height = 120, $barWidth = 3) {
         $encoding = $this->generate($text);
         $totalWidth = strlen($encoding) * $barWidth;
-        $totalHeight = $height + 50; // Extra space for larger text
+        
+        // Remove extra space for text since we're not showing it anymore
+        $totalHeight = $height;
         
         $svg = '<?xml version="1.0" standalone="no"?>' . "\n";
         $svg .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' . "\n";
@@ -62,9 +64,7 @@ class Barcode128SVG {
             }
         }
         
-        // Add text below barcode with larger font size
-        $svg .= '  <text x="' . ($totalWidth / 2) . '" y="' . ($height + 35) . '" font-family="Arial, sans-serif" font-size="' . $fontSize . '" font-weight="bold" text-anchor="middle" fill="black">' . htmlspecialchars($text) . '</text>' . "\n";
-        
+        // Removed the text element entirely
         $svg .= '</svg>';
         return $svg;
     }
@@ -73,8 +73,5 @@ class Barcode128SVG {
 $code = isset($_GET['code']) ? $_GET['code'] : 'BARCODE';
 $gen = new Barcode128SVG();
 
-// You can adjust the font size via URL parameter
-$fontSize = isset($_GET['fontsize']) ? intval($_GET['fontsize']) : 24;
-
 header('Content-Type: image/svg+xml');
-echo $gen->generateSVG($code, 120, 3, $fontSize);
+echo $gen->generateSVG($code);
