@@ -604,15 +604,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                         </div>
 
                         <div class="form-container">
+                            <?php if ($restricted_tenant_id > 0): ?>
+                                <input type="hidden" id="tenant_id" name="tenant_id" value="<?php echo $restricted_tenant_id; ?>">
+                            <?php else: ?>
                             <div class="tenant-section">
                                 <label for="tenant_id" class="form-label">Select Tenant <span class="required">*</span></label>
-                                <?php if ($restricted_tenant_id > 0): ?>
-                                    <select id="tenant_id" name="tenant_id" class="form-select" readonly style="pointer-events: none; background-color: #e9ecef;">
-                                        <option value="<?php echo $restricted_tenant_id; ?>" selected>
-                                            <?php echo htmlspecialchars($tenants[0]['company_name']); ?>
-                                        </option>
-                                    </select>
-                                <?php else: ?>
                                     <select id="tenant_id" name="tenant_id" class="form-select" required>
                                         <option value="">Select Tenant</option>
                                         <?php foreach ($tenants as $tenant): ?>
@@ -621,8 +617,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                <?php endif; ?>
                             </div>
+                            <?php endif; ?>
 
                             <div class="courier-section">
                                 <label for="co_id" class="form-label">Select Courier <span class="required">*</span></label>
