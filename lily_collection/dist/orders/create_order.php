@@ -176,6 +176,66 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     color: #999;
     text-align: center;
 }
+
+.quantity-col {
+    width: 100px;
+    min-width: 80px;
+}
+
+.quantity-col input {
+    text-align: center;
+    font-weight: 500;
+}
+
+.row-highlight {
+    background-color: #fff3cd !important;
+    transition: background-color 0.5s ease;
+}
+
+#product-alert-container {
+    margin-bottom: 15px;
+}
+
+.duplicate-product-alert {
+    display: flex;
+    align-items: center;
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 15px;
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.duplicate-product-alert .alert-icon {
+    font-size: 20px;
+    margin-right: 15px;
+}
+
+.duplicate-product-alert .alert-message {
+    flex-grow: 1;
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.duplicate-product-alert .alert-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #856404;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    padding: 0;
+    margin-left: 10px;
+}
+
+.duplicate-product-alert .alert-close:hover {
+    opacity: 1;
+}
+
 </style>
 
 <body>
@@ -427,6 +487,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             <h5 class="section-title">Products</h5>
                         </div>
                         <div class="section-body">
+                            <div id="product-alert-container"></div>
                             <div style="overflow-x: auto;">
                                 <table class="products-table" id="order_table">
                                     <thead>
@@ -434,6 +495,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             <th class="action-col">Action</th>
                                             <th class="product-col">Product</th>
                                             <th class="description-col">Description</th>
+                                            <th class="quantity-col">Quantity</th>
                                             <th class="price-col">Price</th>
                                             <th class="discount-col">Discount</th>
                                             <th class="subtotal-col">Subtotal</th>
@@ -462,14 +524,17 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             <td class="description-col">
                                                 <input type="text" name="order_product_description[]" class="form-control product-description">
                                             </td>
+                                            <td class="quantity-col">
+                                                <input type="number" name="order_product_quantity[]" class="form-control quantity" value="1" min="1" step="1" disabled>
+                                            </td>
                                             <td class="price-col">
                                                 <div class="input-group">
                                                     <span class="input-group-text">Rs.</span>
-                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01">
+                                                    <input type="number" name="order_product_price[]" class="form-control price" value="0.00" step="0.01" disabled>
                                                 </div>
                                             </td>
                                             <td class="discount-col">
-                                                <input type="number" name="order_product_discount[]" class="form-control discount" value="0" min="0" step="1">
+                                                        <input type="number" name="order_product_discount[]" class="form-control discount" placeholder="0.00" step="0.01" disabled>
                                             </td>
                                             <td class="subtotal-col">
                                                 <div class="input-group">
@@ -483,7 +548,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
-                                <button type="button" id="add_product" class="btn-add-product">
+                                <button type="button" id="add_product" class="btn-add-product" disabled>
                                     <span>+</span> Add Product
                                 </button>
 
@@ -506,7 +571,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         <span class="totals-label">Delivery Fee:</span>
                                         <span class="totals-value">
                                             Rs. <span id="delivery_fee_display"><?php echo number_format($deliveryFee, 2); ?></span>
-                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo number_format($deliveryFee, 2); ?>">
+                                            <input type="hidden" id="delivery_fee" name="delivery_fee" value="<?php echo $deliveryFee; ?>">
                                         </span>
                                     </div>
                                     <div class="totals-row">
@@ -664,16 +729,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </div>
 </div>
     <!-- FOOTER -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php');
-    ?>
-    <!-- END FOOTER -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
 
     <!-- SCRIPTS -->
-    <?php
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php');
-    ?>
-    <!-- END SCRIPTS -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/scripts.php'); ?>
+    
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ========== GLOBAL VARIABLES ==========
@@ -682,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== VALIDATION UTILITIES ==========
     const ValidationUtils = {
-        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        isValidEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email),
         isValidPhone: (phone) => /^\d{10}$/.test(phone),
         isValidDate: (dateString) => {
             const date = new Date(dateString);
@@ -714,8 +774,7 @@ const PhoneValidator = {
         
         try {
             const response = await fetch(`check_phone.php?phone=${encodeURIComponent(phone)}&customer_id=${currentCustomerId}`);
-            const data = await response.json();
-            return data;
+            return await response.json();
         } catch (error) {
             console.error('Error checking phone:', error);
             return { exists: false };
@@ -1146,32 +1205,135 @@ document.getElementById('customer_phone_2').addEventListener('paste', function(e
 const ProductManager = {
     updatePrice: (row) => {
         const productSelect = row.querySelector('.product-select');
+        const selectedValue = productSelect.value;
         const selectedOption = productSelect.options[productSelect.selectedIndex];
         
-        if (!productSelect.value) return;
+        if (!selectedValue) {
+            // Clear fields if no product is selected
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+            
+            // Disable fields
+            row.querySelector('.quantity').disabled = true;
+            row.querySelector('.price').disabled = true;
+            row.querySelector('.discount').disabled = true;
+            
+            ProductManager.updateTotals();
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
+
+        const productName = selectedOption.text;
+
+        // Check for duplicates
+        let existingRow = null;
+        document.querySelectorAll('#order_table tbody tr').forEach(tr => {
+            const select = tr.querySelector('.product-select');
+            if (tr !== row && select && select.value === selectedValue) {
+                existingRow = tr;
+            }
+        });
+
+        if (existingRow) {
+            ProductManager.showDuplicateAlert(productName, existingRow);
+
+            // Clear new row selection
+            productSelect.value = '';
+            row.querySelector('.product-description').value = '';
+            row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
+            row.querySelector('.discount').value = '0';
+            row.querySelector('.subtotal').value = '0.00';
+
+            FormValidator.validateAndToggleSubmit();
+            return;
+        }
 
         const priceField = row.querySelector('.price');
         const descriptionField = row.querySelector('.product-description');
+        const quantityInput = row.querySelector('.quantity');
         const description = selectedOption.getAttribute('data-description') || '';
         const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
 
         priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
         descriptionField.value = description;
 
+        // Enable fields
+        quantityInput.disabled = false;
+        priceField.disabled = false;
+        row.querySelector('.discount').disabled = false;
+
         ProductManager.updateRowTotal(row);
         ProductManager.checkForProducts();
+    },
+
+    showDuplicateAlert: (productName, existingRow) => {
+        const alertContainer = document.getElementById('product-alert-container');
+        
+        // Remove any existing alerts
+        alertContainer.innerHTML = '';
+        
+        // Create new alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'duplicate-product-alert';
+        alertDiv.innerHTML = `
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-message">
+                <strong>Product Already Added!</strong><br>
+                "${productName}" is already in your order. Please increase the quantity of the existing item instead of adding it again.
+            </div>
+            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+        `;
+        
+        alertContainer.appendChild(alertDiv);
+        
+        // Highlight existing row with yellow background
+        if (existingRow) {
+            existingRow.style.backgroundColor = '#fff3cd';
+            existingRow.style.transition = 'background-color 0.3s';
+            
+            // Scroll to the existing row
+            existingRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                existingRow.style.backgroundColor = '';
+            }, 3000);
+        }
+        
+        // Auto-hide alert after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transition = 'opacity 0.3s';
+                setTimeout(() => alertDiv.remove(), 300);
+            }
+        }, 5000);
+        
+        // Scroll to alert
+        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     },
 
     updateRowTotal: (row) => {
         let price = parseFloat(row.querySelector('.price').value) || 0;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
-        if (discount > price) {
-            discount = price;
+        // Handle Quantity - ensure it is at least 1
+        const qtyInput = row.querySelector('.quantity');
+        if (qtyInput.value !== "" && parseInt(qtyInput.value) < 1) {
+            qtyInput.value = 1;
+        }
+        let quantity = parseInt(qtyInput.value) || 1;
+
+        if (discount > (price * quantity)) {
+            discount = price * quantity;
             row.querySelector('.discount').value = discount;
         }
 
-        let subtotal = price - discount;
+        let subtotal = (price * quantity) - discount;
         row.querySelector('.subtotal').value = subtotal.toFixed(2);
         ProductManager.updateTotals();
     },
@@ -1188,39 +1350,47 @@ const ProductManager = {
         const deliveryFeeRow = document.getElementById('delivery_fee_row');
         deliveryFeeRow.style.display = hasProducts ? 'flex' : 'none';
         
+        // Toggle Add Product button
+        const addProductBtn = document.getElementById('add_product');
+        if (addProductBtn) {
+            addProductBtn.disabled = !hasProducts;
+            addProductBtn.style.opacity = hasProducts ? '1' : '0.6';
+            addProductBtn.style.cursor = hasProducts ? 'pointer' : 'not-allowed';
+        }
+        
         return hasProducts;
     },
 
     updateTotals: () => {
-        let subtotal = 0;
+        let subtotalGross = 0; // Total before any discounts
         let totalDiscount = 0;
 
         document.querySelectorAll('#order_table tbody tr').forEach(row => {
             let rowPrice = parseFloat(row.querySelector('.price').value) || 0;
+            let rowQuantity = parseInt(row.querySelector('.quantity').value) || 1;
             let rowDiscount = parseFloat(row.querySelector('.discount').value) || 0;
 
-            if (rowDiscount > rowPrice) {
-                rowDiscount = rowPrice;
-                row.querySelector('.discount').value = rowDiscount;
+            // Ensure discount doesn't exceed item's gross value
+            if (rowDiscount > (rowPrice * rowQuantity)) {
+                rowDiscount = (rowPrice * rowQuantity);
+                row.querySelector('.discount').value = rowDiscount.toFixed(2); // Update field with corrected discount
             }
 
-            let rowSubtotal = rowPrice - rowDiscount;
+            let rowSubtotal = (rowPrice * rowQuantity) - rowDiscount;
             row.querySelector('.subtotal').value = rowSubtotal.toFixed(2);
 
-            subtotal += rowPrice;
-            totalDiscount += rowDiscount;
+            if (row.querySelector('.product-select').value !== '') {
+                subtotalGross += (rowPrice * rowQuantity);
+                totalDiscount += rowDiscount;
+            }
         });
 
-        document.getElementById('subtotal_display').textContent = subtotal.toFixed(2);
-        document.getElementById('subtotal_amount').value = subtotal.toFixed(2);
-        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
-        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
-
-        let subtotalAfterDiscount = subtotal - totalDiscount;
         const hasProducts = ProductManager.checkForProducts();
-
-        // ===== NEW LOGIC: Free delivery for orders >= 5000 =====
         let finalDeliveryFee = 0;
+        
+        // Calculate subtotal first to use in delivery logic
+        let subtotalAfterDiscount = subtotalGross - totalDiscount;
+
         if (hasProducts) {
             if (subtotalAfterDiscount >= 5000) {
                 finalDeliveryFee = 0; // Free delivery
@@ -1230,6 +1400,8 @@ const ProductManager = {
                 finalDeliveryFee = deliveryFee; // Normal delivery fee
                 document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
             }
+        } else {
+            document.getElementById('delivery_fee_display').textContent = '0.00';
         }
 
         // Update delivery fee hidden input
@@ -1237,6 +1409,12 @@ const ProductManager = {
 
         // Calculate final total
         let total = subtotalAfterDiscount + finalDeliveryFee;
+
+        document.getElementById('subtotal_display').textContent = subtotalGross.toFixed(2);
+        document.getElementById('subtotal_amount').value = subtotalGross.toFixed(2);
+        
+        document.getElementById('discount_display').textContent = totalDiscount.toFixed(2);
+        document.getElementById('discount_amount').value = totalDiscount.toFixed(2);
 
         document.getElementById('total_display').textContent = total.toFixed(2);
         document.getElementById('total_amount').value = total.toFixed(2);
@@ -1261,6 +1439,13 @@ const ProductManager = {
                 const price = parseFloat(priceInput.value) || 0;
                 if (price <= 0) {
                     ValidationUtils.showError(priceInput, 'Price must be greater than 0', 'product-validation-error');
+                    isValid = false;
+                }
+                
+                const quantityInput = row.querySelector('.quantity');
+                const quantity = parseInt(quantityInput.value) || 0;
+                if (quantity < 1) {
+                    ValidationUtils.showError(quantityInput, 'Quantity must be more than 0', 'product-validation-error');
                     isValid = false;
                 }
             }
@@ -1292,6 +1477,8 @@ const ProductManager = {
                 input.value = '0.00';
             } else if (input.classList.contains('discount')) {
                 input.value = '0';
+            } else if (input.classList.contains('quantity')) {
+                input.value = '1';
             } else if (input.classList.contains('subtotal')) {
                 input.value = '0.00';
             } else {
@@ -1300,6 +1487,13 @@ const ProductManager = {
         });
         
         newRow.querySelector('.product-select').value = '';
+        
+        // Ensure fields in new row are disabled initially
+        newRow.querySelector('.quantity').disabled = true;
+        newRow.querySelector('.price').disabled = true;
+        newRow.querySelector('.discount').disabled = true;
+        newRow.querySelector('.subtotal').readOnly = true;
+
         document.querySelector('#order_table tbody').appendChild(newRow);
     },
 
@@ -1314,8 +1508,15 @@ const ProductManager = {
             row.querySelector('.product-select').value = '';
             row.querySelector('.product-description').value = '';
             row.querySelector('.price').value = '0.00';
+            row.querySelector('.quantity').value = '1';
             row.querySelector('.discount').value = '0';
             row.querySelector('.subtotal').value = '0.00';
+            
+            // Disable fields
+            row.querySelector('.quantity').disabled = true;
+            row.querySelector('.price').disabled = true;
+            row.querySelector('.discount').disabled = true;
+            
             ProductManager.checkForProducts();
             ProductManager.updateTotals();
         }
@@ -1557,10 +1758,19 @@ const CustomerModal = {
 
             document.addEventListener('input', (e) => {
                 if (e.target.classList.contains('discount')) {
-                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    // Allow numbers and decimal point
+                    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+                    // Ensure only one decimal point
+                    const parts = e.target.value.split('.');
+                    if (parts.length > 2) {
+                        e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                    }
                 }
                 
-                if (e.target.classList.contains('price') || e.target.classList.contains('discount')) {
+                if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
+                    if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) {
+                        e.target.value = 1;
+                    }
                     ProductManager.updateRowTotal(e.target.closest('tr'));
                     FormValidator.validateAndToggleSubmit();
                 }
@@ -1589,11 +1799,9 @@ const CustomerModal = {
                     if (!DateValidator.validate()) issues.push('Order dates');
                     if (!ProductManager.validate()) issues.push('Product information');
                     if (!ProductManager.hasValidProduct()) issues.push('At least one complete product');
-                    // Check email validation errors
-                
-                if (document.querySelectorAll('.email-validation-error').length > 0) {
-                    isValid = false;
-                }
+                    if (document.querySelectorAll('.email-validation-error').length > 0) {
+                        // Email error already shown, just prevent submission
+                    }
 
                     alert('Please fix the following issues:\n- ' + issues.join('\n- '));
                     return false;

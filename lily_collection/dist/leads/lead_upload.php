@@ -13,6 +13,36 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+/**
+ * Handle Failed Rows CSV Download
+ */
+if (isset($_GET['download_errors']) && isset($_SESSION['failed_rows_data'])) {
+    $failedRows = $_SESSION['failed_rows_data'];
+    
+    // Set headers for download
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="failed_leads_import_' . date('Y-m-d_H-i-s') . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    $output = fopen('php://output', 'w');
+    
+    // Add UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    // Write header (original columns + error reason)
+    if (!empty($failedRows)) {
+        fputcsv($output, array_keys($failedRows[0]));
+        
+        foreach ($failedRows as $row) {
+            fputcsv($output, $row);
+        }
+    }
+    
+    fclose($output);
+    exit();
+}
+
 // Include the database connection file early
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
@@ -32,6 +62,9 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details) {
 
 // Process CSV upload if form is submitted
 if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
+    // Clear previous failed rows
+    unset($_SESSION['failed_rows_data']);
+    
     try {
         // Validate file upload
         if ($_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
@@ -113,7 +146,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'address line 1', 
             'address line 2', 
             'product code', 
-            'total amount', 
+            'quantity',
             'other'
         ];
         
@@ -140,6 +173,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         $successCount = 0;
         $errorCount = 0;
         $errorMessages = [];
+        $failedRowsData = [];
         $rowNumber = 1;
         $successfulOrderIds = [];
         
@@ -166,7 +200,19 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $productCode = trim($row[$headerMap['product code']] ?? '');
-                $totalAmount = trim($row[$headerMap['total amount']] ?? '');
+                
+                $quantityInput = isset($headerMap['quantity']) ? trim($row[$headerMap['quantity']] ?? '') : '';
+                
+                // Allow empty or 0, default to 1
+                if ($quantityInput === '' || $quantityInput === '0') {
+                    $quantity = 1;
+                } else {
+                    if (!is_numeric($quantityInput) || (int)$quantityInput < 0) {
+                        throw new Exception("Quantity must be a positive number (got: '$quantityInput')");
+                    }
+                    $quantity = (int)$quantityInput;
+                }
+                
                 $other = trim($row[$headerMap['other']] ?? '');
 
                 // ===============================
@@ -197,12 +243,12 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $phoneNumber2 = '0' . $phoneNumber2;
                 }
 
-                
-                // Handle email - normalize empty values
-                if (empty($email) || $email === '' || $email === 'NULL' || $email === 'null' || $email === 'N/A' || $email === 'n/a' || $email === '-') {
-                    $email = '';
-                    $emailForDb = '-';
-                } else {
+                // Normalize email for DB
+                $emailForDb = null;
+                if (!empty($email) && !in_array(strtolower($email), ['-', 'null', 'n/a', 'na', '', ' -'])) {
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        throw new Exception("Invalid email format: '$email'");
+                    }
                     $emailForDb = $email;
                 }
                 
@@ -224,18 +270,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 if (empty($productCode)) {
                     throw new Exception("Product Code is required");
                 }
-                if (empty($totalAmount)) {
-                    throw new Exception("Total Amount is required");
-                }
                 if (empty($addressLine1)) {
                     throw new Exception("Address Line 1 is required");
-                }
-                
-                // Validate email format ONLY if email is provided
-                if (!empty($email) && $email !== '' && $email !== '-') {
-                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        throw new Exception("Invalid email format: '$email'");
-                    }
                 }
                 
                 // MUST be exactly 10 digits and start with 0
@@ -247,50 +283,46 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     throw new Exception("Phone Number 2 must be exactly 10 digits and start with 0 (got: '$phoneNumber2')");
                 }
                 
-                // Validate total amount is numeric and positive
-                if (!is_numeric($totalAmount) || $totalAmount <= 0) {
-                    throw new Exception("Total Amount must be a positive number");
-                }
-                
-                // Convert total amount to decimal
-                $totalAmountDecimal = (float)$totalAmount;
+               // Get city_id from city name
+$citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
+$cityStmt = $conn->prepare($citySql);
+if (!$cityStmt) {
+    throw new Exception("Failed to prepare city query: " . $conn->error);
+}
+$cityStmt->bind_param("s", $city);
+$cityStmt->execute();
+$cityResult = $cityStmt->get_result();
+
+if ($cityResult->num_rows === 0) {
+    throw new Exception("City '$city' not found in database");
+}
+
+$cityData = $cityResult->fetch_assoc();
+$cityId = $cityData['city_id'];
+$cityStmt->close();
                 
                 // Check if product exists and is active
-                $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND status = 'active'";
+                $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND LOWER(status) = 'active'";
                 $productStmt = $conn->prepare($productSql);
                 if (!$productStmt) {
                     throw new Exception("Failed to prepare product query: " . $conn->error);
                 }
+
+                $productCode = trim($productCode);
                 $productStmt->bind_param("s", $productCode);
                 $productStmt->execute();
                 $productResult = $productStmt->get_result();
-                
+
                 if ($productResult->num_rows === 0) {
                     throw new Exception("Product code '$productCode' not found or inactive");
                 }
-                
+
                 $product = $productResult->fetch_assoc();
                 $productId = $product['id'];
                 $unitPrice = (float)$product['lkr_price'];
+                $subtotal = $unitPrice;
                 $productStmt->close();
-                
-                // Look up city_id - REQUIRED field
-                $cityId = null;
-                $citySql = "SELECT city_id FROM city_table WHERE city_name = ? AND is_active = 1 LIMIT 1";
-                $cityStmt = $conn->prepare($citySql);
-                if (!$cityStmt) {
-                    throw new Exception("Failed to prepare city query: " . $conn->error);
-                }
-                $cityStmt->bind_param("s", $city);
-                $cityStmt->execute();
-                $cityResult = $cityStmt->get_result();
-                if ($cityResult->num_rows > 0) {
-                    $cityId = $cityResult->fetch_assoc()['city_id'];
-                } else {
-                    throw new Exception("City '$city' not found or inactive");
-                }
-                $cityStmt->close();
-                
+
                 // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
                 $customerFound = false;
@@ -315,7 +347,7 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
              
                 // Check Email if provided
-                if (!empty($email) && $email !== '-') {
+                if (!empty($emailForDb)) {
                     $customerCheckConditions[] = "email = ?";
                     $customerCheckParams[] = $emailForDb;
                     $customerCheckTypes .= 's';
@@ -357,54 +389,76 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                     $customerFound = false;
                 }
                 $customerCheckStmt->close();
-                
-                // Randomly assign to one of the selected users
-                $assignedUserId = $selectedUsers[array_rand($selectedUsers)];
-                
-                // Create order header with CSV data
-                $orderSql = "INSERT INTO order_header (
-                    customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
-                    pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-                    mobile, mobile_2, city_id, address_line1, address_line2, full_name, call_log, created_by
-                ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-                         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, 0, ?)";
-                
-                $orderStmt = $conn->prepare($orderSql);
-                if (!$orderStmt) {
-                    throw new Exception("Failed to prepare order query: " . $conn->error);
-                }
-                $notes = !empty($other) ? $other : 'Imported from CSV';
-                
-                // Bind parameters
-                $orderStmt->bind_param("iidsdsssisssi", 
-                    $customerId,
-                    $assignedUserId,
-                    $totalAmountDecimal,
-                    $notes,
-                    $totalAmountDecimal,
-                    $productCode,
-                    $phoneNumber,
-                    $phoneNumber2,
-                    $cityId,
-                    $addressLine1,
-                    $addressLine2,
-                    $fullName,
-                    $loggedInUserId
-                );
-                
-                if (!$orderStmt->execute()) {
-                    throw new Exception("Failed to create order: " . $orderStmt->error);
-                }
-                
-                $orderId = $conn->insert_id;
-                $orderStmt->close();
+
+                // Fetch branding info and delivery fee for this customer
+// Fetch delivery fee from active branding table (get first active branding entry)
+$deliveryFee = 0; // default initialization
+$brandingSql = "SELECT delivery_fee FROM branding WHERE active = 1 ORDER BY branding_id ASC LIMIT 1";
+$brandingStmt = $conn->prepare($brandingSql);
+if (!$brandingStmt) {
+    throw new Exception("Failed to prepare branding query: " . $conn->error);
+}
+$brandingStmt->execute();
+$brandingResult = $brandingStmt->get_result();
+
+if ($brandingResult->num_rows > 0) {
+    $brandingData = $brandingResult->fetch_assoc();
+    $deliveryFee = (float)$brandingData['delivery_fee'];
+} else {
+    throw new Exception("No active branding configuration found. Please set up branding first.");
+}
+$brandingStmt->close();
+
+// Calculate total amount including delivery fee
+$totalAmountWithDelivery = $subtotal + $deliveryFee;
+
+// Randomly assign to one of the selected users
+$assignedUserId = $selectedUsers[array_rand($selectedUsers)];
+
+// Create order header with CSV data including delivery_fee
+$orderSql = "INSERT INTO order_header (
+    customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
+    pay_status, pay_by, total_amount, currency, status, product_code, interface, 
+    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by
+) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
+         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?)";
+
+$orderStmt = $conn->prepare($orderSql);
+if (!$orderStmt) {
+    throw new Exception("Failed to prepare order query: " . $conn->error);
+}
+$notes = !empty($other) ? $other : 'Imported from CSV';
+
+$orderStmt->bind_param("iidsdsssisssdi", 
+    $customerId,                // customer_id (int)
+    $assignedUserId,            // user_id (int)
+    $subtotal,                  // subtotal (decimal) - WITHOUT delivery
+    $notes,                     // notes (string)
+    $totalAmountWithDelivery,   // total_amount (decimal) - WITH delivery
+    $productCode,               // product_code (string)
+    $phoneNumber,               // mobile (string)
+    $phoneNumber2,              // mobile_2 (string)
+    $cityId,                    // city_id (int)
+    $addressLine1,              // address_line1 (string)
+    $addressLine2,              // address_line2 (string)
+    $fullName,                  // full_name (string)
+    $deliveryFee,               // delivery_fee (decimal)
+    $loggedInUserId             // created_by (int)
+);
+
+if (!$orderStmt->execute()) {
+    throw new Exception("Failed to create order: " . $orderStmt->error);
+}
+
+$orderId = $conn->insert_id;
+$orderStmt->close();
                 
                 // Create order item
-                $quantity = 1;
+                // Quantity is already determined above
+                $itemTotalAmount = $unitPrice * $quantity;
                 $itemSql = "INSERT INTO order_items (
-                    order_id, product_id, quantity, unit_price, discount, total_amount, 
-                    pay_status, status, description
-                ) VALUES (?, ?, ?, ?, 0.00, ?, 'unpaid', 'pending', ?)";
+                    order_id, product_id, unit_price, discount, total_amount, quantity, pay_status, status, description
+                ) VALUES (?, ?, ?, 0.00, ?, ?, 'unpaid', 'pending', ?)";
                 
                 $itemStmt = $conn->prepare($itemSql);
                 if (!$itemStmt) {
@@ -412,8 +466,8 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 }
                 $description = "Product: $productCode";
                 
-                $itemStmt->bind_param("iiidds", 
-                    $orderId, $productId, $quantity, $totalAmountDecimal, $totalAmountDecimal, $description
+                $itemStmt->bind_param("iiddis", 
+                    $orderId, $productId, $unitPrice, $itemTotalAmount, $quantity, $description
                 );
                 
                 if (!$itemStmt->execute()) {
@@ -428,12 +482,27 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 
             } catch (Exception $e) {
                 $errorCount++;
-                $errorMessages[] = "Row $rowNumber: " . $e->getMessage();
+                $errorMessage = $e->getMessage();
+                $errorMessages[] = "Row $rowNumber: " . $errorMessage;
+                
+                // Capture row data for error download
+                $failedRow = [];
+                foreach ($headers as $index => $headerName) {
+                    $failedRow[$headerName] = $row[$index] ?? '';
+                }
+                $failedRow['Error Reason'] = $errorMessage;
+                $failedRowsData[] = $failedRow;
+                
                 continue;
             }
         }
         
         fclose($handle);
+        
+        // Store failed rows in session
+        if (!empty($failedRowsData)) {
+            $_SESSION['failed_rows_data'] = $failedRowsData;
+        }
         
         // Commit transaction
         $conn->commit();
@@ -555,6 +624,23 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     color: #721c24;
     margin-bottom: 0.5rem;
 }
+
+.download-errors-btn {
+    display: inline-block;
+    background-color: #dc3545;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 1rem;
+    transition: background-color 0.2s;
+}
+
+.download-errors-btn:hover {
+    background-color: #c82333;
+    color: white;
+}
 </style>
 
 <body>
@@ -578,8 +664,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                         <p><strong>Successfully imported:</strong> <?php echo $_SESSION['import_result']['success']; ?> records</p>
                         <?php if ($_SESSION['import_result']['errors'] > 0): ?>
                             <p><strong>Failed imports:</strong> <?php echo $_SESSION['import_result']['errors']; ?> records</p>
+                            
+                            <!-- NEW: Download Failed Rows Button -->
+                            <?php if (isset($_SESSION['failed_rows_data'])): ?>
+                                <a href="?download_errors=1" class="download-errors-btn">
+                                    📥 Download Failed Rows CSV
+                                </a>
+                                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                                    <em>Download the CSV file containing only the failed rows with error reasons. Fix the issues and re-upload.</em>
+                                </p>
+                            <?php endif; ?>
+                            
                             <?php if (!empty($_SESSION['import_result']['messages'])): ?>
-                                <details>
+                                <details style="margin-top: 1rem;">
                                     <summary style="cursor: pointer; font-weight: bold;">View Error Details</summary>
                                     <div class="error-section">
                                         <ul class="mt-2">
@@ -619,16 +716,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             </div>
                         </div>
                         
+                       
                         <div class="alert alert-info">
                             <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
-                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code, Total Amount</li>
-                                <li><strong>Optional fields:</strong> Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code</li>
+                                <li><strong>Note:</strong> Product Price is automatically fetched from the Product Code</li>
+                                <li><strong>Optional fields:</strong> Quantity, Phone Number 2, Email, Address Line 2, Other</li>
+                                <li><strong>Quantity Rule:</strong> Defaults to 1 if empty or 0</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
                                 <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
+                                <li><strong>⭐ NEW: Failed rows CSV export</strong> - If any rows fail, download a CSV with only failed rows and error reasons to fix and re-upload</li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
@@ -648,7 +749,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
                                 <li><strong>"City not found"</strong> → City name must match system database exactly</li>
                                 <li><strong>"Product code not found"</strong> → Verify product code exists and is active</li>
-                                <li><strong>"Total Amount must be positive"</strong> → Enter numeric value > 0</li>
                                 <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
                             </ul>
                             
@@ -660,6 +760,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <li>Use dash (-) or leave empty for optional fields like Email</li>
                                 <li>Check error details if any rows fail - they show specific issues</li>
                                 <li>Successful rows are imported even if some rows have errors</li>
+                                <li><strong>⭐ If many rows fail:</strong> Download the failed rows CSV, fix issues in Excel, and re-upload only those rows</li>
                             </ul>
                         </div>
                         

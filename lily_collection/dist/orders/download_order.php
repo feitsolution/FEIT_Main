@@ -23,26 +23,21 @@ $order_id = $_GET['id'];
 $show_payment_details = isset($_GET['show_payment']) && $_GET['show_payment'] === 'true';
 
 // ==========================================
-// ✅ FIXED QUERY: Get data from order_header FIRST, fallback to customers table
-// Priority: order_header fields > customers table fields
+// ✅ CHANGE 1: Added c.phone_2 to SELECT query
 // ==========================================
+// Updated query to include payment slip information and phone_2
 $order_query = "SELECT 
-                oh.*, 
-                oh.pay_status AS order_pay_status,
-                
-                -- Customer data (always from order_header)
-                oh.customer_id,
-                oh.full_name AS customer_name,
-                oh.mobile AS customer_phone,
-                oh.mobile_2 AS customer_phone_2,
-                oh.address_line1 AS customer_address_line1,
-                oh.address_line2 AS customer_address_line2,
-                oh.city_id,
-                
-                -- City name lookup
+                i.*, 
+                i.pay_status AS order_pay_status, 
+                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+                COALESCE(
+                    NULLIF(CONCAT_WS(', ', NULLIF(i.address_line1, ''), NULLIF(i.address_line2, '')), ''),
+                    CONCAT_WS(', ', c.address_line1, c.address_line2)
+                ) AS customer_address, 
+                c.email AS customer_email, 
+                COALESCE(NULLIF(i.mobile, ''), c.phone) AS customer_phone,
+                COALESCE(NULLIF(i.mobile_2, ''), c.phone_2) AS customer_phone_2,
                 city.city_name AS customer_city,
-                
-                -- Payment information
                 p.payment_id, 
                 p.amount_paid, 
                 p.payment_method, 
@@ -50,19 +45,18 @@ $order_query = "SELECT
                 p.pay_by,
                 r.name AS paid_by_name, 
                 u.name AS user_name,
-                
-                -- Order details
-                oh.delivery_fee, 
-                oh.pay_by AS order_pay_by, 
-                oh.pay_date AS order_pay_date, 
-                oh.slip AS payment_slip
-                
-            FROM order_header oh
-            LEFT JOIN city_table city ON oh.city_id = city.city_id
-            LEFT JOIN payments p ON oh.order_id = p.order_id
+                i.delivery_fee, 
+                i.pay_by AS order_pay_by, 
+                i.pay_date AS order_pay_date, 
+                i.slip AS payment_slip
+            FROM order_header i
+            LEFT JOIN customers c ON i.customer_id = c.customer_id
+            LEFT JOIN city_table city ON i.city_id = city.city_id
+            LEFT JOIN payments p ON i.order_id = p.order_id
             LEFT JOIN roles r ON p.pay_by = r.id
-            LEFT JOIN users u ON oh.user_id = u.id
-            WHERE oh.order_id = ?";
+            LEFT JOIN users u ON i.user_id = u.id
+            WHERE i.order_id = ?";
+
 
 $stmt = $conn->prepare($order_query);
 
@@ -80,18 +74,6 @@ if ($result->num_rows === 0) {
 }
 
 $order = $result->fetch_assoc();
-
-// ==========================================
-// ✅ FORMAT CUSTOMER ADDRESS
-// Combine address lines for display
-// ==========================================
-$customer_address = '';
-if (!empty($order['customer_address_line1'])) {
-    $customer_address .= $order['customer_address_line1'];
-}
-if (!empty($order['customer_address_line2'])) {
-    $customer_address .= !empty($customer_address) ? ', ' . $order['customer_address_line2'] : $order['customer_address_line2'];
-}
 
 // Get currency from order
 $currency = isset($order['currency']) ? strtolower($order['currency']) : 'lkr';
@@ -151,7 +133,6 @@ if (isset($order['order_pay_status']) && !empty($order['order_pay_status'])) {
 }
 
 // Fetch company information from branding table (UPDATED TO INCLUDE LOGO)
-// Fetch company information from branding table (UPDATED TO ALWAYS USE DB LOGO)
 $branding_query = "SELECT company_name, address, hotline, email, logo_url FROM branding WHERE active = 1 LIMIT 1";
 $branding_result = $conn->query($branding_query);
 
@@ -160,33 +141,23 @@ if ($branding_result && $branding_result->num_rows > 0) {
     // Clean up the address - remove extra backslashes and format properly
     $company['address'] = str_replace(['\\\\r\\\\n', '\\r\\n', '\\n'], "\n", $company['address']);
     
-    // ==========================================
-    // ✅ ALWAYS USE LOGO FROM DATABASE
-    // ==========================================
+    // Set logo URL - use from database if available, otherwise use default
     if (!empty($company['logo_url'])) {
-        // Check if it's a full URL (starts with http/https)
-        if (strpos($company['logo_url'], 'http') === 0) {
-            $logo_url = $company['logo_url'];
-        } 
-        // Check if it already has the full path
-        else if (strpos($company['logo_url'], '/lily_collection/') === 0) {
-            $logo_url = $company['logo_url']; // Already has full path
-        }
-        // Otherwise, it's a relative path from dist folder
-        else {
-            $logo_url = '/lily_collection/dist/' . ltrim($company['logo_url'], '/');
-        }
+        $logo_url = $company['logo_url'];
     } else {
-        // If logo_url is empty in DB, show error instead of fallback
         $logo_url = '';
-        error_log("WARNING: No logo_url found in branding table for active branding record");
     }
 } else {
-    // If no active branding record found, show error
+    // Fallback to default company info if branding not found
+    $company = [
+        'company_name' => 'FE IT Solutions pvt (Ltd)',
+        'address' => 'No: 04, Wijayamangalarama Road, Kohuwala',
+        'email' => 'info@feitsolutions.com',
+        'hotline' => '011-2824524'
+    ];
     $logo_url = '';
-    error_log("ERROR: No active branding record found in database");
-    die("Error: Company branding not configured. Please contact administrator.");
 }
+
 // Function to get the color for payment status
 function getPaymentStatusColor($status)
 {
@@ -241,18 +212,6 @@ $has_any_discount = $total_item_discounts > 0 || floatval($order['discount']) > 
 
 // Count how many columns we need to display in the table
 $column_count = $has_any_discount ? 5 : 4;
-
-// ==========================================
-// ✅ DEBUG LOGGING (REMOVE IN PRODUCTION)
-// ==========================================
-error_log("DEBUG - Invoice Display for Order #$order_id:");
-error_log("  - Customer Name: " . $order['customer_name']);
-error_log("  - Customer Phone: " . $order['customer_phone']);
-error_log("  - Customer Phone 2: " . ($order['customer_phone_2'] ?? 'NULL'));
-error_log("  - Address Line 1: " . $order['customer_address_line1']);
-error_log("  - Address Line 2: " . $order['customer_address_line2']);
-error_log("  - City: " . $order['customer_city']);
-error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (fallback)' : 'order_header table'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -359,21 +318,12 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
             object-fit: contain;
         }
 
-        /* Phone number styling */
+        /* ==========================================
+           ✅ CHANGE 2: Added styling for secondary phone
+           ========================================== */
         .phone-secondary {
             color: #666;
             font-size: 0.95em;
-        }
-
-        /* Data source indicator (for debugging - remove in production) */
-        .data-source-debug {
-            background-color: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            padding: 8px 12px;
-            margin: 10px 0;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #004085;
         }
 
         /* Make alerts responsive */
@@ -496,23 +446,13 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
         }
         ?>
 
-        <?php
-        // ==========================================
-        // ✅ DEBUG INFO (REMOVE IN PRODUCTION)
-        // Shows where the data is coming from
-        // ==========================================
-        $data_source = empty($order['full_name']) ? 'Customers Table (Fallback)' : 'Order Header Table';
-        ?>
-        <!-- REMOVE THIS SECTION IN PRODUCTION -->
-        <!-- <div class="data-source-debug">
-            ℹ️ <strong>Data Source:</strong> <?php echo $data_source; ?> 
-            <?php if (empty($order['full_name'])): ?>
-                (Order header fields were empty, displaying from customers table)
-            <?php endif; ?>
-        </div> -->
-
         <?php if (!$autoPrint): ?>
             <div class="control-buttons">
+                <!-- COMMENTED OUT: Print functionality disabled -->
+                <!-- <button class="btn btn-primary" onclick="window.print()">Print Invoice</button> -->
+                <!-- <button class="btn btn-secondary"
+                    onclick="window.location.href='download_order_print.php?id=<?php echo $order_id; ?>'">Print</button> -->
+
                 <?php if ($show_payment_details && $orderPayStatus != 'paid'): ?>
                     <button id="markAsPaidBtn" class="btn btn-success">Mark as Paid</button>
                 <?php endif; ?>
@@ -520,23 +460,18 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
         <?php endif; ?>
 
         <div class="order-header">
-           <div class="company-logo">
-    <?php if (!empty($logo_url)): ?>
-        <!-- Show logo if available in database -->
-        <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-             alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo">
-    <?php else: ?>
-        <!-- Show company name if no logo -->
-        <h6 style="margin: 0; color: #333; font-weight: bold;">
-            <?php echo htmlspecialchars($company['company_name']); ?>
-        </h6>
-    <?php endif; ?>
-</div>
+            <div class="company-logo">
+                <?php if (!empty($logo_url)): ?>
+                <img src="<?php echo htmlspecialchars($logo_url); ?>" 
+                     alt="<?php echo htmlspecialchars($company['company_name']); ?> Logo">
+                <?php endif; ?>
+            </div>
             <div class="order-info">
                 <div class="order-title">ORDER : # <?php echo $order_id; ?></div>
                 <div class="order-date">Date Issued: <?php echo date('Y-m-d', strtotime($order['issue_date'])); ?>
                 </div>
                 <div>Due Date: <?php echo date('Y-m-d', strtotime($order['due_date'])); ?></div>
+                <!-- Add this line to display just the created time -->
                 <div>Created Time: <?php echo date('H:i:s', strtotime($order['created_at'])); ?></div>
                 <div class="pay-status">
                     Pay Status:
@@ -547,7 +482,7 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
                 
                 <?php if (!empty($order['user_name'])): ?>
                     <div class="pay-by-info">
-                        <strong>Created By:</strong> <?php echo htmlspecialchars($order['user_name']); ?> (ID: <?php echo $order['user_id']; ?>)
+                        <strong>Pay By:</strong> <?php echo htmlspecialchars($order['user_name']); ?> (ID: <?php echo $order['user_id']; ?>)
                     </div>
                 <?php endif; ?>
 
@@ -574,17 +509,15 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
                 <div class="billing-title">Billing To :</div>
                 <div class="billing-info">
                     <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong><br>
-                    <?php echo nl2br(htmlspecialchars($customer_address)); ?><br>
-                    <?php if (!empty($order['customer_city'])): ?>
-                        City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
-                    <?php endif; ?>
+                    <?php echo nl2br(htmlspecialchars($order['customer_address'])); ?><br>
+                    City: <?php echo htmlspecialchars($order['customer_city']); ?><br>
                     
                     <?php 
                     // ==========================================
-                    // ✅ Display phone numbers from order_header (with fallback to customers table)
+                    // ✅ CHANGE 3: Display phone numbers with phone_2 support
                     // ==========================================
                     ?>
-                    Phone Number 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
+                    PhoneNumber 1: <?php echo htmlspecialchars($order['customer_phone']); ?>
                     <?php if (!empty($order['customer_phone_2'])): ?>
                         <br><span class="phone-secondary">Phone Number 2: <?php echo htmlspecialchars($order['customer_phone_2']); ?></span>
                     <?php endif; ?>
@@ -596,12 +529,14 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
             <thead>
                 <tr>
                     <th width="5%">#</th>
-                    <th width="<?php echo $has_any_discount ? '35%' : '40%'; ?>">PRODUCT</th>
-                    <th width="<?php echo $has_any_discount ? '30%' : '40%'; ?>">DESCRIPTION</th>
+            <th width="<?php echo $has_any_discount ? '25%' : '30%'; ?>">PRODUCT</th>
+            <th width="<?php echo $has_any_discount ? '25%' : '30%'; ?>">DESCRIPTION</th>
+            <th width="8%" style="text-align: center;">QTY</th>
+            <th width="12%" style="text-align: right;">UNIT PRICE</th>
                     <?php if ($has_any_discount): ?>
-                        <th width="15%" style="text-align: right;">DISCOUNT</th>
+                <th width="12%" style="text-align: right;">DISCOUNT</th>
                     <?php endif; ?>
-                    <th width="15%" style="text-align: right;">PRICE</th>
+            <th width="13%" style="text-align: right;">TOTAL</th>
                 </tr>
             </thead>
             <tbody>
@@ -609,29 +544,38 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
                 $i = 1;
                 if (count($items) > 0):
                     foreach ($items as $item):
-                        $original_price = $item['original_price'] ?? 0;
-                        $item_price = $item['item_price'] ?? 0;
-                        $item_discount = $item['item_discount'] ?? 0;
+                // Get quantity from database
+                $quantity = isset($item['quantity']) ? intval($item['quantity']) : 1;
+                $unit_price = isset($item['unit_price']) ? floatval($item['unit_price']) : 0;
+                $item_discount = isset($item['discount']) ? floatval($item['discount']) : 0;
+                $total_price = isset($item['total_amount']) ? floatval($item['total_amount']) : 0;
+                
+                // Calculate total before discount for display
+                $total_before_discount = $unit_price * $quantity;
                 ?>
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php echo htmlspecialchars($item['product_name']); ?></td>
                             <td><?php echo htmlspecialchars($item['product_description']); ?></td>
+                    <td style="text-align: center; font-weight: 600;">
+                        <?php echo $quantity; ?>
+                    </td>
+                    <td style="text-align: right;">
+                        <?php echo $currencySymbol . ' ' . number_format($unit_price, 2); ?>
+                    </td>
                             <?php if ($has_any_discount): ?>
-                                <td style="text-align: right;">
-                                    <?php echo $currencySymbol . ' ' . number_format($item_discount, 2); ?>
-                                </td>
-                            <?php endif; ?>
                             <td style="text-align: right;">
                                 <?php 
-                                // Show original price with discount info if applicable
                                 if ($item_discount > 0) {
-                                    echo $currencySymbol . ' ' . number_format($original_price, 2);
-                                    echo '<br><span class="item-discount">(After discount: ' . $currencySymbol . ' ' . number_format($item_price, 2) . ')</span>';
+                                echo $currencySymbol . ' ' . number_format($item_discount, 2);
                                 } else {
-                                    echo $currencySymbol . ' ' . number_format($item_price, 2);
+                                echo '-';
                                 }
                                 ?>
+                        </td>
+                    <?php endif; ?>
+                    <td style="text-align: right; font-weight: 600;">
+                        <?php echo $currencySymbol . ' ' . number_format($total_price, 2); ?>
                             </td>
                         </tr>
                     <?php endforeach;
@@ -642,7 +586,7 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
                 <?php endif; ?>
 
                 <tr class="total-row">
-                    <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Sub Total :</td>
+            <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;">Sub Total :</td>
                     <td class="total-value">
                         <?php echo $currencySymbol . ' ' . number_format($subtotal_before_discounts, 2); ?>
                     </td>
@@ -650,7 +594,7 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
 
                 <?php if ($has_any_discount): ?>
                     <tr class="total-row">
-                        <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Item Discounts :</td>
+                <td colspan="6" style="text-align: right; border-right: none;">Total Discounts :</td>
                         <td class="total-value">
                             <?php echo $currencySymbol . ' ' . number_format($total_item_discounts, 2); ?>
                         </td>
@@ -659,7 +603,7 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
 
                 <?php if ($delivery_fee > 0): ?>
                     <tr class="total-row delivery-fee-row">
-                        <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Delivery Fee :</td>
+                <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;">Delivery Fee :</td>
                         <td class="total-value">
                             <?php echo $currencySymbol . ' ' . number_format($delivery_fee, 2); ?>
                         </td>
@@ -667,13 +611,15 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
                 <?php endif; ?>
 
                 <tr class="total-row">
-                    <td colspan="<?php echo $column_count - 1; ?>" style="text-align: right; border-right: none;">Total :</td>
+            <td colspan="<?php echo $has_any_discount ? '6' : '5'; ?>" style="text-align: right; border-right: none;"><strong> Total :</strong></td>
                     <td class="total-value">
+                <strong>
                         <?php 
                         // Calculate final total ensuring delivery fee is included
                         $final_total = $subtotal_before_discounts - $total_item_discounts + $delivery_fee;
                         echo $currencySymbol . ' ' . number_format($final_total, 2); 
                         ?>
+                </strong>
                     </td>
                 </tr>
             </tbody>
@@ -705,7 +651,7 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
         <?php endif; ?>
     </div>
 
-   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // COMMENTED OUT: Auto print functionality disabled
         /*
@@ -757,13 +703,12 @@ error_log("  - Data Source: " . (empty($order['full_name']) ? 'customers table (
         
     </script>
     <script>
-        // Auto redirect after 10 seconds
+        // Auto redirect after 5 seconds
         setTimeout(function() {
             window.location.href = 'create_order.php';
         }, 10000);
-
-  </script>
-        </body>
+    </script>
+</body>
 
 </html>
 <?php

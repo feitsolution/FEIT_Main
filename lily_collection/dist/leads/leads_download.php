@@ -38,21 +38,10 @@ if ($branding_result && $branding_result->num_rows > 0) {
     // ✅ ALWAYS USE LOGO FROM DATABASE
     // ==========================================
     if (!empty($branding['logo_url'])) {
-        // Check if it's a full URL (starts with http/https)
-        if (strpos($branding['logo_url'], 'http') === 0) {
             $logo_url = $branding['logo_url'];
-        } 
-        // Check if it already has the full path
-        else if (strpos($branding['logo_url'], '/lily_collection/') === 0) {
-            $logo_url = $branding['logo_url']; // Already has full path
-        }
-        // Otherwise, it's a relative path from dist folder
-        else {
-            $logo_url = '/lily_collection/dist/' . ltrim($branding['logo_url'], '/');
-        }
     } else {
         // If logo_url is empty in DB, use fallback and log error
-        $logo_url = '../assets/images/logo-white.svg';
+        $logo_url = ' ';
         error_log("WARNING: No logo_url found in branding table for active branding record");
     }
     
@@ -65,8 +54,8 @@ if ($branding_result && $branding_result->num_rows > 0) {
     ];
 } else {
     // If no active branding record found
-    $logo_url = '../assets/images/logo-white.svg';
-    error_log("ERROR: No active branding record found in database");
+    $logo_url = '';
+
     
     // Fallback company info
     $company = [
@@ -136,7 +125,7 @@ $currencySymbol = ($currency == 'usd') ? '$' : 'Rs.';
 $delivery_fee = isset($order['delivery_fee']) && !is_null($order['delivery_fee']) ? floatval($order['delivery_fee']) : 0.00;
 
 // Get order items with product information
-$itemSql = "SELECT ii.*, ii.pay_status, p.name as product_name,
+$itemSql = "SELECT ii.*, ii.pay_status, ii.quantity, p.name as product_name,
             p.description as product_description,
             (ii.total_amount + ii.discount) as original_price, 
             ii.total_amount as item_price,
@@ -236,7 +225,7 @@ foreach ($items as $item) {
 $has_any_discount = $total_item_discounts > 0 || floatval($order['discount']) > 0;
 
 // Count how many columns we need to display in the table (removed product code column)
-$column_count = $has_any_discount ? 5 : 4;
+$column_count = $has_any_discount ? 6 : 5;
 ?>
 
 <!DOCTYPE html>
@@ -303,8 +292,7 @@ $column_count = $has_any_discount ? 5 : 4;
         <div class="order-header">
             <div class="company-logo">
                 <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo"
-                     onerror="this.onerror=null; this.src='../assets/images/logo-white.svg';">
+                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo">
             </div>
             <div class="order-info">
                 <div class="order-title">
@@ -370,10 +358,11 @@ $column_count = $has_any_discount ? 5 : 4;
             <thead>
                 <tr>
                     <th width="5%">#</th>
-                    <th width="<?php echo $has_any_discount ? '35%' : '40%'; ?>">PRODUCT</th>
-                    <th width="<?php echo $has_any_discount ? '35%' : '40%'; ?>">DESCRIPTION</th>
+                    <th width="<?php echo $has_any_discount ? '30%' : '35%'; ?>">PRODUCT</th>
+                    <th width="<?php echo $has_any_discount ? '25%' : '35%'; ?>">DESCRIPTION</th>
+                    <th width="10%" style="text-align: center;">QTY</th>
                     <?php if ($has_any_discount): ?>
-                        <th width="10%" style="text-align: right;">DISCOUNT</th>
+                        <th width="15%" style="text-align: right;">DISCOUNT</th>
                     <?php endif; ?>
                     <th width="15%" style="text-align: right;">PRICE</th>
                 </tr>
@@ -391,6 +380,7 @@ $column_count = $has_any_discount ? 5 : 4;
                             <td><?php echo $i++; ?></td>
                             <td class="product-name"><?php echo htmlspecialchars($item['product_name']); ?></td>
                             <td><?php echo htmlspecialchars($item['product_description']); ?></td>
+                            <td style="text-align: center;"><?php echo $item['quantity'] ?? 1; ?></td>
                             <?php if ($has_any_discount): ?>
                                 <td style="text-align: right;">
                                     <?php echo $currencySymbol . ' ' . number_format($item_discount, 2); ?>

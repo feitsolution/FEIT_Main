@@ -75,6 +75,13 @@ function getFdeStatusMessage($status_code, $api_type = 'new') {
     }
 }
 
+// Function to parse numeric inputs safely (stripping commas)
+function parse_numeric($value, $default = 0.00) {
+    if (is_array($value)) return $default;
+    $clean_value = str_replace(',', '', (string)$value);
+    return is_numeric($clean_value) ? floatval($clean_value) : $default;
+}
+
 // Function to set session message and redirect
 function setMessageAndRedirect($type, $message, $redirect_url = null) {
     $_SESSION["order_{$type}"] = $message;
@@ -445,30 +452,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Product processing
             $products = $_POST['order_product'];
             $product_prices = $_POST['order_product_price'];
+            $quantities = $_POST['order_product_quantity'] ?? [];
             $discounts = $_POST['order_product_discount'] ?? [];
             $product_descriptions = $_POST['order_product_description'] ?? [];
 
             $subtotal_before_discounts = 0;
             $total_discount = 0;
-            $delivery_fee = isset($_POST['delivery_fee']) ? floatval($_POST['delivery_fee']) : 0.00;
+            $delivery_fee = parse_numeric($_POST['delivery_fee'] ?? 0.00);
             $product_codes = [];
             $order_items = [];
 
             foreach ($products as $key => $product_id) {
                 if (empty($product_id)) continue;
                 
-                $original_price = floatval($product_prices[$key] ?? 0);
-                $discount = floatval($discounts[$key] ?? 0);
+                $original_price = parse_numeric($product_prices[$key] ?? 0);
+                $quantity = intval($quantities[$key] ?? 1);
+                if ($quantity < 1) $quantity = 1;
+                
+                $discount = parse_numeric($discounts[$key] ?? 0);
                 $description = $product_descriptions[$key] ?? '';
                 
-                $discount = min($discount, $original_price);
-                $subtotal_before_discounts += $original_price;
+                $line_total_price = $original_price * $quantity;
+                $discount = min($discount, $line_total_price);
+                
+                $subtotal_before_discounts += $line_total_price;
                 $total_discount += $discount;
                 $product_codes[] = $product_id;
                 
                 $order_items[] = [
                     'product_id' => $product_id,
                     'original_price' => $original_price,
+                    'quantity' => $quantity,
                     'discount' => $discount,
                     'description' => $description
                 ];
@@ -481,13 +495,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $final_product_code = implode(',', $product_codes);
             $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
-            // Free delivery for orders >= 5000
+            // Apply free delivery rule for orders >= 5000
             if ($subtotal_after_discount >= 5000) {
-                $delivery_fee = 0.00;
-                error_log("DEBUG - Free delivery applied. Order total: Rs. $subtotal_after_discount");
+                $delivery_fee = 0;
             }
 
-            $total_amount = $subtotal_after_discount + $delivery_fee;
+           // Calculate total amount with delivery fee
+$total_amount = $subtotal_after_discount + $delivery_fee;
 
            // ==========================================
     // INSERT ORDER_HEADER WITH ALL FIELDS INCLUDING EMAIL
@@ -559,9 +573,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
         // Order items insertion
         $insertItemSql = "INSERT INTO order_items (
-            order_id, product_id, unit_price, discount, 
+            order_id, product_id, unit_price, quantity, discount, 
             total_amount, pay_status, status, description
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($insertItemSql);
         
@@ -570,16 +584,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         foreach ($order_items as $item) {
-            // Calculate the price after discount
-            $item_price_after_discount = $item['original_price'] - $item['discount'];
+            // Calculate the price after discount for the line
+            $item_total_amount = ($item['original_price'] * $item['quantity']) - $item['discount'];
             
             $stmt->bind_param(
-                "iiddssss", 
+                "iididssss", 
                 $order_id, 
                 $item['product_id'], 
-                $item['original_price'],      // unit_price (original price)
+                $item['original_price'],      // unit_price
+                $item['quantity'],            // quantity
                 $item['discount'], 
-                $item_price_after_discount,   // total_amount (price after discount)
+                $item_total_amount,           // total_amount (line total)
                 $pay_status, 
                 $status,     
                 $item['description']

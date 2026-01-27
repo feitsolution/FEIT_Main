@@ -1454,6 +1454,16 @@
     background: #0056b3;
 }
 
+/* Edit button */
+.edit-btn {
+    background-color: #ffc107; /* warning yellow */
+    color: #212529;
+}
+
+.edit-btn:hover {
+    background-color: #e0a800;
+}
+
 .paid-btn {
     background: #28a745;
     color: white;
@@ -1461,6 +1471,15 @@
 
 .paid-btn:hover {
     background: #1e7e34;
+}
+
+.unpaid-btn {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.unpaid-btn:hover {
+    background-color: #5a6268;
 }
 
 .dispatch-btn {
