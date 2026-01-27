@@ -475,9 +475,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             <i class="fas fa-dollar-sign"></i>
                                         </button>
                                     <?php elseif ($payStatus === 'paid'): ?>
-                                        <!-- UNMARK AS PAID button - only show for paid orders -->
+                                        <!-- Mark as Unpaid button - only show for paid orders -->
                                         <button class="action-btn unpaid-btn"
-                                                title="Unmark as Paid"
+                                                title="Mark as Unpaid"
                                                 onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
                                             <i class="fas fa-undo"></i>
                                         </button>
@@ -793,10 +793,10 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
-// Unmark as Paid function
+// Mark as Unpaid function
 function unmarkAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to unmark as paid.');
+        alert('Order ID is required to Mark as Unpaid.');
         return;
     }
 
