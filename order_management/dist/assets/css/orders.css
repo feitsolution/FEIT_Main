@@ -282,6 +282,31 @@
   border: 1px solid #93c5fd;
 }
 
+/* Success Rate Badges */
+.rate-excellent {
+  background-color: #d1fae5; /* Light green */
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.rate-good {
+  background-color: #dbeafe; /* Light blue */
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+}
+
+.rate-average {
+  background-color: #fef3c7; /* Light yellow */
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.rate-bad {
+  background-color: #fee2e2; /* Light red */
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
 .status-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -323,8 +348,8 @@
 }
 
 /* ====================================
-   PAGINATION STYLES
-   ==================================== */
+PAGINATION STYLES
+==================================== */
 
 .pagination {
   display: flex;
@@ -373,7 +398,7 @@
 /* ====================================
    RESPONSIVE DESIGN
    ==================================== */
-
+   
 @media (max-width: 1200px) {
   .tracking-form {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -389,7 +414,7 @@
   .tracking-container {
     padding: 20px;
   }
-
+  
   .tracking-form {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -398,11 +423,11 @@
   .table-wrapper {
     overflow-x: auto;
   }
-
+  
   .orders-table {
     min-width: 800px;
   }
-
+  
   .orders-table thead th,
   .orders-table tbody td {
     padding: 12px 8px;
@@ -411,8 +436,8 @@
 
   /* .order-count-number {
     font-size: 2.5rem;
-  } */
-
+    } */
+    
   .pagination {
     flex-direction: column;
     gap: 16px;
@@ -434,7 +459,7 @@
     height: 36px;
     font-size: 0.875rem;
   }
-
+  
   .action-btn {
     width: 36px;
     height: 36px;
@@ -476,7 +501,7 @@
 /* ====================================
    FOCUS ACCESSIBILITY
    ==================================== */
-
+   
 .search-btn:focus,
 .page-btn:focus,
 .action-btn:focus {
@@ -492,7 +517,7 @@
 /* ====================================
    PRINT STYLES
    ==================================== */
-
+   
 @media print {
   .tracking-container,
   .pagination,
@@ -512,8 +537,8 @@
 }
 
 /* ====================================
-   MODAL STYLES for view button - FIXED VERSION
-   ==================================== */
+MODAL STYLES for view button - FIXED VERSION
+==================================== */
 
 .modal-overlay {
   display: none;
@@ -1455,12 +1480,21 @@
 
 /* Edit button */
 .edit-btn {
-  background-color: #ffc107 !important; /* warning yellow */
-  color: #212529 !important;
+  background-color: #ffc107; /* warning yellow */
+  color: #212529;
 }
 
 .edit-btn:hover {
-  background-color: #e0a800 !important;
+  background-color: #e0a800;
+}
+
+.condition-btn {
+  background: #1f2937;
+  color: white;
+}
+.condition-btn:hover {
+  background: #1f2937;
+  color: white;
 }
 
 .restore-btn{
