@@ -175,7 +175,7 @@
 }
 
 .orders-table thead th:after {
-  content: "";
+  content: '';
   position: absolute;
   bottom: 0;
   left: 0;
@@ -214,7 +214,7 @@
 .order-id {
   font-weight: 600;
   color: #3b82f6;
-  font-family: "Monaco", "Menlo", monospace;
+  font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .customer-name {
@@ -228,9 +228,12 @@
 }
 
 .tracking-number {
+
   font-size: 0.85rem;
   color: #6b7280;
 }
+
+
 
 /* ====================================
    STATUS BADGES
@@ -668,7 +671,7 @@
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   /* FIXED: Prevent content overflow */
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -721,7 +724,7 @@
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Items table styling */
@@ -862,12 +865,8 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -890,11 +889,7 @@
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
-<<<<<<< HEAD
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-=======
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 }
 
 .control-buttons {
@@ -1262,11 +1257,7 @@
   }
 
   body {
-<<<<<<< HEAD
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-=======
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
     line-height: 1.4;
     color: #000;
     background: white;
@@ -1489,7 +1480,6 @@
 
 .view-btn:hover {
   background: #0056b3;
-<<<<<<< HEAD
 }
 
 /* Edit button */
@@ -1500,8 +1490,6 @@
 
 .edit-btn:hover {
     background-color: #e0a800;
-=======
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 }
 
 .paid-btn {
@@ -1511,7 +1499,6 @@
 
 .paid-btn:hover {
   background: #1e7e34;
-<<<<<<< HEAD
 }
 
 .unpaid-btn {
@@ -1521,20 +1508,14 @@
 
 .unpaid-btn:hover {
     background-color: #5a6268;
-=======
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 }
 
 .dispatch-btn {
   background: #ffc107;
   color: #212529;
 }
-<<<<<<< HEAD
 #cbf9db
 .dispatch-btn:hover {
-=======
-#cbf9db .dispatch-btn:hover {
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
   background: #e0a800;
 }
 
@@ -1587,6 +1568,7 @@
 .modal-body {
   padding: 30px;
 }
+
 
 .modal.show {
   display: flex;
@@ -1648,6 +1630,7 @@
   width: 36px;
   height: 36px;
 }
+
 
 .btn-close:hover {
   opacity: 1;
@@ -1769,10 +1752,9 @@
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+    to { transform: rotate(360deg); }
 }
+
 
 /* New button style for "No Answer" state */
 .action-btn.no-answer-btn {
@@ -1941,6 +1923,7 @@
     background: #fafafa;
 } */
 
+
 #cancelModal .form-control::placeholder {
   color: #9ca3af;
   opacity: 0.8;
@@ -2101,6 +2084,9 @@
   }
 }
 
+
+
+
 /* Status badges */
 .status-active {
   background-color: #28a745 !important;
@@ -2122,36 +2108,11 @@
   display: inline-block;
 }
 
-<<<<<<< HEAD
-/* Status badges */
-.status-active {
-  background-color: #28a745 !important;
-  color: white !important;
-}
-
-.status-inactive {
-  background-color: #6c757d !important;
-  color: white !important;
-}
-
-/* Commission badges */
-.commission-badge {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  display: inline-block;
-}
-
-=======
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 .commission-info {
   font-size: 0.75rem;
   color: #6c757d;
   margin-top: 2px;
 }
-<<<<<<< HEAD
 
 /* Action buttons consistent with your existing UI */
 .btn-action {
@@ -2303,163 +2264,9 @@
     padding: 8px;
   }
 }
-=======
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 
-/* Action buttons consistent with your existing UI */
-.btn-action {
-  padding: 6px 12px;
-  margin: 2px;
-  font-size: 0.8rem;
-  border-radius: 4px;
-  min-width: 80px;
-  transition: all 0.3s ease;
-}
 
-.btn-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
 
-<<<<<<< HEAD
-=======
-/* Modal styling to match your existing UI */
-.modal-content {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.modal-header {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  padding: 20px;
-  border-bottom: none;
-}
-
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-footer {
-  padding: 20px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.btn-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  font-size: 1.2rem;
-  color: white;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Table styling */
-.table-wrapper {
-  overflow-x: auto;
-  margin-top: 20px;
-}
-
-.orders-table {
-  width: 100%;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.orders-table thead {
-  background: #f8f9fa;
-}
-
-.orders-table th {
-  padding: 12px;
-  font-weight: 600;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.orders-table td {
-  padding: 12px;
-  /* border-bottom: 1px solid #dee2e6; */
-  vertical-align: middle;
-}
-
-.orders-table tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-/* User info styling */
-.user-info h6 {
-  margin: 0 0 4px 0;
-  font-weight: 600;
-}
-
-.user-info small {
-  color: #6c757d;
-}
-
-/* Contact info styling */
-.contact-info {
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.contact-info i {
-  width: 16px;
-  color: #6c757d;
-}
-
-/* Role and status styling */
-.role-status .badge {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 12px;
-  margin-bottom: 4px;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .btn-action {
-    min-width: 60px;
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    margin: 1px;
-  }
-
-  .modal-dialog {
-    margin: 10px;
-    max-width: calc(100% - 20px);
-  }
-
-  .orders-table {
-    font-size: 0.9rem;
-  }
-
-  .orders-table th,
-  .orders-table td {
-    padding: 8px;
-  }
-}
-
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 /* ====================================
    CUSTOMER DETAILS MODAL STYLES
    ==================================== */
@@ -2515,11 +2322,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-<<<<<<< HEAD
     color:#ffffff
-=======
-  color: #ffffff;
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 }
 
 .close {
@@ -2604,6 +2407,7 @@
   color: #166534 !important;
   border: 1px solid #86efac;
 }
+
 
 .status-inactive {
   background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
@@ -2744,6 +2548,11 @@
   box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
 }
 
+
+
+
+
+
 /* Bulk Actions Bar Styles */
 .bulk-actions-bar {
   background: #f8f9fa;
@@ -2754,11 +2563,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-<<<<<<< HEAD
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-=======
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
 }
 
 .bulk-actions-left {
@@ -2832,12 +2637,7 @@
 }
 
 /* Checkbox Styles */
-<<<<<<< HEAD
 .order-checkbox, #selectAll {
-=======
-.order-checkbox,
-#selectAll {
->>>>>>> fe977d80f436a4ea714b9092927a71b7f1963826
   transform: scale(1.2);
   cursor: pointer;
 }
