@@ -347,8 +347,13 @@
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.4);
 }
-.restore-btn{
-  background-color: #ffc107; color: #212529; border: none; padding: 8px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 5px; transition: background-color 0.3s;
+.restore-btn {
+  background: #34d399;
+  color: black;
+}
+
+.restore-btn:hover {
+  background: #059669;
 }
 
 .action-btn:active {
@@ -1484,7 +1489,7 @@
 
 /* Edit button */
 .edit-btn {
-    background-color: #ffc107; /* warning yellow */
+    background-color: #ffc107;
     color: #212529;
 }
 
