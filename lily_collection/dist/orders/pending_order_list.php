@@ -62,6 +62,7 @@ $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
 $call_status_filter = isset($_GET['call_status_filter']) ? trim($_GET['call_status_filter']) : '';
+$condition_filter = isset($_GET['condition_filter']) ? $_GET['condition_filter'] : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -165,6 +166,12 @@ if (!empty($pay_status_filter)) {
 if (!empty($call_status_filter !== '')) {
     $callStatusTerm = $conn->real_escape_string($call_status_filter);
     $searchConditions[] = "i.call_log = '$callStatusTerm'";
+}
+
+// Success Rate filter
+if ($condition_filter !== '') {
+    $conditionTerm = (int)$condition_filter;
+    $searchConditions[] = "i.condition = $conditionTerm";
 }
 
 // Apply search conditions
@@ -286,13 +293,24 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                             </select>
                         </div>
 
-                         <div class="form-group">
+                        <div class="form-group">
                             <label for="call_status_filter">Call Answer</label>
                             <select id="call_status_filter" name="call_status_filter">
                                 <option value="">Call Answer Status</option>
                                 <option value="0" <?php echo ($call_status_filter == '0') ? 'selected' : ''; ?>>No Answer</option>
                                 <option value="1" <?php echo ($call_status_filter == '1') ? 'selected' : ''; ?>>Answer</option>
                                 
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="condition_filter">Success Rate</label>
+                            <select id="condition_filter" name="condition_filter">
+                                <option value="">All Success Rates</option>
+                                <option value="0" <?php echo ($condition_filter === '0') ? 'selected' : ''; ?>>Excellent</option>
+                                <option value="1" <?php echo ($condition_filter === '1') ? 'selected' : ''; ?>>Good</option>
+                                <option value="2" <?php echo ($condition_filter === '2') ? 'selected' : ''; ?>>Average</option>
+                                <option value="3" <?php echo ($condition_filter === '3') ? 'selected' : ''; ?>>Bad</option>
                             </select>
                         </div>
                         
@@ -352,6 +370,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 <th>Total Amount</th>
                 <th>Pay Status</th>
                 <th>Created By</th>
+                <th>Success Rate</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -443,6 +462,29 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     }
     ?>
 </td>
+
+<!-- Success Rate Badge -->
+                        <td>
+                            <?php
+                            $condition = isset($row['condition']) ? (int)$row['condition'] : 0;
+                            switch ($condition) {
+                                case 0:
+                                    echo '<span class="status-badge rate-excellent">Excellent</span>';
+                                    break;
+                                case 1:
+                                    echo '<span class="status-badge rate-good">Good</span>';
+                                    break;
+                                case 2:
+                                    echo '<span class="status-badge rate-average">Average</span>';
+                                    break;
+                                case 3:
+                                    echo '<span class="status-badge rate-bad">Bad</span>';
+                                    break;
+                                default:
+                                    echo '<span class="status-badge rate-excellent">Excellent</span>';
+                            }
+                            ?>
+                        </td>
                  <!-- Action Buttons - Updated to pass interface parameter -->
 <td class="actions">
     <div class="action-buttons-group">
@@ -458,7 +500,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 </a>
         
     <?php if ($payStatus == 'unpaid'): ?>
-    <button class="action-btn paid-btn" title="Mark as Paid"
+    <button class="action-btn paid-btn" title="Mark as Paid" 
         onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-dollar-sign"></i>
     </button>
@@ -470,10 +512,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <?php endif; ?>
 
         
-        <button class="action-btn dispatch-btn" title="Mark as Dispatched" 
+        <!-- <button class="action-btn dispatch-btn" title="Mark as Dispatched" 
                 onclick="openDispatchModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
             <i class="fas fa-truck"></i>
-        </button>
+        </button> -->
         
         <button class="action-btn <?php echo ($row['call_log'] == 0) ? 'answer-btn' : 'no-answer-btn'; ?>" 
                 title="<?php echo ($row['call_log'] == 0) ? 'Mark as Answered' : 'Mark as No Answer'; ?>" 
@@ -485,13 +527,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 onclick="cancelOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
             <i class="fas fa-times-circle"></i>
         </button>
-           <button class="action-btn print-btn" title="Print Order" 
+        <!-- <button class="action-btn print-btn" title="Print Order" 
             onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-print"></i>
-    </button>
+        </button> -->
+
+        <button class="action-btn condition-btn" title="Update Success Rate" 
+            onclick="openConditionModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', <?php echo $condition; ?>)">
+        <i class="fas fa-user-shield"></i>
+        </button>
     </div>
 </td>
-                    </tr>
+</tr>
                 <?php endwhile; ?>
             <?php else: ?>
                 <tr>
@@ -558,6 +605,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 <!--  ADD THE API DISPATCH MODAL HTML -->
  <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/api_dispatch.php'); ?>
 
+<!--  ADD THE CONDITION UPDATE MODAL -->
+ <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/condition_update_modal.php'); ?>
+
 <script>
         /**
          * JavaScript functionality for pending order management
@@ -576,8 +626,69 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             document.getElementById('date_to').value = '';
             document.getElementById('pay_status_filter').value = '';
             document.getElementById('call_status_filter').value = '';
+            document.getElementById('condition_filter').value = '';
+            
             // Submit the form to clear filters
             window.location.href = window.location.pathname;
+        }
+
+        // --- CUSTOMER CONDITION UPDATE FUNCTIONS ---
+        function openConditionModal(orderId, currentCondition) {
+            if (!orderId) return;
+            document.getElementById('cond_order_id').value = orderId;
+            
+            // Select the correct radio button
+            const radio = document.querySelector(`input[name="condition"][value="${currentCondition}"]`);
+            if (radio) radio.checked = true;
+            
+            const modal = document.getElementById('conditionModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConditionModal() {
+            const modal = document.getElementById('conditionModal');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function submitConditionUpdate() {
+            const form = document.getElementById('conditionUpdateForm');
+            const formData = new FormData(form);
+            
+            // Validate that a condition is selected
+            if (!formData.get('condition')) {
+                alert('Please select a condition');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveConditionBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            fetch('update_condition.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Success Rate updated successfully');
+                    location.reload(); 
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the condition');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Save Changes';
+            });
         }
 
     
@@ -923,12 +1034,12 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     // Show loading state
     submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
     submitBtn.disabled = true;
-
+    
     // Create FormData object
     const formData = new FormData();
     formData.append('order_id', orderId);
     if (fileInput.files[0]) {
-        formData.append('payment_slip', fileInput.files[0]);
+    formData.append('payment_slip', fileInput.files[0]);
     }
     formData.append('action', 'mark_paid');
     
@@ -1439,10 +1550,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-/**
- * Backward compatibility function
- * Keep this if you have existing calls to markAsAnswered()
- */
+// Close condition modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const conditionModal = document.getElementById('conditionModal');
+    if (conditionModal) {
+        conditionModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConditionModal();
+            }
+        });
+    }
+});
+
+// Update Escape key listener to handle condition modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const conditionModal = document.getElementById('conditionModal');
+        if (conditionModal && conditionModal.classList.contains('show')) {
+            closeConditionModal();
+        }
+    }
+});
 function markAsAnswered(orderId) {
     // Default to call_log = 0 (no answer) for backward compatibility
     openAnswerModal(orderId, 0);

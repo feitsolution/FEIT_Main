@@ -185,13 +185,17 @@ $roleBasedCondition = $rbac->getRoleBasedCondition();
 
 // Base SQL for counting total records
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
-             LEFT JOIN customers c ON i.customer_id = c.customer_id
-             LEFT JOIN users u2 ON i.user_id = u2.id
              WHERE i.interface IN ('individual', 'leads') AND i.status = 'cancel'$roleBasedCondition";
 
 // Main query with all required joins
-$sql = "SELECT i.*, c.name as customer_name, 
-               p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
+$sql = "SELECT i.*, 
+               COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
+               i.customer_id,
+               p.payment_id, 
+               p.amount_paid, 
+               p.payment_method, 
+               p.payment_date, 
+               p.pay_by,
                u1.name as paid_by_name,
                u2.name as user_name
         FROM order_header i 
@@ -209,7 +213,7 @@ if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
-                        c.name LIKE '%$searchTerm%' OR 
+                        i.full_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -226,7 +230,7 @@ if (!empty($order_id_filter)) {
 // Specific Customer Name filter
 if (!empty($customer_name_filter)) {
     $customerNameTerm = $conn->real_escape_string($customer_name_filter);
-    $searchConditions[] = "c.name LIKE '%$customerNameTerm%'";
+    $searchConditions[] = "i.full_name LIKE '%$customerNameTerm%'";
 }
 
 // Specific User ID filter - SIMPLIFIED WITH RBAC
@@ -535,15 +539,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         <td class="actions">
                                             <div class="action-buttons-group">
                                                 <button class="action-btn view-btn" title="View Order Details" 
-                onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
-            <i class="fas fa-eye"></i>
-        </button>
+                                                    onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
 
-         <!-- Print Button -->
-    <button class="action-btn print-btn" title="Print Order" 
-            onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-        <i class="fas fa-print"></i>
-    </button>
+                                                <!-- Print Button -->
+                                                <button class="action-btn print-btn" title="Print Order" 
+                                                    onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+
+                                                <!-- Restore Button -->
+                                                <button class="action-btn restore-btn" title="Restore Order" 
+                                                    onclick="restoreOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -786,6 +796,37 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             
             console.log('Downloading from:', downloadUrl);
             window.open(downloadUrl, '_blank');
+        }
+
+        // Restore order 
+        function restoreOrder(orderId) {
+            if (!orderId) {
+                alert('No order selected for restore.');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to restore Order ID: ' + orderId + '? This will move the order back to Pending status.')) {
+                const formData = new FormData();
+                formData.append('order_id', orderId);
+                
+                fetch('restore_order.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order restored successfully.');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error restoring order:', error);
+                    alert('An error occurred while restoring the order.');
+                });
+            }
         }
 
         // Close modal when clicking outside 
