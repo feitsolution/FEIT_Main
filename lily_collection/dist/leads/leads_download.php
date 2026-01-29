@@ -95,9 +95,7 @@ $order_query = "SELECT
                 LEFT JOIN roles r ON p.pay_by = r.id
                 LEFT JOIN users u ON i.user_id = u.id
                 LEFT JOIN users u2 ON i.created_by = u2.id
-                WHERE i.order_id = ? 
-                AND i.interface = 'leads'
-                AND i.status IN ('done', 'pending', 'cancel', 'dispatch', 'no_answer')";
+                WHERE i.order_id = ?";
 
 
 $stmt = $conn->prepare($order_query);
