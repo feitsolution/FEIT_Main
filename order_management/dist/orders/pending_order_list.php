@@ -311,6 +311,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <option value="1" <?php echo ($condition_filter === '1') ? 'selected' : ''; ?>>Good</option>
                                 <option value="2" <?php echo ($condition_filter === '2') ? 'selected' : ''; ?>>Average</option>
                                 <option value="3" <?php echo ($condition_filter === '3') ? 'selected' : ''; ?>>Bad</option>
+                                <option value="4" <?php echo ($condition_filter === '4') ? 'selected' : ''; ?>>New</option>
                             </select>
                         </div>
                         
@@ -480,8 +481,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 case 3:
                                     echo '<span class="status-badge rate-bad">Bad</span>';
                                     break;
+                                case 4:
+                                    echo '<span class="status-badge rate-new">New</span>';
+                                    break;
                                 default:
-                                    echo '<span class="status-badge rate-excellent">Excellent</span>';
+                                    echo '<span class="status-badge rate-new">New</span>';
                             }
                             ?>
                         </td>
@@ -492,22 +496,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
             <i class="fas fa-eye"></i>
         </button>
-
-        <a href="edit_order.php?id=<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
-   class="action-btn edit-btn"
-   title="Edit Order">
-    <i class="fas fa-edit"></i>
-</a>
         
     <?php if ($payStatus == 'unpaid'): ?>
     <button class="action-btn paid-btn" title="Mark as Paid" 
         onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-dollar-sign"></i>
-    </button>
-    <?php elseif ($payStatus == 'paid'): ?>
-    <button class="action-btn unpaid-btn" title="Mark as Unpaid"
-        onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-        <i class="fas fa-undo"></i>
     </button>
 <?php endif; ?>
 

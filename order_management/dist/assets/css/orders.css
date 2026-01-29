@@ -307,6 +307,12 @@
   border: 1px solid #fca5a5;
 }
 
+.rate-new {
+  background-color: #e2e2e7; /* light gray */
+  color: #374151; /* dark gray text */
+  border: 1px solid #d1d5db;
+}
+
 .status-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -398,7 +404,7 @@ PAGINATION STYLES
 /* ====================================
    RESPONSIVE DESIGN
    ==================================== */
-   
+
 @media (max-width: 1200px) {
   .tracking-form {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -414,7 +420,7 @@ PAGINATION STYLES
   .tracking-container {
     padding: 20px;
   }
-  
+
   .tracking-form {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -423,11 +429,11 @@ PAGINATION STYLES
   .table-wrapper {
     overflow-x: auto;
   }
-  
+
   .orders-table {
     min-width: 800px;
   }
-  
+
   .orders-table thead th,
   .orders-table tbody td {
     padding: 12px 8px;
@@ -437,7 +443,7 @@ PAGINATION STYLES
   /* .order-count-number {
     font-size: 2.5rem;
     } */
-    
+
   .pagination {
     flex-direction: column;
     gap: 16px;
@@ -459,7 +465,7 @@ PAGINATION STYLES
     height: 36px;
     font-size: 0.875rem;
   }
-  
+
   .action-btn {
     width: 36px;
     height: 36px;
@@ -501,7 +507,7 @@ PAGINATION STYLES
 /* ====================================
    FOCUS ACCESSIBILITY
    ==================================== */
-   
+
 .search-btn:focus,
 .page-btn:focus,
 .action-btn:focus {
@@ -517,7 +523,7 @@ PAGINATION STYLES
 /* ====================================
    PRINT STYLES
    ==================================== */
-   
+
 @media print {
   .tracking-container,
   .pagination,
@@ -1497,8 +1503,9 @@ MODAL STYLES for view button - FIXED VERSION
   color: white;
 }
 
-.restore-btn{
-  background-color: #05441c; color: #ffffff;
+.restore-btn {
+  background-color: #05441c;
+  color: #ffffff;
 }
 .restore-btn:hover {
   background-color: #043615;

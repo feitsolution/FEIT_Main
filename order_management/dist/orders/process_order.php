@@ -35,7 +35,7 @@ function cs_condition($conn, $customer_id) {
     $stmt->close();
     error_log("DEBUG: cs_condition - customer_id: $customer_id, totalOrders: $totalOrders");
 
-    if ($totalOrders == 0) return 0; // No orders = Excellent
+    if ($totalOrders == 0) return 4; // New
 
     // Failed orders (return + cancel)
     $stmt = $conn->prepare(
@@ -54,10 +54,10 @@ function cs_condition($conn, $customer_id) {
 
     $rate = ($failedOrders / $totalOrders) * 100;
     
-    if ($rate <= 25) return 0; // Excellent
-    if ($rate <= 50) return 1;  // Good
-    if ($rate <= 75) return 2;  // Average
-    return 3;                  // Bad
+    if (($rate >= 0) && ($rate <= 25)) return 0; // Excellent
+    if (($rate > 25) && ($rate <= 50)) return 1;  // Good
+    if (($rate > 50) && ($rate <= 75)) return 2;  // Average
+    if (($rate > 75)) return 3;                  // Bad
 }
 /**
  * Get user-friendly FDE API status message
