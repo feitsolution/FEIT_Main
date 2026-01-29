@@ -145,11 +145,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'email', 
             'address line 1', 
             'address line 2', 
-            'phone number 2', 
-            'city', 
-            'email', 
-            'address line 1', 
-            'address line 2', 
             'product code', 
             'quantity',
             'other'
@@ -185,6 +180,9 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         // Begin transaction
         $conn->begin_transaction();
         $transactionStarted = true;
+
+        // Initialize round-robin counter
+        $userIndex = 0;
         
         // Process each row
         while (($row = fgetcsv($handle)) !== FALSE) {
@@ -202,8 +200,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
                 $phoneNumber2 = trim($row[$headerMap['phone number 2']] ?? '');
                 $city = trim($row[$headerMap['city']] ?? '');
                 $email = trim($row[$headerMap['email']] ?? '');
-                $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
-                $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
                 $productCode = trim($row[$headerMap['product code']] ?? '');
@@ -422,7 +418,8 @@ $brandingStmt->close();
 $totalAmountWithDelivery = $subtotal + $deliveryFee;
 
 // Randomly assign to one of the selected users
-$assignedUserId = $selectedUsers[array_rand($selectedUsers)];
+$assignedUserId = $selectedUsers[$userIndex % count($selectedUsers)];
+$userIndex++;
 
 // Create order header with CSV data including delivery_fee
 $orderSql = "INSERT INTO order_header (
@@ -718,14 +715,53 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             <div class="file-upload-box">
                                 <p><strong>Select CSV File</strong></p>
                                 <p id="file-name">No file selected</p>
-                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;" required>
+                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;">
                                 <button type="button" class="choose-file-btn" onclick="document.getElementById('csv_file').click()">
                                      Choose File
                                 </button>
                             </div>
                         </div>
+
+                        <hr>
+
+                        <br>
+
+                        <div class="users-section">
+                            <h2 class="section-title">Select Users</h2>
+                            <p class="text-muted">Choose which users will receive the imported leads</p>
+                            
+                            <ul class="users-list" id="usersList">
+                                <?php if (!empty($users)): ?>
+                                    <?php foreach ($users as $user): ?>
+                                        <li>
+                                            <input type="checkbox" id="user_<?php echo $user['id']; ?>" name="users[]" value="<?php echo $user['id']; ?>">
+                                            <label for="user_<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['name']); ?></label>
+                                        </li>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <li class="no-users">No active users found</li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
                         
-                       
+                        <?php if (!empty($users)): ?>
+                            <button type="button" class="select-all-btn" id="toggleSelectAll">Select All</button>
+                        <?php endif; ?>
+                        
+                        <hr>
+                        
+
+                        <div class="action-buttons">
+                            <button type="button" class="action-btn reset-btn" id="resetBtn">Reset</button>
+                            <button type="submit" class="action-btn import-btn" id="importBtn">
+                                 Import Leads
+                            </button>
+                        </div>
+                        
+                                
+                        <br>
+
+
                         <div class="alert alert-info">
                             <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
@@ -738,6 +774,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li><strong>Select users</strong> to randomly distribute leads</li>
                                 <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
                                 <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
+                                <li><strong>⭐ NEW: Failed rows CSV export</strong> - If any rows fail, download a CSV with only failed rows and error reasons to fix and re-upload</li>
                             </ul>
                             
                             <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
@@ -768,40 +805,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <li>Use dash (-) or leave empty for optional fields like Email</li>
                                 <li>Check error details if any rows fail - they show specific issues</li>
                                 <li>Successful rows are imported even if some rows have errors</li>
+                                <li><strong>⭐ If many rows fail:</strong> Download the failed rows CSV, fix issues in Excel, and re-upload only those rows</li>
                             </ul>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="users-section">
-                            <h2 class="section-title">Select Users</h2>
-                            <p class="text-muted">Choose which users will receive the imported leads</p>
-                            
-                            <ul class="users-list" id="usersList">
-                                <?php if (!empty($users)): ?>
-                                    <?php foreach ($users as $user): ?>
-                                        <li>
-                                            <input type="checkbox" id="user_<?php echo $user['id']; ?>" name="users[]" value="<?php echo $user['id']; ?>">
-                                            <label for="user_<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['name']); ?></label>
-                                        </li>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <li class="no-users">No active users found</li>
-                                <?php endif; ?>
-                            </ul>
-                        </div>
-                        
-                        <?php if (!empty($users)): ?>
-                            <button type="button" class="select-all-btn" id="toggleSelectAll">Select All</button>
-                        <?php endif; ?>
-                        
-                        <hr>
-                        
-                        <div class="action-buttons">
-                            <button type="button" class="action-btn reset-btn" id="resetBtn">Reset</button>
-                            <button type="submit" class="action-btn import-btn" id="importBtn">
-                                 Import Leads
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -831,7 +836,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             
             const importBtn = document.getElementById('importBtn');
             importBtn.disabled = true;
-            importBtn.innerHTML = '⏳ Importing...';
+            importBtn.innerHTML = 'Importing...';
             
             return true;
         });
@@ -865,7 +870,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 
                 const importBtn = document.getElementById('importBtn');
                 importBtn.disabled = false;
-                importBtn.innerHTML = '📤 Import Leads';
+                importBtn.innerHTML = 'Import Leads';
             }
         });
         
