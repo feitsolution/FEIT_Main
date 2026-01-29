@@ -100,7 +100,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
         $export_sql .= " WHERE " . implode(' AND ', $export_conditions);
     }
     
-    $export_sql .= " ORDER BY u.created_at DESC";
+    $export_sql .= " ORDER BY u.id DESC";
     $export_result = $conn->query($export_sql);
     
     // Clear any output buffers
@@ -275,7 +275,7 @@ if (!empty($searchConditions)) {
 }
 
 // Add ordering and pagination
-$sql .= " ORDER BY u.created_at DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY u.id DESC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
