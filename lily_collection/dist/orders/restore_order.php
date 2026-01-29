@@ -35,7 +35,7 @@ try {
     
     try {
         // Check if order exists and is in 'cancel' status
-        $check_sql = "SELECT order_id, status FROM order_header WHERE order_id = ? AND interface IN ('individual', 'leads')";
+        $check_sql = "SELECT order_id, status, tracking_number FROM order_header WHERE order_id = ? AND interface IN ('individual', 'leads')";
         $stmt = $conn->prepare($check_sql);
         $stmt->bind_param("s", $order_id);
         $stmt->execute();
@@ -53,14 +53,20 @@ try {
         
         $stmt->close();
         
-        // Update order header to pending
+        // if has tracking number, move back to dispatch
+        $restore_status = 'pending';
+        if (!empty($order['tracking_number'])) {
+            $restore_status = 'dispatch';
+        }
+        
+        // Update order header to restore status
         $update_order_sql = "UPDATE order_header SET 
-                            status = 'pending', 
+                            status = ?, 
                             cancellation_reason = NULL,
                             updated_at = CURRENT_TIMESTAMP
                             WHERE order_id = ?";
         $order_stmt = $conn->prepare($update_order_sql);
-        $order_stmt->bind_param("s", $order_id);
+        $order_stmt->bind_param("ss", $restore_status, $order_id);
         
         if (!$order_stmt->execute()) {
             throw new Exception('Failed to update order: ' . $order_stmt->error);
@@ -68,14 +74,13 @@ try {
         
         $order_stmt->close();
         
-        // Update order_items status back to 'pending' (or whatever it was before, usually 'pending' if it was 'canceled')
-        // We revert 'canceled' items to 'pending'
+        // Update order_items status back to restore status
         $update_items_sql = "UPDATE order_items SET 
-                            status = 'pending',
+                            status = ?,
                             updated_at = CURRENT_TIMESTAMP
                             WHERE order_id = ? AND status = 'canceled'";
         $items_stmt = $conn->prepare($update_items_sql);
-        $items_stmt->bind_param("s", $order_id);
+        $items_stmt->bind_param("ss", $restore_status, $order_id);
         
         if (!$items_stmt->execute()) {
             throw new Exception('Failed to update order items: ' . $items_stmt->error);
@@ -86,7 +91,7 @@ try {
         
         // Log user action
         $user_id = $_SESSION['user_id'] ?? $_SESSION['id'] ?? 0;
-        $log_description = "Order(" . $order_id . ") restored (reverted to pending)";
+        $log_description = "Order(" . $order_id . ") restored (reverted to " . $restore_status . ")";
         
         $user_log_sql = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) 
                         VALUES (?, 'order_restore', ?, ?, NOW())";
