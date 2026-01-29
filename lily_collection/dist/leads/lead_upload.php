@@ -184,7 +184,43 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
         // Initialize round-robin counter
         $userIndex = 0;
         
-        // Process each row
+// Function to calculate customer success rate
+function cs_condition($conn, $customer_id) {
+    if (!$customer_id) return 4; // Default to New if no ID
+
+    // Total orders
+    $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM order_header WHERE customer_id = ?");
+    $stmt->bind_param("i", $customer_id);
+    $stmt->execute();
+    $totalOrders = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+    $stmt->close();
+
+    if ($totalOrders == 0) return 4; // New
+
+    // Failed orders (return + cancel)
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS failed
+         FROM order_header
+         WHERE customer_id = ?
+         AND status IN ('cancel', 'return', 'return complete', 'return_handover', 'return pending', 'return transfer','removed')"
+    );
+    $stmt->bind_param("i", $customer_id);
+    $stmt->execute();
+    $failedOrders = $stmt->get_result()->fetch_assoc()['failed'] ?? 0;
+    $stmt->close();
+
+    // If no failed orders → Excellent
+    if ($failedOrders == 0) return 0;
+
+    $rate = ($failedOrders / $totalOrders) * 100;
+    
+    if (($rate > 0) && ($rate <= 25)) return 0; // Excellent
+    if (($rate > 25) && ($rate <= 50)) return 1;  // Good
+    if (($rate > 50) && ($rate <= 75)) return 2;  // Average
+    if (($rate > 75)) return 3;                  // Bad
+}
+
+// Process each row
         while (($row = fgetcsv($handle)) !== FALSE) {
             $rowNumber++;
             
@@ -419,13 +455,16 @@ $totalAmountWithDelivery = $subtotal + $deliveryFee;
 $assignedUserId = $selectedUsers[$userIndex % count($selectedUsers)];
 $userIndex++;
 
-// Create order header with CSV data including delivery_fee
+// Calculate customer success rate
+$rate = cs_condition($conn, $customerId);
+
+// Create order header with CSV data 
 $orderSql = "INSERT INTO order_header (
     customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
     pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by
+    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by, `condition`
 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?)";
+         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)";
 
 $orderStmt = $conn->prepare($orderSql);
 if (!$orderStmt) {
@@ -433,7 +472,7 @@ if (!$orderStmt) {
 }
 $notes = !empty($other) ? $other : 'Imported from CSV';
 
-$orderStmt->bind_param("iidsdsssisssdi", 
+$orderStmt->bind_param("iidsdsssisssdii", 
     $customerId,                // customer_id (int)
     $assignedUserId,            // user_id (int)
     $subtotal,                  // subtotal (decimal) - WITHOUT delivery
@@ -447,7 +486,8 @@ $orderStmt->bind_param("iidsdsssisssdi",
     $addressLine2,              // address_line2 (string)
     $fullName,                  // full_name (string)
     $deliveryFee,               // delivery_fee (decimal)
-    $loggedInUserId             // created_by (int)
+    $loggedInUserId,            // created_by (int)
+    $rate        // condition (int)
 );
 
 if (!$orderStmt->execute()) {

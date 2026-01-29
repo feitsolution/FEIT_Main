@@ -43,7 +43,7 @@ try {
         throw new Exception('Order ID is required');
     }
     
-    if ($condition === null || !in_array($condition, [0, 1, 2, 3])) {
+    if ($condition === null || !in_array($condition, [0, 1, 2, 3, 4])) {
         throw new Exception('Invalid condition status');
     }
     

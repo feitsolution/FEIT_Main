@@ -211,6 +211,7 @@ if (!function_exists('get_logo_with_fallback')) {
           <ul class="pc-submenu">
             <li class="pc-item"><a class="pc-link" href="../users/add_user.php">Add New User</a></li>
             <li class="pc-item"><a class="pc-link" href="../users/users.php">All Users</a></li>
+            <li class="pc-item"><a class="pc-link" href="../users/user_success_rate.php">User Success Rate</a></li>
             <li class="pc-item"><a class="pc-link" href="../users/user_logs.php">User Activity Log</a></li>
           </ul>
         </li>

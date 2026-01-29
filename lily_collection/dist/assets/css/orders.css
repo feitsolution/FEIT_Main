@@ -307,6 +307,12 @@
   border: 1px solid #fca5a5;
 }
 
+.rate-new {
+  background-color: #e2e2e7; /* light gray */
+  color: #374151; /* dark gray text */
+  border: 1px solid #d1d5db;
+}
+
 .status-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

@@ -56,6 +56,12 @@
                                         <span class="status-badge rate-bad">Bad</span>
                                     </label>
                                 </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="condition" id="cond_new" value="4">
+                                    <label class="form-check-label" for="cond_new">
+                                        <span class="status-badge rate-new">New</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>

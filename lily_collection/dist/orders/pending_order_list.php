@@ -311,6 +311,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <option value="1" <?php echo ($condition_filter === '1') ? 'selected' : ''; ?>>Good</option>
                                 <option value="2" <?php echo ($condition_filter === '2') ? 'selected' : ''; ?>>Average</option>
                                 <option value="3" <?php echo ($condition_filter === '3') ? 'selected' : ''; ?>>Bad</option>
+                                <option value="4" <?php echo ($condition_filter === '4') ? 'selected' : ''; ?>>New</option>
                             </select>
                         </div>
                         
@@ -480,8 +481,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 case 3:
                                     echo '<span class="status-badge rate-bad">Bad</span>';
                                     break;
+                                case 4:
+                                    echo '<span class="status-badge rate-new">New</span>';
+                                    break;
                                 default:
-                                    echo '<span class="status-badge rate-excellent">Excellent</span>';
+                                    echo '<span class="status-badge rate-new">New</span>';
                             }
                             ?>
                         </td>
