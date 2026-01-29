@@ -149,7 +149,7 @@ $customerSql = "SELECT c.*, ct.city_name
                 FROM customers c 
                 LEFT JOIN city_table ct ON c.city_id = ct.city_id 
                 WHERE c.status = 'Active' 
-                ORDER BY c.name ASC";
+                ORDER BY c.customer_id DESC";
 $customersResult = $conn->query($customerSql);
 
 $citySql = "SELECT city_id, city_name FROM city_table WHERE is_active = 1 ORDER BY city_name ASC";
