@@ -101,7 +101,7 @@ $customerSql = "SELECT c.*, ct.city_name
                 FROM customers c 
                 LEFT JOIN city_table ct ON c.city_id = ct.city_id 
                 WHERE c.status = 'Active' 
-                ORDER BY c.name ASC";
+                ORDER BY c.customer_id DESC";
 $customerResult = $conn->query($customerSql);
 
 // Fetch cities for dropdown
