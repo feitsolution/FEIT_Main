@@ -9,9 +9,6 @@ header('Expires: 0');
 
 // Create CSV content
 $csvContent = "Tracking Number\n";
-$csvContent .= "TRK001234567\n";
-$csvContent .= "TRK001234568\n";
-$csvContent .= "TRK001234569\n";
 
 // Output CSV content
 echo $csvContent;
