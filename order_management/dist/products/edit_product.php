@@ -643,8 +643,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 if (desc.trim() === '') {
                     return { valid: false, message: 'Description is required' };
                 }
-                if (desc.length < 10) {
-                    return { valid: false, message: 'Description must be at least 10 characters long' };
+                if (desc.length < 5) {
+                    return { valid: false, message: 'Description must be at least 5 characters long' };
                 }
                 return { valid: true, message: '' };
             }
