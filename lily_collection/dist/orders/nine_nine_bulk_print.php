@@ -190,9 +190,14 @@ function currencySymbol($c)
     return strtolower($c) === "usd" ? "$" : "Rs.";
 }
 
+// function barcodeImg($d)
+// {
+//     return "https://barcodeapi.org/api/code128/" . urlencode($d);
+// }
+
 function barcodeImg($d)
 {
-    return "https://barcodeapi.org/api/code128/" . urlencode($d);
+    return "../include/barcode.php?code=" . urlencode($d);
 }
 
 function formatProducts($order_id, $products_by_order)

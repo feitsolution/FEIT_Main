@@ -190,9 +190,13 @@ function getCurrencySymbol($currency) {
     return (strtolower($currency) == 'usd') ? '$' : 'Rs.';
 }
 
+// function getBarcodeUrl($data) {
+//     // Using Code128 format which is widely supported by barcode scanners
+//     return "https://barcodeapi.org/api/code128/{$data}";
+// }
+
 function getBarcodeUrl($data) {
-    // Using Code128 format which is widely supported by barcode scanners
-    return "https://barcodeapi.org/api/code128/{$data}";
+    return "../include/barcode.php?code=" . $data;
 }
 
 // NEW: Function to check if tracking number exists

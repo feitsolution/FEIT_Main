@@ -203,8 +203,12 @@ function getCurrencySymbol($currency) {
     return (strtolower($currency) == 'usd') ? '$' : 'Rs.';
 }
 
+// function getBarcodeUrl($data) {
+//     return "https://barcodeapi.org/api/code128/{$data}";
+// }
+
 function getBarcodeUrl($data) {
-    return "https://barcodeapi.org/api/code128/{$data}";
+    return "../include/barcode.php?code=" . urlencode($data);
 }
 
 function getQRCodeUrl($data) {
