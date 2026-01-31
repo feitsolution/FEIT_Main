@@ -242,12 +242,31 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
     <div class="pc-container">
         <div class="pc-content">
-            
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
-                    <div class="page-header-title">
+                    <div class="page-header-title" style="display: flex; align-items: center;justify-content: space-between;">
                         <h5 class="mb-0 font-medium">Pending Orders</h5>
+                        
+                        <!-- Alert Messages (Compact & Inline) -->
+                        <?php
+                        if (isset($_SESSION['order_success'])) {
+                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_success']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_success']);
+                        }
+                        if (isset($_SESSION['order_error'])) {
+                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_error']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_error']);
+                        }
+                        ?>
                     </div>
                 </div>
             </div>
@@ -496,11 +515,22 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
             <i class="fas fa-eye"></i>
         </button>
+
+        <a href="edit_order.php?id=<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
+   class="action-btn edit-btn"
+   title="Edit Order">
+    <i class="fas fa-edit"></i>
+</a>
         
     <?php if ($payStatus == 'unpaid'): ?>
     <button class="action-btn paid-btn" title="Mark as Paid" 
         onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-dollar-sign"></i>
+    </button>
+    <?php elseif ($payStatus == 'paid'): ?>
+    <button class="action-btn unpaid-btn" title="Mark as Unpaid"
+        onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+        <i class="fas fa-undo"></i>
     </button>
 <?php endif; ?>
 
@@ -2751,6 +2781,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
  </script>
+ 
+ <script>
+                // Auto-dismiss alerts after 3 seconds
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alerts = document.querySelectorAll('.alert-dismissible');
+                    if (alerts.length > 0) {
+                        setTimeout(function() {
+                            alerts.forEach(function(alert) {
+                                // Fade out effect
+                                alert.classList.remove('show'); 
+                                // Remove from DOM after transition
+                                setTimeout(function() {
+                                    alert.remove();
+                                }, 150);
+                            });
+                        }, 3000);
+                    }
+                });
+            </script>
 
     <!-- Include Footer and Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
