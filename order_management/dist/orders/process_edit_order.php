@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Begin transaction
         $conn->begin_transaction();
 
-                // Fetch current pay_status of the order before updating
+        // Fetch current pay_status of the order before updating
         $currentPayStatusSql = "SELECT pay_status FROM order_header WHERE order_id = ?";
         $currentPayStatusStmt = $conn->prepare($currentPayStatusSql);
         $currentPayStatusStmt->bind_param("s", $order_id);
@@ -241,8 +241,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $updateStmt->close();
         $insertStmt->close();
 
-        // Log action
-        logUserAction($conn, $user_id, "Updated order", $order_id, "Order details updated via edit interface");
+        // Create detailed log message
+        $logDetails = "Order details updated via edit interface";
+        if ($old_pay_status !== $pay_status) {
+            $logDetails .= " | Payment Status: " . ucfirst($old_pay_status) . " to " . ucfirst($pay_status);
+        }
+
+        // Log action with details
+        logUserAction($conn, $user_id, "Updated order", $order_id, $logDetails);
 
         // If status changed from unpaid to paid, insert payment record
         if ($old_pay_status !== 'paid' && $pay_status === 'paid') {
@@ -254,6 +260,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 throw new Exception("Failed to insert payment record: " . $insertPaymentStmt->error);
             }
             $insertPaymentStmt->close();
+        } 
+        // If status changed from paid to unpaid, delete payment record
+        else if ($old_pay_status === 'paid' && $pay_status !== 'paid') {
+            $deletePaymentSql = "DELETE FROM payments WHERE order_id = ?";
+            $deletePaymentStmt = $conn->prepare($deletePaymentSql);
+            $deletePaymentStmt->bind_param("s", $order_id);
+            if (!$deletePaymentStmt->execute()) {
+                throw new Exception("Failed to delete payment record: " . $deletePaymentStmt->error);
+            }
+            $deletePaymentStmt->close();
         }
 
         $conn->commit();
