@@ -60,6 +60,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Begin transaction
         $conn->begin_transaction();
 
+                // Fetch current pay_status of the order before updating
+        $currentPayStatusSql = "SELECT pay_status FROM order_header WHERE order_id = ?";
+        $currentPayStatusStmt = $conn->prepare($currentPayStatusSql);
+        $currentPayStatusStmt->bind_param("s", $order_id);
+        $currentPayStatusStmt->execute();
+        $currentPayResult = $currentPayStatusStmt->get_result();
+        $old_pay_status = 'unpaid';
+        if ($old_row = $currentPayResult->fetch_assoc()) {
+            $old_pay_status = $old_row['pay_status'];
+        }
+        $currentPayStatusStmt->close();
+
         $user_id = $_SESSION['user_id'] ?? 1;
         $customer_id = !empty($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
         $customer_name = trim($_POST['customer_name']);
@@ -231,6 +243,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Log action
         logUserAction($conn, $user_id, "Updated order", $order_id, "Order details updated via edit interface");
+
+        // If status changed from unpaid to paid, insert payment record
+        if ($old_pay_status !== 'paid' && $pay_status === 'paid') {
+            $insertPaymentSql = "INSERT INTO payments (order_id, amount_paid, payment_method, payment_date, pay_by) 
+                                VALUES (?, ?, 'order_edit', CURRENT_TIMESTAMP, ?)";
+            $insertPaymentStmt = $conn->prepare($insertPaymentSql);
+            $insertPaymentStmt->bind_param("sdi", $order_id, $total_amount, $user_id);
+            if (!$insertPaymentStmt->execute()) {
+                throw new Exception("Failed to insert payment record: " . $insertPaymentStmt->error);
+            }
+            $insertPaymentStmt->close();
+        }
 
         $conn->commit();
         setMessageAndRedirect("success", "Order #{$order_id} updated successfully.");
