@@ -513,6 +513,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                                         <button type="button" class="btn-remove remove_product">×</button>
                                                     </td>
                                                     <td class="product-col">
+                                                        <input type="hidden" name="order_item_id[]" value="<?= $item['item_id'] ?? '' ?>">
                                                         <select name="order_product[]" class="form-select product-select">
                                                             <option value="">-- Select Product --</option>
                                                             <?php
@@ -1289,8 +1290,8 @@ const ProductManager = {
                 finalDeliveryFee = 0;
                 document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
             } else {
-                finalDeliveryFee = deliveryFee;
-                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+            finalDeliveryFee = deliveryFee;
+            document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
             }
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
@@ -1363,6 +1364,7 @@ const ProductManager = {
             else if (input.classList.contains('discount')) input.value = '0';
             else if (input.classList.contains('quantity')) input.value = '1';
             else if (input.classList.contains('subtotal')) input.value = '0.00';
+            else if (input.name === 'order_item_id[]') input.value = ''; // Clear item_id for new rows
             else input.value = '';
         });
         
@@ -1400,6 +1402,36 @@ const ProductManager = {
     }
 };
 
+// ========== FORM TRACKER ==========
+const FormTracker = {
+    initialState: null,
+    
+    getFormData: () => {
+        const form = document.getElementById('orderForm');
+        if (!form) return '';
+        const formData = new FormData(form);
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            if (data[key]) {
+                if (!Array.isArray(data[key])) data[key] = [data[key]];
+                data[key].push(value);
+            } else {
+                data[key] = value;
+            }
+        }
+        return JSON.stringify(data);
+    },
+
+    init: () => {
+        FormTracker.initialState = FormTracker.getFormData();
+    },
+
+    hasChanges: () => {
+        if (!FormTracker.initialState) return false;
+        return FormTracker.getFormData() !== FormTracker.initialState;
+    }
+};
+
 // ========== FORM VALIDATOR ==========
 const FormValidator = {
     validateAndToggleSubmit: () => {
@@ -1412,13 +1444,20 @@ const FormValidator = {
         const datesValid = DateValidator.validate();
         const productsValid = ProductManager.validate();
         const hasValidProducts = ProductManager.hasValidProduct();
+        const hasChanges = FormTracker.hasChanges();
 
-        const isFormValid = customerValid && datesValid && productsValid && hasValidProducts;
+        const isFormValid = customerValid && datesValid && productsValid && hasValidProducts && hasChanges;
 
         submitButton.disabled = !isFormValid;
         submitButton.style.opacity = isFormValid ? '1' : '0.6';
         submitButton.style.cursor = isFormValid ? 'pointer' : 'not-allowed';
-        // submitButton.style.backgroundColor = isFormValid ? '#007bff' : '#6c757d';
+        
+        // Update button text to indicate if changes are needed
+        if (!hasChanges && submitButton.innerHTML.includes('Update Order')) {
+            submitButton.title = "No changes made";
+        } else {
+            submitButton.title = "";
+        }
 
         return isFormValid;
     }
@@ -1590,6 +1629,11 @@ const FormValidator = {
             document.querySelector('input[name="order_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
             document.querySelector('input[name="due_date"]').addEventListener('change', FormValidator.validateAndToggleSubmit);
 
+            // Add event listeners for paid/unpaid radio buttons
+            document.querySelectorAll('input[name="order_status"]').forEach(radio => {
+                radio.addEventListener('change', FormValidator.validateAndToggleSubmit);
+            });
+
             document.addEventListener('change', (e) => {
                 if (e.target.classList.contains('product-select')) {
                     ProductManager.updatePrice(e.target.closest('tr'));
@@ -1659,6 +1703,9 @@ const FormValidator = {
     CustomerModal.init();
     EventListeners.init();
     ProductManager.updateTotals();
+    
+    // Initialize tracker AFTER everything is set up
+    FormTracker.init();
     FormValidator.validateAndToggleSubmit();
 });
 </script>

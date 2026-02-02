@@ -60,6 +60,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Begin transaction
         $conn->begin_transaction();
 
+        // Fetch current pay_status of the order before updating
+        $currentPayStatusSql = "SELECT pay_status FROM order_header WHERE order_id = ?";
+        $currentPayStatusStmt = $conn->prepare($currentPayStatusSql);
+        $currentPayStatusStmt->bind_param("s", $order_id);
+        $currentPayStatusStmt->execute();
+        $currentPayResult = $currentPayStatusStmt->get_result();
+        $old_pay_status = 'unpaid';
+        if ($old_row = $currentPayResult->fetch_assoc()) {
+            $old_pay_status = $old_row['pay_status'];
+        }
+        $currentPayStatusStmt->close();
+
         $user_id = $_SESSION['user_id'] ?? 1;
         $customer_id = !empty($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
         $customer_name = trim($_POST['customer_name']);
@@ -98,11 +110,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $quantities = $_POST['order_product_quantity'] ?? [];
         $discounts = $_POST['order_product_discount'] ?? [];
         $product_descriptions = $_POST['order_product_description'] ?? [];
+        $item_ids = $_POST['order_item_id'] ?? []; // Get existing item IDs
 
         $subtotal_before_discounts = 0;
         $total_discount = 0;
         $product_codes = [];
         $order_items = [];
+        $processed_item_ids = []; // Track which item IDs we've processed
 
         foreach ($products as $key => $pid) {
             if (empty($pid)) continue;
@@ -111,6 +125,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $qty = intval($quantities[$key] ?? 1);
             $disc = parse_numeric($discounts[$key] ?? 0);
             $desc = $product_descriptions[$key] ?? '';
+            $item_id = !empty($item_ids[$key]) ? intval($item_ids[$key]) : null;
             
             $line_total = $price * $qty;
             $subtotal_before_discounts += $line_total;
@@ -118,6 +133,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $product_codes[] = $pid;
             
             $order_items[] = [
+                'item_id' => $item_id,
                 'product_id' => $pid,
                 'price' => $price,
                 'qty' => $qty,
@@ -125,6 +141,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 'desc' => $desc,
                 'total' => $line_total - $disc
             ];
+            
+            if ($item_id) {
+                $processed_item_ids[] = $item_id;
+            }
         }
 
         $product_code_str = implode(',', $product_codes);
@@ -162,29 +182,98 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         $stmt->close();
 
-        // Refresh order_items
-        $conn->query("DELETE FROM order_items WHERE order_id = '$order_id'");
+        // Fetch current order items to track what exists
+        $currentItemsSql = "SELECT item_id, product_id, quantity FROM order_items WHERE order_id = ?";
+        $currentItemsStmt = $conn->prepare($currentItemsSql);
+        $currentItemsStmt->bind_param("s", $order_id);
+        $currentItemsStmt->execute();
+        $currentItemsResult = $currentItemsStmt->get_result();
         
+        $current_items_map = [];
+        while ($row = $currentItemsResult->fetch_assoc()) {
+            $current_items_map[$row['item_id']] = $row;
+        }
+        $currentItemsStmt->close();
+
+        // Prepare statements for item operations
+        $updateItemSql = "UPDATE order_items SET 
+                            product_id = ?, unit_price = ?, quantity = ?, 
+                            discount = ?, total_amount = ?, pay_status = ?, description = ?
+                          WHERE item_id = ? AND order_id = ?";
+        $updateStmt = $conn->prepare($updateItemSql);
+
         $insertItemSql = "INSERT INTO order_items (
             order_id, product_id, unit_price, quantity, discount, 
             total_amount, pay_status, status, description
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)";
-        
-        $stmt = $conn->prepare($insertItemSql);
-        foreach ($order_items as $item) {
-            $stmt->bind_param("iididsss", 
-                $order_id, $item['product_id'], $item['price'], $item['qty'], 
-                $item['discount'], $item['total'], $pay_status, $item['desc']
-            );
-            $stmt->execute();
-        }
-        $stmt->close();
+        $insertStmt = $conn->prepare($insertItemSql);
 
-        // Log action
-        logUserAction($conn, $user_id, "Updated order", $order_id, "Order details updated via edit interface");
+        // Process each item
+        foreach ($order_items as $item) {
+            if ($item['item_id'] && isset($current_items_map[$item['item_id']])) {
+                // EXISTING ITEM - UPDATE IT
+                $updateStmt->bind_param("ididdssis", 
+                    $item['product_id'], $item['price'], $item['qty'], 
+                    $item['discount'], $item['total'], $pay_status, $item['desc'],
+                    $item['item_id'], $order_id
+                );
+                $updateStmt->execute();
+            } else {
+                // NEW ITEM - INSERT IT
+                $insertStmt->bind_param("sididsss", 
+                    $order_id, $item['product_id'], $item['price'], $item['qty'], 
+                    $item['discount'], $item['total'], $pay_status, $item['desc']
+                );
+                $insertStmt->execute();
+            }
+        }
+        
+        // Delete items that were removed from the order
+        foreach ($current_items_map as $item_id => $old_item) {
+            if (!in_array($item_id, $processed_item_ids)) {
+                $deleteStmt = $conn->prepare("DELETE FROM order_items WHERE item_id = ? AND order_id = ?");
+                $deleteStmt->bind_param("is", $item_id, $order_id);
+                $deleteStmt->execute();
+                $deleteStmt->close();
+            }
+        }
+        
+        $updateStmt->close();
+        $insertStmt->close();
+
+        // Create detailed log message
+        $logDetails = "Order details updated via edit interface";
+        if ($old_pay_status !== $pay_status) {
+            $logDetails .= " | Payment Status: " . ucfirst($old_pay_status) . " to " . ucfirst($pay_status);
+        }
+
+        // Log action with details
+        logUserAction($conn, $user_id, "Updated order", $order_id, $logDetails);
+
+        // If status changed from unpaid to paid, insert payment record
+        if ($old_pay_status !== 'paid' && $pay_status === 'paid') {
+            $insertPaymentSql = "INSERT INTO payments (order_id, amount_paid, payment_method, payment_date, pay_by) 
+                                VALUES (?, ?, 'order_edit', CURRENT_TIMESTAMP, ?)";
+            $insertPaymentStmt = $conn->prepare($insertPaymentSql);
+            $insertPaymentStmt->bind_param("sdi", $order_id, $total_amount, $user_id);
+            if (!$insertPaymentStmt->execute()) {
+                throw new Exception("Failed to insert payment record: " . $insertPaymentStmt->error);
+            }
+            $insertPaymentStmt->close();
+        } 
+        // If status changed from paid to unpaid, delete payment record
+        else if ($old_pay_status === 'paid' && $pay_status !== 'paid') {
+            $deletePaymentSql = "DELETE FROM payments WHERE order_id = ?";
+            $deletePaymentStmt = $conn->prepare($deletePaymentSql);
+            $deletePaymentStmt->bind_param("s", $order_id);
+            if (!$deletePaymentStmt->execute()) {
+                throw new Exception("Failed to delete payment record: " . $deletePaymentStmt->error);
+            }
+            $deletePaymentStmt->close();
+        }
 
         $conn->commit();
-        setMessageAndRedirect("success", "Order #$order_id updated successfully.");
+        setMessageAndRedirect("success", "Order #{$order_id} updated successfully.");
 
     } catch (Exception $e) {
         if ($conn) $conn->rollback();

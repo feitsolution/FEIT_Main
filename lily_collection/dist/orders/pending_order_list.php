@@ -88,7 +88,9 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
 
 // Main query with all required joins
 // Main query with all required joins - UPDATED to fetch customer name from customers table as fallback
-$sql = "SELECT i.*, 
+$sql = "SELECT i.*,
+                -- Duplicate count
+               (SELECT COUNT(*) FROM order_header o2 WHERE o2.mobile = i.mobile AND o2.status = 'pending') as duplicate_count,
                -- Customer info: Use order_header full_name, fallback to customers table
                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
                i.customer_id,
@@ -242,12 +244,31 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
     <div class="pc-container">
         <div class="pc-content">
-            
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
-                    <div class="page-header-title">
+                    <div class="page-header-title" style="display: flex; align-items: center;justify-content: space-between;">
                         <h5 class="mb-0 font-medium">Pending Orders</h5>
+                        
+                        <!-- Alert Messages (Compact & Inline) -->
+                        <?php
+                        if (isset($_SESSION['order_success'])) {
+                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_success']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_success']);
+                        }
+                        if (isset($_SESSION['order_error'])) {
+                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_error']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_error']);
+                        }
+                        ?>
                     </div>
                 </div>
             </div>
@@ -396,6 +417,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
     $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
     echo $customerName . ($customerId ? " ($customerId)" : "");
+
+    // Duplicate Orders Warning
+    if (isset($row['duplicate_count']) && $row['duplicate_count'] > 1) {
+        echo '<br><span class="badge badge-danger" style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block;">Duplicate (' . $row['duplicate_count'] . ')</span>';
+    }
     ?>
 </td>
                   <td class="date-range">
@@ -2761,7 +2787,26 @@ document.addEventListener('DOMContentLoaded', function() {
     dispatchTypeContainer.style.display = 'none';
 });
 
- </script>
+</script>
+
+<script>
+     // Auto-dismiss alerts after 3 seconds
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alerts = document.querySelectorAll('.alert-dismissible');
+                    if (alerts.length > 0) {
+                        setTimeout(function() {
+                            alerts.forEach(function(alert) {
+                                // Fade out effect
+                                alert.classList.remove('show'); 
+                                // Remove from DOM after transition
+                                setTimeout(function() {
+                                    alert.remove();
+                                }, 150);
+                            });
+                        }, 3000);
+                    }
+                });
+            </script>
 
     <!-- Include Footer and Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
