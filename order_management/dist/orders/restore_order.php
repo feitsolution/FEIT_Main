@@ -52,6 +52,33 @@ try {
         }
         
         $stmt->close();
+
+        // Fetch items and check/deduct stock
+        if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+            $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status = 'canceled'";
+            $items_stmt = $conn->prepare($getItemsSql);
+            $items_stmt->bind_param("s", $order_id);
+            $items_stmt->execute();
+            $items_result = $items_stmt->get_result();
+            
+            $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
+            $stockStmt = $conn->prepare($updateStockSql);
+            
+            $processed_items = [];
+            while ($item = $items_result->fetch_assoc()) {
+                $stockStmt->bind_param("iii", $item['quantity'], $item['product_id'], $item['quantity']);
+                if (!$stockStmt->execute()) {
+                    throw new Exception('Failed to update stock for product ID: ' . $item['product_id']);
+                }
+                
+                if ($stockStmt->affected_rows === 0) {
+                    throw new Exception('Insufficient stock for product ID: ' . $item['product_id'] . '. Restoration aborted.');
+                }
+                $processed_items[] = $item;
+            }
+            $items_stmt->close();
+            $stockStmt->close();
+        }
         
         // if has tracking number, move back to dispatch
         $restore_status = 'pending';

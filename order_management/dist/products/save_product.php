@@ -54,6 +54,11 @@ try {
     $lkr_price = sanitizeInput($_POST['lkr_price'] ?? '');
     $product_code = sanitizeInput($_POST['product_code'] ?? '');
     $description = sanitizeInput($_POST['description'] ?? '');
+    
+    // Default values for stock if inventory management is disabled
+    $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
+    $stock_quantity = $allow_inventory ? intval($_POST['stock_quantity'] ?? 0) : 0;
+    $low_stock_threshold = $allow_inventory ? intval($_POST['low_stock_threshold'] ?? 0) : 0;
 
     // -------------------------------------------------------------------------
     // REQUIRED FIELDS VALIDATION (updated to include description)
@@ -95,8 +100,8 @@ try {
     }
 
     // Prepare insert query
-    $insertQuery = "INSERT INTO products (name, description, lkr_price, status, product_code) 
-                    VALUES (?, ?, ?, ?, ?)";
+    $insertQuery = "INSERT INTO products (name, description, lkr_price, status, product_code, stock_quantity, low_stock_threshold) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
     $insertStmt = $conn->prepare($insertQuery);
 
     if (!$insertStmt) {
@@ -104,7 +109,7 @@ try {
     }
 
     // Bind parameters
-    $insertStmt->bind_param("ssdss", $name, $description, $lkr_price, $status, $product_code);
+    $insertStmt->bind_param("ssdssii", $name, $description, $lkr_price, $status, $product_code, $stock_quantity, $low_stock_threshold);
 
     // Execute the query
     if ($insertStmt->execute()) {
@@ -114,7 +119,7 @@ try {
         if (isset($_SESSION['user_id'])) {
             $user_id = $_SESSION['user_id'];
             $action_type = 'product_create';
-            $details = "New product created - Name: {$name}, Code: {$product_code}, Price: LKR {$lkr_price}, Status: {$status}";
+            $details = "New product created - Name: {$name}, Code: {$product_code}, Price: LKR {$lkr_price}, Status: {$status}, Stock: {$stock_quantity}, Threshold: {$low_stock_threshold}";
 
             $logQuery = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details) 
                          VALUES (?, ?, ?, ?)";
