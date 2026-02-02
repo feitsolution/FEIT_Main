@@ -21,6 +21,44 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = nu
     return $stmt->execute();
 }
 
+// Function to calculate customer success rate
+function cs_condition($conn, $customer_id) {
+    if (!$customer_id) return 0;
+
+    // Total orders
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS total FROM order_header WHERE customer_id = ?"
+    );
+    $stmt->bind_param("i", $customer_id);
+    $stmt->execute();
+    $totalOrders = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+    $stmt->close();
+    error_log("DEBUG: cs_condition - customer_id: $customer_id, totalOrders: $totalOrders");
+
+    if ($totalOrders == 0) return 4; // New
+
+    // Failed orders (return + cancel)
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS failed
+         FROM order_header
+         WHERE customer_id = ?
+         AND status IN ('cancel', 'return', 'return complete', 'return_handover', 'return pending', 'return transfer','removed')"
+    );
+    $stmt->bind_param("i", $customer_id);
+    $stmt->execute();
+    $failedOrders = $stmt->get_result()->fetch_assoc()['failed'] ?? 0;
+    $stmt->close();
+
+    // If no failed orders → Excellent
+    if ($failedOrders == 0) return 0;
+
+    $rate = ($failedOrders / $totalOrders) * 100;
+    
+    if (($rate >= 0) && ($rate <= 25)) return 0; // Excellent
+    if (($rate > 25) && ($rate <= 50)) return 1;  // Good
+    if (($rate > 50) && ($rate <= 75)) return 2;  // Average
+    return 3;                  // Bad
+}
 /**
  * Get user-friendly FDE API status message
  * Handles both New Parcel API and Existing Parcel API status codes
@@ -502,8 +540,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $final_product_code = implode(',', $product_codes);
             $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
-           // Calculate total amount with delivery fee
+// Calculate total amount with delivery fee
 $total_amount = $subtotal_after_discount + $delivery_fee;
+
+// Calculate customer success rate
+$rate = cs_condition($conn, $customer_id);
 
            // ==========================================
     // INSERT ORDER_HEADER WITH ALL FIELDS INCLUDING EMAIL
@@ -513,8 +554,8 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
     subtotal, discount, total_amount, delivery_fee,
     notes, currency, status, pay_status, pay_date, created_by,
     product_code, full_name, mobile, mobile_2,
-    address_line1, address_line2, city_id, zone_id, district_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    address_line1, address_line2, city_id, zone_id, district_id, `condition`
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($insertOrderSql);
 
@@ -523,7 +564,7 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
     }
 
   $stmt->bind_param(
-    "iissddddsssssissssssiii",  // Removed one 's' (23 parameters now)
+    "iissddddsssssissssssiiii",  // Removed one 's' (23 parameters now)
     $customer_id,                   // 1.  customer_id
     $user_id,                       // 2.  user_id
     $order_date,                    // 3.  issue_date
@@ -546,7 +587,8 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
     $final_address_line2,           // 20. address_line2 (FROM FORM)
     $final_city_id,                 // 21. city_id (FROM FORM)
     $final_zone_id,                 // 22. zone_id (FROM CITY_TABLE)
-    $final_district_id              // 23. district_id (FROM CITY_TABLE)
+    $final_district_id,              // 23. district_id (FROM CITY_TABLE)
+    $rate
 );
 
     if (!$stmt->execute()) {
@@ -1808,7 +1850,7 @@ $total_amount = $subtotal_after_discount + $delivery_fee;
         
     } catch (Exception $e) {
         // Rollback transaction
-        if ($conn->inTransaction()) {
+        if ($conn) {
             $conn->rollback();
         }
         

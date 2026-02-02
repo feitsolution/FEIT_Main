@@ -544,15 +544,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                         <td class="actions">
                                             <div class="action-buttons-group">
                                                 <button class="action-btn view-btn" title="View Order Details" 
-                onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
-            <i class="fas fa-eye"></i>
-        </button>
+                                                    onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
 
-         <!-- Print Button -->
-    <button class="action-btn print-btn" title="Print Order" 
-            onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-        <i class="fas fa-print"></i>
-    </button>
+                                                <!-- Print Button -->
+                                                <button class="action-btn print-btn" title="Print Order" 
+                                                    onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+
+                                                <!-- Restore Button -->
+                                                <button class="action-btn restore-btn" title="Restore Order" 
+                                                    onclick="restoreOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -795,6 +801,37 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             
             console.log('Downloading from:', downloadUrl);
             window.open(downloadUrl, '_blank');
+        }
+
+        // Restore order 
+        function restoreOrder(orderId) {
+            if (!orderId) {
+                alert('No order selected for restore.');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to restore Order ID: ' + orderId + '? This will move the order back to Pending status.')) {
+                const formData = new FormData();
+                formData.append('order_id', orderId);
+                
+                fetch('restore_order.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order restored successfully.');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error restoring order:', error);
+                    alert('An error occurred while restoring the order.');
+                });
+            }
         }
 
         // Close modal when clicking outside 

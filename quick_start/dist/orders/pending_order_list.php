@@ -61,6 +61,8 @@ $customer_name_filter = isset($_GET['customer_name_filter']) ? trim($_GET['custo
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
+$call_status_filter = isset($_GET['call_status_filter']) ? trim($_GET['call_status_filter']) : '';
+$condition_filter = isset($_GET['condition_filter']) ? $_GET['condition_filter'] : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -161,6 +163,18 @@ if (!empty($pay_status_filter)) {
     $searchConditions[] = "i.pay_status = '$payStatusTerm'";
 }
 
+// Call Answer filter
+if (!empty($call_status_filter !== '')) {
+    $callStatusTerm = $conn->real_escape_string($call_status_filter);
+    $searchConditions[] = "i.call_log = '$callStatusTerm'";
+}
+
+// Success Rate filter
+if ($condition_filter !== '') {
+    $conditionTerm = (int)$condition_filter;
+    $searchConditions[] = "i.condition = $conditionTerm";
+}
+
 // Apply search conditions
 if (!empty($searchConditions)) {
     $finalSearchCondition = " AND (" . implode(' AND ', $searchConditions) . ")";
@@ -233,8 +247,28 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
-                    <div class="page-header-title">
+                    <div class="page-header-title" style="display: flex; align-items: center;justify-content: space-between;">
                         <h5 class="mb-0 font-medium">Pending Orders</h5>
+                        
+                        <!-- Alert Messages (Compact & Inline) -->
+                        <?php
+                        if (isset($_SESSION['order_success'])) {
+                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_success']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_success']);
+                        }
+                        if (isset($_SESSION['order_error'])) {
+                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
+                                    <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i>
+                                    ' . htmlspecialchars($_SESSION['order_error']) . '
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
+                                  </div>';
+                            unset($_SESSION['order_error']);
+                        }
+                        ?>
                     </div>
                 </div>
             </div>
@@ -277,6 +311,28 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                 <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
                                 <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
                                 <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="call_status_filter">Call Answer</label>
+                            <select id="call_status_filter" name="call_status_filter">
+                                <option value="">Call Answer Status</option>
+                                <option value="0" <?php echo ($call_status_filter == '0') ? 'selected' : ''; ?>>No Answer</option>
+                                <option value="1" <?php echo ($call_status_filter == '1') ? 'selected' : ''; ?>>Answer</option>
+                                
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="condition_filter">Success Rate</label>
+                            <select id="condition_filter" name="condition_filter">
+                                <option value="">All Success Rates</option>
+                                <option value="0" <?php echo ($condition_filter === '0') ? 'selected' : ''; ?>>Excellent</option>
+                                <option value="1" <?php echo ($condition_filter === '1') ? 'selected' : ''; ?>>Good</option>
+                                <option value="2" <?php echo ($condition_filter === '2') ? 'selected' : ''; ?>>Average</option>
+                                <option value="3" <?php echo ($condition_filter === '3') ? 'selected' : ''; ?>>Bad</option>
+                                <option value="4" <?php echo ($condition_filter === '4') ? 'selected' : ''; ?>>New</option>
                             </select>
                         </div>
                         
@@ -336,6 +392,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 <th>Total Amount</th>
                 <th>Pay Status</th>
                 <th>Created By</th>
+                <th>Success Rate</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -427,6 +484,32 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     }
     ?>
 </td>
+
+<!-- Success Rate Badge -->
+                        <td>
+                            <?php
+                            $condition = isset($row['condition']) ? (int)$row['condition'] : 0;
+                            switch ($condition) {
+                                case 0:
+                                    echo '<span class="status-badge rate-excellent">Excellent</span>';
+                                    break;
+                                case 1:
+                                    echo '<span class="status-badge rate-good">Good</span>';
+                                    break;
+                                case 2:
+                                    echo '<span class="status-badge rate-average">Average</span>';
+                                    break;
+                                case 3:
+                                    echo '<span class="status-badge rate-bad">Bad</span>';
+                                    break;
+                                case 4:
+                                    echo '<span class="status-badge rate-new">New</span>';
+                                    break;
+                                default:
+                                    echo '<span class="status-badge rate-new">New</span>';
+                            }
+                            ?>
+                        </td>
                  <!-- Action Buttons - Updated to pass interface parameter -->
 <td class="actions">
     <div class="action-buttons-group">
@@ -434,19 +517,30 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', '<?php echo isset($row['interface']) ? htmlspecialchars($row['interface']) : ''; ?>')">
             <i class="fas fa-eye"></i>
         </button>
+
+        <a href="edit_order.php?id=<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
+   class="action-btn edit-btn"
+   title="Edit Order">
+    <i class="fas fa-edit"></i>
+</a>
         
     <?php if ($payStatus == 'unpaid'): ?>
     <button class="action-btn paid-btn" title="Mark as Paid" 
         onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-dollar-sign"></i>
     </button>
+    <?php elseif ($payStatus == 'paid'): ?>
+    <button class="action-btn unpaid-btn" title="Mark as Unpaid"
+        onclick="unmarkAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+        <i class="fas fa-undo"></i>
+    </button>
 <?php endif; ?>
 
         
-        <button class="action-btn dispatch-btn" title="Mark as Dispatched" 
+        <!-- <button class="action-btn dispatch-btn" title="Mark as Dispatched" 
                 onclick="openDispatchModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
             <i class="fas fa-truck"></i>
-        </button>
+        </button> -->
         
         <button class="action-btn <?php echo ($row['call_log'] == 0) ? 'answer-btn' : 'no-answer-btn'; ?>" 
                 title="<?php echo ($row['call_log'] == 0) ? 'Mark as Answered' : 'Mark as No Answer'; ?>" 
@@ -458,13 +552,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 onclick="cancelOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
             <i class="fas fa-times-circle"></i>
         </button>
-           <button class="action-btn print-btn" title="Print Order" 
+        <!-- <button class="action-btn print-btn" title="Print Order" 
             onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
         <i class="fas fa-print"></i>
-    </button>
+        </button> -->
+
+        <button class="action-btn condition-btn" title="Update Success Rate" 
+            onclick="openConditionModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', <?php echo $condition; ?>)">
+        <i class="fas fa-user-shield"></i>
+        </button>
     </div>
 </td>
-                    </tr>
+</tr>
                 <?php endwhile; ?>
             <?php else: ?>
                 <tr>
@@ -531,6 +630,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 <!--  ADD THE API DISPATCH MODAL HTML -->
  <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/api_dispatch.php'); ?>
 
+<!--  ADD THE CONDITION UPDATE MODAL -->
+ <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/condition_update_modal.php'); ?>
+
 <script>
         /**
          * JavaScript functionality for pending order management
@@ -548,9 +650,70 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             document.getElementById('date_from').value = '';
             document.getElementById('date_to').value = '';
             document.getElementById('pay_status_filter').value = '';
+            document.getElementById('call_status_filter').value = '';
+            document.getElementById('condition_filter').value = '';
             
             // Submit the form to clear filters
             window.location.href = window.location.pathname;
+        }
+
+        // --- CUSTOMER CONDITION UPDATE FUNCTIONS ---
+        function openConditionModal(orderId, currentCondition) {
+            if (!orderId) return;
+            document.getElementById('cond_order_id').value = orderId;
+            
+            // Select the correct radio button
+            const radio = document.querySelector(`input[name="condition"][value="${currentCondition}"]`);
+            if (radio) radio.checked = true;
+            
+            const modal = document.getElementById('conditionModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConditionModal() {
+            const modal = document.getElementById('conditionModal');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function submitConditionUpdate() {
+            const form = document.getElementById('conditionUpdateForm');
+            const formData = new FormData(form);
+            
+            // Validate that a condition is selected
+            if (!formData.get('condition')) {
+                alert('Please select a condition');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveConditionBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            fetch('update_condition.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Success Rate updated successfully');
+                    location.reload(); 
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the condition');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Save Changes';
+            });
         }
 
     
@@ -773,6 +936,56 @@ function markAsPaid(orderId) {
     document.body.style.overflow = 'hidden';
 }
 
+// Mark as Unpaid function
+function unmarkAsPaid(orderId) {
+    if (!orderId || orderId.trim() === '') {
+        alert('Order ID is required to Mark as Unpaid.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to mark this order as unpaid? This will remove the payment record.')) {
+        return;
+    }
+
+    // Show loading
+    const btn = event.target.closest('.unpaid-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    // Create FormData
+    const formData = new FormData();
+    formData.append('order_id', orderId.trim());
+    formData.append('action', 'unmark_paid');
+
+    // Send request
+    fetch('unmark_paid.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Order marked as unpaid successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-undo"></i>';
+            }
+        }
+    })
+    .catch(error => {
+        alert('Network error. Please try again.');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-undo"></i>';
+        }
+    });
+}
+
 // Close the Mark as Paid modal
 function closePaidModal() {
     const modal = document.getElementById('markPaidModal');
@@ -843,11 +1056,6 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     const fileInput = document.getElementById('payment_slip');
     const submitBtn = document.getElementById('submitPaidBtn');
     
-    if (!fileInput.files[0]) {
-        alert('Please select a payment slip file');
-        return;
-    }
-    
     // Show loading state
     submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
     submitBtn.disabled = true;
@@ -855,7 +1063,9 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     // Create FormData object
     const formData = new FormData();
     formData.append('order_id', orderId);
+    if (fileInput.files[0]) {
     formData.append('payment_slip', fileInput.files[0]);
+    }
     formData.append('action', 'mark_paid');
     
     // Send the request
@@ -1365,10 +1575,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-/**
- * Backward compatibility function
- * Keep this if you have existing calls to markAsAnswered()
- */
+// Close condition modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const conditionModal = document.getElementById('conditionModal');
+    if (conditionModal) {
+        conditionModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConditionModal();
+            }
+        });
+    }
+});
+
+// Update Escape key listener to handle condition modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const conditionModal = document.getElementById('conditionModal');
+        if (conditionModal && conditionModal.classList.contains('show')) {
+            closeConditionModal();
+        }
+    }
+});
 function markAsAnswered(orderId) {
     // Default to call_log = 0 (no answer) for backward compatibility
     openAnswerModal(orderId, 0);
@@ -2556,6 +2783,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
  </script>
+ 
+ <script>
+                // Auto-dismiss alerts after 3 seconds
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alerts = document.querySelectorAll('.alert-dismissible');
+                    if (alerts.length > 0) {
+                        setTimeout(function() {
+                            alerts.forEach(function(alert) {
+                                // Fade out effect
+                                alert.classList.remove('show'); 
+                                // Remove from DOM after transition
+                                setTimeout(function() {
+                                    alert.remove();
+                                }, 150);
+                            });
+                        }, 3000);
+                    }
+                });
+            </script>
 
     <!-- Include Footer and Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/footer.php'); ?>

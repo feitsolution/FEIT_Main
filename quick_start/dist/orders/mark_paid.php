@@ -69,90 +69,77 @@ try {
         throw new Exception('Order is not in a valid status for payment processing. Current status: ' . $orderData['status']);
     }
     
-    // Validate file upload
-    if (!isset($_FILES['payment_slip']) || $_FILES['payment_slip']['error'] !== UPLOAD_ERR_OK) {
-        $error_messages = [
-            UPLOAD_ERR_INI_SIZE => 'File too large (exceeds server limit)',
-            UPLOAD_ERR_FORM_SIZE => 'File too large (exceeds form limit)',
-            UPLOAD_ERR_PARTIAL => 'File upload incomplete',
-            UPLOAD_ERR_NO_FILE => 'No file uploaded',
-            UPLOAD_ERR_NO_TMP_DIR => 'No temporary directory',
-            UPLOAD_ERR_CANT_WRITE => 'Cannot write to disk',
-            UPLOAD_ERR_EXTENSION => 'Upload stopped by extension'
-        ];
-        
-        $error_code = $_FILES['payment_slip']['error'];
-        $error_message = isset($error_messages[$error_code]) ? $error_messages[$error_code] : 'Unknown upload error';
-        throw new Exception('Payment slip upload error: ' . $error_message);
-    }
-    
-    $file = $_FILES['payment_slip'];
-    
-    // Validate file size (2MB limit)
-    if ($file['size'] > 2 * 1024 * 1024) {
-        throw new Exception('File size must be less than 2MB');
-    }
-    
-    // Validate file type
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    
-    // Check file type using multiple methods
-    $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-    
-    if (!in_array($fileExtension, $allowedExtensions)) {
-        throw new Exception('Invalid file type. Only JPG, JPEG, PNG, and PDF files are allowed');
-    }
-    
-    // Additional MIME type check if fileinfo is available
-    if (extension_loaded('fileinfo')) {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-        
-        if (!in_array($mimeType, $allowedTypes)) {
-            throw new Exception('Invalid file MIME type: ' . $mimeType);
+    $fileName = null; // Default to null if no file is uploaded or if there's an issue
+    $filePath = null; // Initialize filePath as null
+
+    // Check if a payment slip file was uploaded
+    if (isset($_FILES['payment_slip']) && $_FILES['payment_slip']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['payment_slip'];
+
+        // Validate file size (2MB limit)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            throw new Exception('File size must be less than 2MB');
         }
-    }
-    
-    // Create upload directory if it doesn't exist
-    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/uploads/payment_slips/';
-    if (!is_dir($uploadDir)) {
-        if (!mkdir($uploadDir, 0755, true)) {
-            throw new Exception('Failed to create upload directory');
+
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            throw new Exception('Invalid file type. Only JPG, JPEG, PNG, and PDF files are allowed');
         }
-    }
-    
-    // Check if directory is writable
-    if (!is_writable($uploadDir)) {
-        throw new Exception('Upload directory is not writable');
-    }
-    
-    // Get company name for filename prefix
-    $companyName = '';
-    $brandQuery = "SELECT company_name FROM branding WHERE active = 1 LIMIT 1";
-    $brandResult = $conn->query($brandQuery);
 
-    if ($brandResult && $brandRow = $brandResult->fetch_assoc()) {
-        if (!empty($brandRow['company_name'])) {
-        // Keep only letters and convert to lowercase
-        $cleanCompanyName = strtolower(
-            preg_replace('/[^a-zA-Z0-9]/', '', $brandRow['company_name'])
-        );
+        // Additional MIME type check if fileinfo is available
+        if (extension_loaded('fileinfo')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
 
-        if (!empty($cleanCompanyName)) {
-            $companyName = $cleanCompanyName . '_';
-           }
-       }
-    }
+            if (!in_array($mimeType, $allowedTypes)) {
+                throw new Exception('Invalid file MIME type: ' . $mimeType);
+            }
+        }
 
-    // Generate unique filename
-    $fileName = $companyName . 'payment_' . $orderId . '_' . time() . '.' . $fileExtension;
-    $filePath = $uploadDir . $fileName;
-    
-    // Move uploaded file
-    if (!move_uploaded_file($file['tmp_name'], $filePath)) {
-        throw new Exception('Failed to move uploaded file');
+        // Create upload directory if it doesn't exist
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/uploads/payment_slips/';
+        if (!is_dir($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                throw new Exception('Failed to create upload directory');
+            }
+        }
+
+        // Check if directory is writable
+        if (!is_writable($uploadDir)) {
+            throw new Exception('Upload directory is not writable');
+        }
+
+        // Get company name for filename prefix
+        $companyName = '';
+        $brandQuery = "SELECT company_name FROM branding WHERE active = 1 LIMIT 1";
+        $brandResult = $conn->query($brandQuery);
+
+        if ($brandResult && $brandRow = $brandResult->fetch_assoc()) {
+            if (!empty($brandRow['company_name'])) {
+                // Keep only letters and convert to lowercase
+                $cleanCompanyName = strtolower(
+                    preg_replace('/[^a-zA-Z0-9]/', '', $brandRow['company_name'])
+                );
+
+                if (!empty($cleanCompanyName)) {
+                    $companyName = $cleanCompanyName . '_';
+                }
+            }
+        }
+
+        // Generate unique filename
+        $fileName = $companyName . 'payment_' . $orderId . '_' . time() . '.' . $fileExtension;
+        $filePath = $uploadDir . $fileName;
+
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+            throw new Exception('Failed to move uploaded file');
+        }
     }
     
     // Start database transaction
