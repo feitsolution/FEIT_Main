@@ -95,6 +95,9 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
 
 // Main query with all required joins - ONLY DISPATCH STATUS - UPDATED with customer name fallback
 $sql = "SELECT i.*, 
+                -- Duplicate order count based on mobile and product_code
+                (SELECT COUNT(*) FROM order_header o2 WHERE o2.mobile = i.mobile AND o2.product_code = i.product_code AND  o2.status = 'dispatch') as duplicate_count,
+                
                -- Customer info: Use order_header full_name, fallback to customers table
                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
                i.customer_id,
@@ -374,6 +377,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
                                             $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
                                             echo $customerName . ($customerId ? " ($customerId)" : "");
+
+                                            // Duplicate Orders Warning
+                                            if (isset($row['duplicate_count']) && $row['duplicate_count'] > 1) {
+                                                echo '<br><span class="badge badge-danger" style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block;">Duplicate (' . $row['duplicate_count'] . ')</span>';
+                                            }
                                             ?>
                                         </td>
                                         
