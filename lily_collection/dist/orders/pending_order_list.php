@@ -90,7 +90,7 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
 // Main query with all required joins - UPDATED to fetch customer name from customers table as fallback
 $sql = "SELECT i.*,
                 -- Duplicate count
-               (SELECT COUNT(*) FROM order_header o2 WHERE o2.mobile = i.mobile AND o2.product_code = i.product_code AND  o2.status = 'pending') as duplicate_count,
+               (SELECT COUNT(*) FROM order_header o2 WHERE o2.mobile = i.mobile AND  o2.status = 'pending') as duplicate_count,
                
                -- Customer info: Use order_header full_name, fallback to customers table
                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
