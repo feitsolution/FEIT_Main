@@ -38,7 +38,7 @@ $offset = ($page - 1) * $limit;
 $countSql = "SELECT COUNT(*) as total FROM products";
 
 // Main query - Updated to include product_code
-$sql = "SELECT id, name, product_code, description, lkr_price, created_at, status FROM products";
+$sql = "SELECT id, name, product_code, description, lkr_price, created_at, status, stock_quantity, low_stock_threshold FROM products";
 
 // Build search conditions
 $searchConditions = [];
@@ -250,6 +250,9 @@ $result = $conn->query($sql);
                                 <th>Product Code</th>
                                 <th>Description</th>
                                 <th>Price (LKR)</th>
+                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                <th>Stock</th>
+                                <?php endif; ?>
                                 <th>Created Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -295,6 +298,25 @@ $result = $conn->query($sql);
                                             </div>
                                         </td>
                                         
+                                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                        <!-- Stock -->
+                                        <td>
+                                            <div class="stock-display">
+                                                <?php 
+                                                $stock = (int)$row['stock_quantity'];
+                                                $threshold = (int)$row['low_stock_threshold'];
+                                                $is_low = $stock <= $threshold;
+                                                ?>
+                                                <span style="font-weight: 600; color: <?php echo $is_low ? '#dc3545' : '#28a745'; ?>;">
+                                                    <?php echo $stock; ?>
+                                                </span>
+                                                <?php if ($is_low): ?>
+                                                    <i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 12px;" title="Low Stock"></i>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <?php endif; ?>
+                                        
                                         <!-- Created Date -->
                                         <td>
                                             <div style="font-size: 13px;">
@@ -322,6 +344,10 @@ $result = $conn->query($sql);
                                                         data-product-code="<?= htmlspecialchars($row['product_code'] ?? '') ?>"
                                                         data-product-description="<?= htmlspecialchars($row['description'] ?? '') ?>"
                                                         data-product-price="<?= htmlspecialchars($row['lkr_price']) ?>"
+                                                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                        data-product-stock="<?= htmlspecialchars($row['stock_quantity']) ?>"
+                                                        data-product-threshold="<?= htmlspecialchars($row['low_stock_threshold']) ?>"
+                                                        <?php endif; ?>
                                                         data-product-status="<?= htmlspecialchars($row['status']) ?>"
                                                         data-product-created="<?= htmlspecialchars($row['created_at']) ?>"
                                                         title="View Product Details">
@@ -416,6 +442,16 @@ $result = $conn->query($sql);
                     <span class="detail-label">Price (LKR):</span>
                     <span class="detail-value" id="modal-product-price"></span>
                 </div>
+                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Stock Quantity:</span>
+                    <span class="detail-value" id="modal-product-stock"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Low Stock Threshold:</span>
+                    <span class="detail-value" id="modal-product-threshold"></span>
+                </div>
+                <?php endif; ?>
                 <div class="customer-detail-row">
                     <span class="detail-label">Status:</span>
                     <span class="detail-value">
@@ -478,6 +514,8 @@ $result = $conn->query($sql);
             const productCode = button.getAttribute('data-product-code');
             const productDescription = button.getAttribute('data-product-description');
             const productPrice = button.getAttribute('data-product-price');
+            const productStock = button.getAttribute('data-product-stock');
+            const productThreshold = button.getAttribute('data-product-threshold');
             const productStatus = button.getAttribute('data-product-status');
             const productCreated = button.getAttribute('data-product-created');
 
@@ -487,6 +525,11 @@ $result = $conn->query($sql);
             document.getElementById('modal-product-code').textContent = productCode || 'N/A';
             document.getElementById('modal-product-description').textContent = productDescription || 'N/A';
             document.getElementById('modal-product-price').textContent = 'LKR ' + parseFloat(productPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            if (document.getElementById('modal-product-stock')) {
+                document.getElementById('modal-product-stock').textContent = productStock;
+                document.getElementById('modal-product-threshold').textContent = productThreshold;
+            }
             
             // Set status badge
             const statusElement = document.getElementById('modal-product-status');

@@ -636,6 +636,32 @@ $rate = cs_condition($conn, $customer_id);
         }
 
         foreach ($order_items as $item) {
+            // Check and deduct stock atomically to prevent overselling and race conditions
+            if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
+                $stockStmt = $conn->prepare($updateStockSql);
+                $stockStmt->bind_param("iii", $item['quantity'], $item['product_id'], $item['quantity']);
+                
+                if (!$stockStmt->execute()) {
+                    throw new Exception("Failed to update stock for product ID: " . $item['product_id']);
+                }
+                
+                if ($stockStmt->affected_rows === 0) {
+                    // Fetch product name for better error message
+                    $getNameSql = "SELECT name FROM products WHERE id = ?";
+                    $nameStmt = $conn->prepare($getNameSql);
+                    $nameStmt->bind_param("i", $item['product_id']);
+                    $nameStmt->execute();
+                    $productResult = $nameStmt->get_result();
+                    $productName = "Unknown product";
+                    if ($productResult && $productRow = $productResult->fetch_assoc()) {
+                        $productName = $productRow['name'];
+                    }
+                    $nameStmt->close();
+                    throw new Exception("Insufficient stock for product: " . $productName);
+                }
+                $stockStmt->close();
+            }
             // Calculate the price after discount for the line
             $item_total_amount = ($item['original_price'] * $item['quantity']) - $item['discount'];
             
