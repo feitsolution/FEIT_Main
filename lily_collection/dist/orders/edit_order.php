@@ -145,7 +145,7 @@ while ($item = $itemsResult->fetch_assoc()) {
 $stmt->close();
 
 // Fetch necessary data for the form (same as create_order.php)
-$productSql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+$productSql = "SELECT id, name, description, lkr_price, stock_quantity, low_stock_threshold FROM products WHERE status = 'active' ORDER BY name ASC";
 $productsResult = $conn->query($productSql);
 
 $customerSql = "SELECT c.*, ct.city_name 
@@ -778,10 +778,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // ========== GLOBAL VARIABLES ==========
+            const allowInventory = <?= (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) ? 'true' : 'false' ?>;
             let deliveryFee = <?php echo $defaultDeliveryFee; ?>;
             let isExistingCustomer = <?= $order['customer_id'] ? 'true' : 'false' ?>;
 
-        const productBaseStocks = {
+            const productBaseStocks = {
                 <?php
                 $productsResult->data_seek(0);
                 while ($p = $productsResult->fetch_assoc()) {
@@ -1242,11 +1243,15 @@ const ProductManager = {
         descriptionField.value = description;
 
         // Enable fields
-        if (stock > 0) {
+        if (!allowInventory || stock > 0) {
             quantityInput.disabled = false;
-            quantityInput.max = stock;
-            if (parseInt(quantityInput.value) > stock) {
-                quantityInput.value = stock;
+            if (allowInventory) {
+                quantityInput.max = stock;
+                if (parseInt(quantityInput.value) > stock) {
+                    quantityInput.value = stock;
+                }
+            } else {
+                quantityInput.removeAttribute('max');
             }
         } else {
             // Only disable if it's not the existing product in the order
@@ -1254,6 +1259,7 @@ const ProductManager = {
             quantityInput.disabled = (stock <= 0);
             if (stock <= 0) quantityInput.value = 0;
         }
+
         priceField.disabled = false;
         row.querySelector('.discount').disabled = false;
         descriptionField.disabled = false;
@@ -1307,34 +1313,38 @@ const ProductManager = {
         let price = parseFloat(row.querySelector('.price').value) || 0;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
+        // Handle Quantity - ensure it is at least 1
         const qtyInput = row.querySelector('.quantity');
         const productSelect = row.querySelector('.product-select');
         const selectedOption = productSelect.options[productSelect.selectedIndex];
-
+        
         if (qtyInput.value !== "" && parseInt(qtyInput.value) < 1) {
             qtyInput.value = 1;
         }
+        
         let quantity = parseInt(qtyInput.value) || 1;
 
-        // Stock validation
-        if (selectedOption && selectedOption.value !== "") {
-            const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
-            const baseStock = productBaseStocks[selectedOption.value] || 0;
-            
-            // Clear any previous error
-            ValidationUtils.clearErrors('product-validation-error');
-            
-            if (quantity > stock) {
-                ValidationUtils.showError(
-                    qtyInput, 
-                    `Max ${stock} can be added (Real Stock: ${baseStock})`, 
-                    'product-validation-error'
-                );
-                qtyInput.value = stock;
-                quantity = stock;
+            // Stock validation
+            if (allowInventory && selectedOption && selectedOption.value !== "") {
+                const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
+                const baseStock = productBaseStocks[selectedOption.value] || 0;
+                
+                // Clear any previous error
+                ValidationUtils.clearErrors('product-validation-error');
+                
+                if (quantity > stock) {
+                    ValidationUtils.showError(
+                        qtyInput, 
+                        `Max ${stock} can be added (Real Stock: ${baseStock})`, 
+                        'product-validation-error'
+                    );
+                    qtyInput.value = stock;
+                    quantity = stock;
+                }
+                qtyInput.max = stock;
+            } else if (!allowInventory) {
+                qtyInput.removeAttribute('max');
             }
-            qtyInput.max = stock;
-        }
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
@@ -1402,7 +1412,6 @@ const ProductManager = {
             } else {
             finalDeliveryFee = deliveryFee;
             document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
-            }
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
         }
@@ -1509,10 +1518,11 @@ const ProductManager = {
             row.querySelector('.discount').disabled = true;
             ProductManager.checkForProducts();
             ProductManager.updateTotals();
-            ProductManager.refreshStockLabels()
+            ProductManager.refreshStockLabels();
         }
         FormValidator.validateAndToggleSubmit();
-    }
+    },
+
     refreshStockLabels: () => {
         const consumed = {};
         document.querySelectorAll('#order_table tbody tr').forEach(row => {
@@ -1551,17 +1561,19 @@ const ProductManager = {
                 
                 // Create label showing REAL stock
                 let label = "";
-                if (baseStock <= 0) {
-                    label = " (OUT OF STOCK)";
-                } else {
-                    label = ` (Stock: ${baseStock}`;
-                    if (originalQty > 0) {
-                        label += ` | In Order: ${originalQty}`;
+                if (allowInventory) {
+                    if (baseStock <= 0) {
+                        label = " (OUT OF STOCK)";
+                    } else {
+                        label = ` (Stock: ${baseStock}`;
+                        if (originalQty > 0) {
+                            label += ` | In Order: ${originalQty}`;
+                        }
+                        if (availForThisRow < baseStock) {
+                            label += ` | Can add: ${Math.max(0, availForThisRow)}`;
+                        }
+                        label += ")";
                     }
-                    if (availForThisRow < baseStock) {
-                        label += ` | Can add: ${Math.max(0, availForThisRow)}`;
-                    }
-                    label += ")";
                 }
                 
                 const baseName = option.getAttribute('data-base-name');
@@ -1572,21 +1584,27 @@ const ProductManager = {
                 if (pid === currentPid) {
                     const rowQtyInput = select.closest('tr').querySelector('.quantity');
                     if (rowQtyInput) {
-                        rowQtyInput.max = Math.max(0, availForThisRow);
-                        if (parseInt(rowQtyInput.value) > availForThisRow) {
-                            rowQtyInput.value = Math.max(0, availForThisRow);
-                            ProductManager.updateRowTotal(select.closest('tr'));
+                        if (allowInventory) {
+                            rowQtyInput.max = Math.max(0, availForThisRow);
+                            if (parseInt(rowQtyInput.value) > availForThisRow) {
+                                rowQtyInput.value = Math.max(0, availForThisRow);
+                                ProductManager.updateRowTotal(select.closest('tr'));
+                            }
+                        } else {
+                            rowQtyInput.removeAttribute('max');
                         }
                     }
                 }
 
                 // Disable option if not enough stock available
-                if (pid !== currentPid) {
+                if (allowInventory && pid !== currentPid) {
                     option.disabled = (availForThisRow <= 0);
+                } else if (!allowInventory) {
+                    option.disabled = false;
                 }
             });
         });
-                                            }
+    }
 };
 
 // ========== FORM TRACKER ==========
