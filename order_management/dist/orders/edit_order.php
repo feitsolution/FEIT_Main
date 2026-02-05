@@ -1210,12 +1210,15 @@ const ProductManager = {
 
         // Check for duplicates
         let existingRow = null;
-        document.querySelectorAll('#order_table tbody tr').forEach(tr => {
+        const allRows = document.querySelectorAll('#order_table tbody tr');
+        
+        for (let tr of allRows) {
             const select = tr.querySelector('.product-select');
-            if (tr !== row && select && select.value === selectedValue) {
+            if (tr !== row && select && select.value && select.value === selectedValue) {
                 existingRow = tr;
+                break;
             }
-        });
+        }
 
         if (existingRow) {
             ProductManager.showDuplicateAlert(productName, existingRow);
@@ -1255,7 +1258,6 @@ const ProductManager = {
             }
         } else {
             // Only disable if it's not the existing product in the order
-            const isOriginalProduct = selectedValue == selectedOption.getAttribute('data-value'); // This check might be redundant if stock includes original
             quantityInput.disabled = (stock <= 0);
             if (stock <= 0) quantityInput.value = 0;
         }
@@ -1348,7 +1350,7 @@ const ProductManager = {
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
-            row.querySelector('.discount').value = discount;
+            row.querySelector('.discount').value = discount.toFixed(2);
         }
 
         let subtotal = (price * quantity) - discount;
@@ -1406,8 +1408,8 @@ const ProductManager = {
         let subtotalAfterDiscount = subtotalGross - totalDiscount;
 
         if (hasProducts) {
-            finalDeliveryFee = deliveryFee;
-            document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+                finalDeliveryFee = deliveryFee;
+                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
         }
@@ -1844,11 +1846,11 @@ const FormValidator = {
             });
 
             document.addEventListener('input', (e) => {
-                if (e.target.classList.contains('discount')) {
-                    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
-                    const parts = e.target.value.split('.');
-                    if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
-                }
+                // if (e.target.classList.contains('discount')) {
+                //     e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+                //     const parts = e.target.value.split('.');
+                //     if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                // }
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
                     if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) e.target.value = 1;
                     ProductManager.updateRowTotal(e.target.closest('tr'));

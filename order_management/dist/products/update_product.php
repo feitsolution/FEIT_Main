@@ -81,10 +81,11 @@ try {
     $product_code = sanitizeInput($_POST['product_code'] ?? '');
     $description = sanitizeInput($_POST['description'] ?? '');
     
-    // Default values for stock if inventory management is disabled
+    // Default values for stock if inventory
     $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
     $stock_quantity = $allow_inventory ? intval($_POST['stock_quantity'] ?? $originalProduct['stock_quantity']) : intval($originalProduct['stock_quantity']);
     $low_stock_threshold = $allow_inventory ? intval($_POST['low_stock_threshold'] ?? $originalProduct['low_stock_threshold']) : intval($originalProduct['low_stock_threshold']);
+    $category_id = intval($_POST['category_id'] ?? $originalProduct['category_id']);
 
     // Server-side validation
     $errors = [];
@@ -140,6 +141,9 @@ try {
     if ($low_stock_threshold < 0) {
         $errors['low_stock_threshold'] = 'Low stock threshold cannot be negative';
     }
+    if ($category_id <= 0) {
+        $errors['category_id'] = 'Category is required';
+    }
 
     // Check for duplicate product code (excluding current product)
     if (empty($errors['product_code'])) {
@@ -165,7 +169,7 @@ try {
 
     // Prepare update query
     $updateQuery = "UPDATE products 
-                    SET name = ?, description = ?, lkr_price = ?, status = ?, product_code = ?, stock_quantity = ?, low_stock_threshold = ?
+                    SET name = ?, description = ?, lkr_price = ?, status = ?, product_code = ?, stock_quantity = ?, low_stock_threshold = ?, category_id = ?
                     WHERE id = ?";
 
     $updateStmt = $conn->prepare($updateQuery);
@@ -175,7 +179,7 @@ try {
     }
 
     // Bind parameters
-    $updateStmt->bind_param("ssdssiii", $name, $description, $lkr_price, $status, $product_code, $stock_quantity, $low_stock_threshold, $product_id);
+    $updateStmt->bind_param("ssdssiiii", $name, $description, $lkr_price, $status, $product_code, $stock_quantity, $low_stock_threshold, $category_id, $product_id);
 
     // Execute the update
     if ($updateStmt->execute()) {
@@ -205,10 +209,13 @@ try {
                     $changes[] = "Description updated";
                 }
                 if (intval($originalProduct['stock_quantity'] ?? 0) !== $stock_quantity) {
-                    $changes[] = "Stock: {$originalProduct['stock_quantity']} → {$stock_quantity}";
+                    $changes[] = "Stock: {$originalProduct['stock_quantity']} to {$stock_quantity}";
                 }
                 if (intval($originalProduct['low_stock_threshold'] ?? 10) !== $low_stock_threshold) {
-                    $changes[] = "Threshold: {$originalProduct['low_stock_threshold']} → {$low_stock_threshold}";
+                    $changes[] = "Threshold: {$originalProduct['low_stock_threshold']} to {$low_stock_threshold}";
+                }
+                if (intval($originalProduct['category_id'] ?? 0) !== $category_id) {
+                    $changes[] = "Category ID: {$originalProduct['category_id']} to {$category_id}";
                 }
 
                 $details = empty($changes)

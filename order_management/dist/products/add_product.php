@@ -25,6 +25,24 @@ function generateCSRFToken() {
 
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+
+// Fetch all categories for the dropdown logic
+$mainCategories = [];
+$subCategories = [];
+try {
+    $catRes = $conn->query("SELECT id, name, parent_id FROM categories WHERE status = 'active' ORDER BY name ASC");
+    if ($catRes) {
+        while ($row = $catRes->fetch_assoc()) {
+            if (empty($row['parent_id']) || $row['parent_id'] == 0) {
+                $mainCategories[] = $row;
+            } else {
+                $subCategories[] = $row;
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Error fetching categories: " . $e->getMessage());
+}
 ?>
 
 <!doctype html>
@@ -196,6 +214,35 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                     <div class="error-feedback" id="status-error"></div>
                                 </div>
                             </div>
+                            
+                            <!-- Second Row: Main Category and Sub Category -->
+                            <div class="form-row">
+                                <div class="product-form-group">
+                                    <label for="main_category_id" class="form-label">
+                                        <i class="fas fa-tags"></i> Main Category<span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" id="main_category_id" name="main_category_id" required>
+                                        <option value="" disabled selected>Select main category</option>
+                                        <?php foreach ($mainCategories as $cat): ?>
+                                            <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="error-feedback" id="main_category_id-error"></div>
+                                </div>
+
+                                <div class="product-form-group">
+                                    <label for="sub_category_id" class="form-label">
+                                        <i class="fas fa-level-down-alt"></i> Sub Category (Optional)
+                                    </label>
+                                    <select class="form-select" id="sub_category_id" name="sub_category_id">
+                                        <option value="">Select sub category</option>
+                                    </select>
+                                    <div class="error-feedback" id="sub_category_id-error"></div>
+                                </div>
+
+                                <!-- Actual category_id that will be submitted -->
+                                <input type="hidden" id="category_id" name="category_id" value="">
+                            </div>
 
                             <!-- Second Row: Price and Product Code -->
                             <div class="form-row">
@@ -297,6 +344,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <script>
+        // Categories data for JS logic
+        const subCategories = <?php echo json_encode($subCategories); ?>;
         $(document).ready(function() {
             // Initialize form
             initializeForm();
@@ -470,6 +519,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         // Form reset function
         function resetForm() {
             $('#addProductForm')[0].reset();
+            $('#sub_category_id').html('<option value="">Select sub category</option>');
+            $('#category_id').val('');
             clearAllValidations();
             updateCharCount();
             $('#name').focus();
@@ -537,6 +588,39 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                     clearValidation('description');
                 }
             });
+
+            $('#main_category_id').on('change', function() {
+                const mainId = $(this).val();
+                
+                // Update Sub Category dropdown
+                const $subSelect = $('#sub_category_id');
+                $subSelect.html('<option value="">Select sub category</option>');
+                
+                if (mainId) {
+                    const filteredSubs = subCategories.filter(sub => sub.parent_id == mainId);
+                    filteredSubs.forEach(sub => {
+                        $subSelect.append(`<option value="${sub.id}">${sub.name}</option>`);
+                    });
+                    showSuccess('main_category_id');
+                } else {
+                    showError('main_category_id', 'Please select a main category');
+                }
+                
+                updateFinalCategoryId();
+            });
+
+            $('#sub_category_id').on('change', function() {
+                updateFinalCategoryId();
+            });
+        }
+
+        function updateFinalCategoryId() {
+            const mainId = $('#main_category_id').val();
+            const subId = $('#sub_category_id').val();
+            
+            // Final value is sub_id if selected, else main_id
+            const finalId = subId ? subId : mainId;
+            $('#category_id').val(finalId);
         }
         
         // Setup other event listeners
@@ -605,6 +689,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 return { valid: false, message: 'Price can have maximum 2 decimal places' };
             }
             
+            return { valid: true, message: '' };
+        }
+
+        function validateCategory(categoryId) {
+            const mainId = $('#main_category_id').val();
+            if (!mainId) {
+                return { valid: false, message: 'Please select a main category' };
+            }
             return { valid: true, message: '' };
         }
 
@@ -691,7 +783,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 { field: 'name', validator: validateName, value: name },
                 { field: 'lkr_price', validator: validatePrice, value: price },
                 { field: 'product_code', validator: validateProductCode, value: productCode },
-                { field: 'description', validator: validateDescription, value: description }
+                { field: 'description', validator: validateDescription, value: description },
+                { field: 'main_category_id', validator: validateCategory, value: $('#category_id').val() }
             ];
             
             validations.forEach(function(validation) {

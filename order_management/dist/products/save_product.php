@@ -59,15 +59,20 @@ try {
     $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
     $stock_quantity = $allow_inventory ? intval($_POST['stock_quantity'] ?? 0) : 0;
     $low_stock_threshold = $allow_inventory ? intval($_POST['low_stock_threshold'] ?? 0) : 0;
+    $category_id = intval($_POST['category_id'] ?? 0);
 
     // -------------------------------------------------------------------------
-    // REQUIRED FIELDS VALIDATION (updated to include description)
+    // REQUIRED FIELDS VALIDATION
     // -------------------------------------------------------------------------
-    if (empty($name) || empty($status) || empty($lkr_price) || empty($product_code) || empty($description)) {
+    if (empty($name) || empty($status) || empty($lkr_price) || empty($product_code) || empty($description) || $category_id <= 0) {
         $response['message'] = 'Required fields are missing';
 
         if (empty($description)) {
             $response['errors']['description'] = 'Description is required';
+        }
+        
+        if ($category_id <= 0) {
+            $response['errors']['category_id'] = 'Category is required';
         }
 
         echo json_encode($response);
@@ -100,8 +105,8 @@ try {
     }
 
     // Prepare insert query
-    $insertQuery = "INSERT INTO products (name, description, lkr_price, status, product_code, stock_quantity, low_stock_threshold) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $insertQuery = "INSERT INTO products (name, description, lkr_price, status, product_code, stock_quantity, low_stock_threshold, category_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $insertStmt = $conn->prepare($insertQuery);
 
     if (!$insertStmt) {
@@ -109,7 +114,7 @@ try {
     }
 
     // Bind parameters
-    $insertStmt->bind_param("ssdssii", $name, $description, $lkr_price, $status, $product_code, $stock_quantity, $low_stock_threshold);
+    $insertStmt->bind_param("ssdssiii", $name, $description, $lkr_price, $status, $product_code, $stock_quantity, $low_stock_threshold, $category_id);
 
     // Execute the query
     if ($insertStmt->execute()) {
@@ -119,7 +124,7 @@ try {
         if (isset($_SESSION['user_id'])) {
             $user_id = $_SESSION['user_id'];
             $action_type = 'product_create';
-            $details = "New product created - Name: {$name}, Code: {$product_code}, Price: LKR {$lkr_price}, Status: {$status}, Stock: {$stock_quantity}, Threshold: {$low_stock_threshold}";
+            $details = "New product created - Name: {$name}, Code: {$product_code}, Price: LKR {$lkr_price}, Status: {$status}, Stock: {$stock_quantity}, Threshold: {$low_stock_threshold}, Category ID: {$category_id}";
 
             $logQuery = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details) 
                          VALUES (?, ?, ?, ?)";
