@@ -1412,14 +1412,9 @@ const ProductManager = {
                 finalDeliveryFee = 0;
                 document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
             } else {
-<<<<<<< HEAD
                 finalDeliveryFee = deliveryFee;
                 document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
             }
-=======
-            finalDeliveryFee = deliveryFee;
-            document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
->>>>>>> 9123791dd5fc54afe917695eb9e9632094888099
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
         }
