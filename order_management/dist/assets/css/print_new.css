@@ -61,7 +61,7 @@ body {
 
 .company-logo img {
     max-height: 55px;
-    width: auto;
+    max-width: 150px;
 }
 
 /* Order and Service Information */
