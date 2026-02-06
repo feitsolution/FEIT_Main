@@ -1350,7 +1350,7 @@ const ProductManager = {
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
-            row.querySelector('.discount').value = discount;
+            row.querySelector('.discount').value = discount.toFixed(2);
         }
 
         let subtotal = (price * quantity) - discount;
@@ -1851,11 +1851,11 @@ const FormValidator = {
             });
 
             document.addEventListener('input', (e) => {
-                if (e.target.classList.contains('discount')) {
-                    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
-                    const parts = e.target.value.split('.');
-                    if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
-                }
+                // if (e.target.classList.contains('discount')) {
+                //     e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+                //     const parts = e.target.value.split('.');
+                //     if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                // }
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
                     if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) e.target.value = 1;
                     ProductManager.updateRowTotal(e.target.closest('tr'));
