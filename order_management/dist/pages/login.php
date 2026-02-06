@@ -147,6 +147,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                         error_log("User $email successfully logged in with customer_id: $customer_id");
 
+                        // Log successful login action
+                        try {
+                            $log_action = 'Login';
+                            $log_details = "User successfully logged in.";
+                            $log_sql = "INSERT INTO user_logs (user_id, action_type, details, created_at) VALUES (?, ?, ?, NOW())";
+                            $log_stmt = $conn->prepare($log_sql);
+                            if ($log_stmt) {
+                                $log_stmt->bind_param("iss", $_SESSION['user_id'], $log_action, $log_details);
+                                $log_stmt->execute();
+                                $log_stmt->close();
+                            }
+                        } catch (Exception $e) {
+                            error_log("Failed to log login action: " . $e->getMessage());
+                        }
+
                         // ✅ Redirect by role
                         switch ($user['role_id']) {
                             case 1: // Superadmin
