@@ -62,9 +62,9 @@ $prodCatId = intval($product['category_id']);
 
 try {
     $catQuery = "SELECT id, name, parent_id FROM categories 
-    WHERE status = 'active' 
-    OR id = ? 
-    OR id = (SELECT parent_id FROM categories WHERE id = ?)";
+                 WHERE status = 'active' 
+                 OR id = ? 
+                 OR id = (SELECT parent_id FROM categories WHERE id = ?)";
     $catStmt = $conn->prepare($catQuery);
     $catStmt->bind_param("ii", $prodCatId, $prodCatId);
     $catStmt->execute();
@@ -122,6 +122,7 @@ if ($prodCatId > 0) {
     <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/products.css" id="main-style-link" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
  
     <!-- Custom CSS for AJAX notifications -->
     <style>
@@ -215,6 +216,59 @@ if ($prodCatId > 0) {
                 opacity: 1;
             }
         }
+
+        .select2-container--default .select2-selection--single {
+            height: 45px !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            display: flex;
+            align-items: center;
+            background-color: #fff !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: inherit !important;
+            color: #495057 !important;
+            padding-left: 0 !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 43px !important;
+            top: 1px !important;
+            right: 10px !important;
+        }
+        .select2-dropdown {
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+            z-index: 10001;
+        }
+
+        /* Integrated In-Field Search Styling */
+        .select2-container--open .select2-selection__rendered {
+            visibility: hidden;
+        }
+        .select2-container--open .select2-dropdown--below {
+            margin-top: -45px !important;
+            border-top: 1px solid #ced4da !important;
+        }
+        .select2-container--open .select2-dropdown--above {
+            margin-top: 45px !important;
+            border-bottom: 1px solid #ced4da !important;
+        }
+        .select2-search--dropdown {
+            padding: 0 !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            height: 44px !important;
+            padding: 8px 12px !important;
+            border: none !important;
+            border-bottom: 1px solid #ced4da !important;
+            border-radius: 8px 8px 0 0 !important;
+            outline: none !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #1565c0 !important;
+        }
     </style>
 </head>
 
@@ -288,8 +342,8 @@ if ($prodCatId > 0) {
                                     <label for="main_category_id" class="form-label">
                                         <i class="fas fa-tags"></i> Main Category<span class="required">*</span>
                                     </label>
-                                    <select class="form-select" id="main_category_id" name="main_category_id" required>
-                                        <option value="" disabled>Select main category</option>
+                                    <select class="form-select" id="main_category_id" name="main_category_id" data-placeholder="Search main category..." required>
+                                        <option value=""></option>
                                         <?php foreach ($mainCategories as $cat): ?>
                                             <option value="<?php echo $cat['id']; ?>" <?php echo $currentMainId == $cat['id'] ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($cat['name']); ?>
@@ -303,8 +357,8 @@ if ($prodCatId > 0) {
                                     <label for="sub_category_id" class="form-label">
                                         <i class="fas fa-level-down-alt"></i> Sub Category (Optional)
                                     </label>
-                                    <select class="form-select" id="sub_category_id" name="sub_category_id">
-                                        <option value="">Select sub category</option>
+                                    <select class="form-select" id="sub_category_id" name="sub_category_id" data-placeholder="Search sub category (optional)...">
+                                        <option value=""></option>
                                         <!-- Will be populated by JS -->
                                     </select>
                                     <div class="error-feedback" id="sub_category_id-error"></div>
@@ -420,6 +474,7 @@ if ($prodCatId > 0) {
 
     <!-- jQuery (make sure this is loaded before your custom script) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         // Store original values for reset functionality
@@ -440,6 +495,23 @@ if ($prodCatId > 0) {
         const initialSubId = <?php echo $currentSubId; ?>;
 
         $(document).ready(function() {
+            // Initialize Select2 for categories with placeholder refinement
+            $('#main_category_id, #sub_category_id').select2({
+                placeholder: function() {
+                    return $(this).data('placeholder');
+                },
+                allowClear: true,
+                width: '100%'
+            }).on('select2:open', function(e) {
+                // Focus the search field immediately and set its placeholder
+                const placeholder = $(this).data('placeholder') || 'Search...';
+                const searchField = document.querySelector('.select2-search__field');
+                if (searchField) {
+                    searchField.placeholder = placeholder;
+                    searchField.focus();
+                }
+            });
+
             // Initialize Sub Category dropdown if Main is selected
             if (initialMainId) {
                 populateSubCategories(initialMainId, initialSubId);
@@ -557,7 +629,12 @@ if ($prodCatId > 0) {
         // Show field-specific errors from server
         function showFieldErrors(errors) {
             $.each(errors, function(field, message) {
-                showError(field, message);
+                // Map category_id error to main_category_id field
+                if (field === 'category_id') {
+                    showError('main_category_id', message);
+                } else {
+                    showError(field, message);
+                }
             });
         }
         
@@ -635,6 +712,9 @@ if ($prodCatId > 0) {
             $('#main_category_id').val(originalValues.main_category_id);
             populateSubCategories(originalValues.main_category_id, originalValues.sub_category_id);
             $('#category_id').val(originalValues.category_id);
+            
+            // Refresh Select2
+            $('#main_category_id, #sub_category_id, #status').trigger('change');
             
             clearAllValidations();
             updateCharCount();
@@ -722,7 +802,7 @@ if ($prodCatId > 0) {
 
         function populateSubCategories(mainId, selectedSubId = 0) {
             const $subSelect = $('#sub_category_id');
-            $subSelect.html('<option value="">Select sub category</option>');
+            $subSelect.html('<option value=""></option>');
             
             if (mainId) {
                 const filteredSubs = subCategories.filter(sub => sub.parent_id == mainId);
@@ -731,6 +811,9 @@ if ($prodCatId > 0) {
                     $subSelect.append(`<option value="${sub.id}" ${selected}>${sub.name}</option>`);
                 });
             }
+            
+            // Refresh Select2 for sub category
+            $subSelect.trigger('change');
             
             updateFinalCategoryId();
         }

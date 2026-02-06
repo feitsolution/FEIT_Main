@@ -79,6 +79,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/products.css" id="main-style-link" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
  
     <style>
         .ajax-notification {
@@ -111,6 +112,59 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
+        }
+
+        .select2-container--default .select2-selection--single {
+            height: 45px !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            display: flex;
+            align-items: center;
+            background-color: #fff !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: inherit !important;
+            color: #495057 !important;
+            padding-left: 0 !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 43px !important;
+            top: 1px !important;
+            right: 10px !important;
+        }
+        .select2-dropdown {
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+            z-index: 10001;
+        }
+
+        /* Integrated In-Field Search Styling */
+        .select2-container--open .select2-selection__rendered {
+            visibility: hidden;
+        }
+        .select2-container--open .select2-dropdown--below {
+            margin-top: -45px !important;
+            border-top: 1px solid #ced4da !important;
+        }
+        .select2-container--open .select2-dropdown--above {
+            margin-top: 45px !important;
+            border-bottom: 1px solid #ced4da !important;
+        }
+        .select2-search--dropdown {
+            padding: 0 !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            height: 44px !important;
+            padding: 8px 12px !important;
+            border: none !important;
+            border-bottom: 1px solid #ced4da !important;
+            border-radius: 8px 8px 0 0 !important;
+            outline: none !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #1565c0 !important;
         }
     </style>
 </head>
@@ -150,8 +204,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                     <label for="parent_id" class="form-label">
                                         <i class="fas fa-level-up-alt"></i> Parent Category
                                     </label>
-                                    <select class="form-select" id="parent_id" name="parent_id">
-                                        <option value="0">None (Top Level)</option>
+                                    <select class="form-select" id="parent_id" name="parent_id" data-placeholder="Search Parent Category...">
+                                        <option value=""></option>
+                                        <option value="0" <?php echo $category['parent_id'] == 0 ? 'selected' : ''; ?>>None (Top Level)</option>
                                         <?php foreach ($categories as $cat): ?>
                                             <option value="<?php echo $cat['id']; ?>" <?php echo $category['parent_id'] == $cat['id'] ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($cat['name']); ?>
@@ -181,9 +236,27 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         $(document).ready(function() {
+            // Initialize Select2 for Parent Category with placeholder refinement
+            $('#parent_id').select2({
+                placeholder: function() {
+                    return $(this).data('placeholder');
+                },
+                allowClear: true,
+                width: '100%'
+            }).on('select2:open', function(e) {
+                // Focus the search field immediately and set its placeholder
+                const placeholder = $(this).data('placeholder') || 'Search...';
+                const searchField = document.querySelector('.select2-search__field');
+                if (searchField) {
+                    searchField.placeholder = placeholder;
+                    searchField.focus();
+                }
+            });
+
             $('#editCategoryForm').on('submit', function(e) {
                 e.preventDefault();
                 
