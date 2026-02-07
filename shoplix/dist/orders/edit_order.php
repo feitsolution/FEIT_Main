@@ -693,7 +693,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                         <div class="section-body">
                             <div class="notes-section">
                                 <label class="form-label">Additional Notes</label>
-                                <textarea name="notes" class="form-control" rows="3" placeholder="Enter any additional notes for this order..."><?= htmlspecialchars($order['notes']) ?></textarea>
+                                <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Enter any additional notes for this order..."><?= htmlspecialchars($order['notes']) ?></textarea>
                             </div>
                             <div class="submit-section">
                                 <button type="submit" class="btn-primary" id="submit_order">
@@ -1825,7 +1825,7 @@ const FormValidator = {
     // ========== EVENT LISTENERS ==========
     const EventListeners = {
         init: () => {
-            ['customer_name', 'customer_email', 'customer_phone', 'address_line1', 'address_line2'].forEach(id => {
+            ['customer_name', 'customer_email', 'customer_phone', 'address_line1', 'address_line2', 'notes'].forEach(id => {
                 document.getElementById(id).addEventListener('input', FormValidator.validateAndToggleSubmit);
             });
 
