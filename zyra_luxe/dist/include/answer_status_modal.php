@@ -34,10 +34,10 @@
                 <!-- Reason/Notes textarea -->
                 <div class="form-group mb-3">
                     <label for="answer_reason" class="form-label" id="reasonLabel">
-                        Call Notes <span class="text-danger">*</span>
+                        Call Notes
                     </label>
                     <textarea class="form-control" id="answer_reason" name="answer_reason" rows="4" 
-                              placeholder="Enter call notes or reason..." required></textarea>
+                              placeholder="Enter call notes or reason..."></textarea>
                     <small class="form-text text-muted" id="reasonHelp">
                         Please provide details about the call interaction
                     </small>

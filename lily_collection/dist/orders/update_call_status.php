@@ -56,14 +56,6 @@ try {
         throw new Exception('Invalid call log status');
     }
     
-    if (empty($answer_reason)) {
-        throw new Exception('Call notes/reason is required');
-    }
-    
-    if (strlen($answer_reason) < 5) {
-        throw new Exception('Call notes must be at least 5 characters long');
-    }
-    
     // Start database transaction
     $conn->begin_transaction();
     
@@ -149,9 +141,15 @@ try {
         
         // Simple log message format with actual notes
         if ($call_log == 1) {
-            $log_message = "Call answered order({$order_id}) - {$answer_reason}";
+            $log_message = "Call answered order({$order_id})";
+            if (!empty($answer_reason)) {
+                $log_message .= " - {$answer_reason}";
+            }
         } else {
-            $log_message = "Call no answer order({$order_id}) - {$answer_reason}";
+            $log_message = "Call no answer order({$order_id})";
+            if (!empty($answer_reason)) {
+                $log_message .= " - {$answer_reason}";
+            }
         }
         
         // Insert user log entry with simple format

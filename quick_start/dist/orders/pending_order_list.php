@@ -1443,7 +1443,7 @@ function updateModalContent(currentStatus, newStatus) {
         modalTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Answered';
         alertMessage.className = 'alert alert-success mb-3';
         alertText.textContent = 'Mark this order as answered and provide call notes';
-        reasonLabel.innerHTML = 'Answer Notes <span class="text-danger">*</span>';
+        reasonLabel.innerHTML = 'Answer Notes';
         reasonHelp.textContent = 'Please provide details about the customer conversation';
         submitButtonText.textContent = 'Mark as Answered';
         submitBtn.style.background = '#28a745 !important';
@@ -1453,7 +1453,7 @@ function updateModalContent(currentStatus, newStatus) {
         modalTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i>Mark as No Answer';
         alertMessage.className = 'alert alert-warning mb-3';
         alertText.textContent = 'Mark this order as no answer and provide reason';
-        reasonLabel.innerHTML = 'No Answer Reason <span class="text-danger">*</span>';
+        reasonLabel.innerHTML = 'No Answer Reason';
         reasonHelp.textContent = 'Please specify why the customer did not answer';
         submitButtonText.textContent = 'Mark as No Answer';
         submitBtn.style.background = '#dc3545 !important';
@@ -1493,13 +1493,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('answer-submit-btn');
             
             // Validation
-            if (!orderId || !answerReason) {
-                alert('Please fill in all required fields');
-                return;
-            }
-            
-            if (answerReason.length < 5) {
-                alert('Please provide more detailed notes (minimum 5 characters)');
+            if (!orderId) {
+                alert('Order ID is missing');
                 return;
             }
             
