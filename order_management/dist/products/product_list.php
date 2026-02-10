@@ -738,10 +738,14 @@ $result = $conn->query($sql);
         });
 
         // Stock Update Functionality
+        let currentStockValue = 0;
+
         function openStockUpdateModal(button) {
             const productId = button.getAttribute('data-product-id');
             const productName = button.getAttribute('data-product-name');
             const productStock = button.getAttribute('data-product-stock');
+            
+            currentStockValue = parseInt(productStock) || 0;
             
             document.getElementById('stock-modal-product-name').textContent = productName;
             document.getElementById('stock-modal-current-stock').textContent = productStock;
@@ -762,6 +766,36 @@ $result = $conn->query($sql);
             adjustmentInput.focus();
             adjustmentInput.select();
         }
+
+        // Validate adjustment value when decreasing stock
+        document.addEventListener('DOMContentLoaded', function() {
+            const adjustmentInput = document.getElementById('adjustment_value');
+            const stockOperationRadios = document.querySelectorAll('input[name="stock_operation"]');
+            
+            if (adjustmentInput) {
+                adjustmentInput.addEventListener('input', function() {
+                    const selectedOperation = document.querySelector('input[name="stock_operation"]:checked');
+                    if (selectedOperation && selectedOperation.value === 'decrease') {
+                        const enteredValue = parseInt(this.value) || 0;
+                        if (enteredValue > currentStockValue) {
+                            this.value = currentStockValue;
+                        }
+                    }
+                });
+            }
+            
+            // Re-validate when switching to decrease operation
+            stockOperationRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'decrease') {
+                        const currentValue = parseInt(adjustmentInput.value) || 0;
+                        if (currentValue > currentStockValue) {
+                            adjustmentInput.value = currentStockValue;
+                        }
+                    }
+                });
+            });
+        });
 
         function closeStockUpdateModal() {
             const stockModal = document.getElementById('stockUpdateModal');
