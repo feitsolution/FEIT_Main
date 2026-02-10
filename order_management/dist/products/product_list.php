@@ -738,10 +738,14 @@ $result = $conn->query($sql);
         });
 
         // Stock Update Functionality
+        let currentStockValue = 0;
+
         function openStockUpdateModal(button) {
             const productId = button.getAttribute('data-product-id');
             const productName = button.getAttribute('data-product-name');
             const productStock = button.getAttribute('data-product-stock');
+            
+            currentStockValue = parseInt(productStock) || 0;
             
             document.getElementById('stock-modal-product-name').textContent = productName;
             document.getElementById('stock-modal-current-stock').textContent = productStock;
@@ -763,6 +767,51 @@ $result = $conn->query($sql);
             adjustmentInput.select();
         }
 
+        // Validate adjustment value when decreasing stock
+        document.addEventListener('DOMContentLoaded', function() {
+            const adjustmentInput = document.getElementById('adjustment_value');
+            const stockOperationRadios = document.querySelectorAll('input[name="stock_operation"]');
+            
+            if (adjustmentInput) {
+                adjustmentInput.addEventListener('input', function() {
+                    const selectedOperation = document.querySelector('input[name="stock_operation"]:checked');
+                    if (selectedOperation && selectedOperation.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            this.value = 1;
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const enteredValue = parseInt(this.value) || 0;
+                        if (enteredValue > currentStockValue) {
+                            this.value = currentStockValue;
+                        }
+                    }
+                });
+            }
+            
+            // Re-validate when switching to decrease operation
+            stockOperationRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const currentValue = parseInt(adjustmentInput.value) || 0;
+                        if (currentValue > currentStockValue) {
+                            adjustmentInput.value = currentStockValue;
+                        }
+                    }
+                });
+            });
+        });
+
         function closeStockUpdateModal() {
             const stockModal = document.getElementById('stockUpdateModal');
             if (stockModal) stockModal.style.display = 'none';
@@ -771,6 +820,12 @@ $result = $conn->query($sql);
         function updateProductStock(productId, operation, adjustmentValue) {
             if (adjustmentValue === '' || isNaN(adjustmentValue) || parseInt(adjustmentValue) <= 0) {
                 alert('Please enter a valid quantity greater than 0.');
+                return;
+            }
+
+            // Check if trying to decrease when stock is 0
+            if (operation === 'decrease' && currentStockValue <= 0) {
+                alert('Cannot decrease stock. Current stock is already 0.');
                 return;
             }
 
