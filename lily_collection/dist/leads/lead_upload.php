@@ -416,11 +416,11 @@ $cityStmt->close();
                 }
              
                 // Check Email if provided
-                if (!empty($emailForDb)) {
-                    $customerCheckConditions[] = "email = ?";
-                    $customerCheckParams[] = $emailForDb;
-                    $customerCheckTypes .= 's';
-                }
+                // if (!empty($emailForDb)) {
+                //     $customerCheckConditions[] = "email = ?";
+                //     $customerCheckParams[] = $emailForDb;
+                //     $customerCheckTypes .= 's';
+                // }
                 
                 // Build the query
                 $customerCheckSql = "SELECT customer_id FROM customers WHERE " . implode(' OR ', $customerCheckConditions) . " LIMIT 1";

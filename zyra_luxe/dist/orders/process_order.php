@@ -261,36 +261,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             // STEP 2: If phone not found, check email (optional - frontend should prevent duplicate email)
-            if ($is_new_customer && !empty($customer_email)) {
+            // if ($is_new_customer && !empty($customer_email)) {
                 
-                $checkEmailSql = "SELECT customer_id, name, email, phone, phone_2 
-                                FROM customers 
-                                WHERE email = ? 
-                                AND status = 'Active'
-                                LIMIT 1";
+            //     $checkEmailSql = "SELECT customer_id, name, email, phone, phone_2 
+            //                     FROM customers 
+            //                     WHERE email = ? 
+            //                     AND status = 'Active'
+            //                     LIMIT 1";
                 
-                $stmt = $conn->prepare($checkEmailSql);
+            //     $stmt = $conn->prepare($checkEmailSql);
                 
-                if (!$stmt) {
-                    throw new Exception("Failed to prepare email check query: " . $conn->error);
-                }
+            //     if (!$stmt) {
+            //         throw new Exception("Failed to prepare email check query: " . $conn->error);
+            //     }
                 
-                $stmt->bind_param("s", $customer_email);
+            //     $stmt->bind_param("s", $customer_email);
                 
-                if (!$stmt->execute()) {
-                    throw new Exception("Failed to execute email check: " . $stmt->error);
-                }
+            //     if (!$stmt->execute()) {
+            //         throw new Exception("Failed to execute email check: " . $stmt->error);
+            //     }
                 
-                $result = $stmt->get_result();
+            //     $result = $stmt->get_result();
                 
-                if ($result->num_rows > 0) {
-                    // Email exists - this should be caught by frontend validation
-                    // But as a safety measure, we block it here too
-                    throw new Exception("This email is already registered. Please use a different email.");
-                }
+            //     if ($result->num_rows > 0) {
+            //         // Email exists - this should be caught by frontend validation
+            //         // But as a safety measure, we block it here too
+            //         throw new Exception("This email is already registered. Please use a different email.");
+            //     }
                 
-                $stmt->close();
-            }
+            //     $stmt->close();
+            // }
 
             // ==========================================
             // STEP 3: CREATE NEW CUSTOMER (Only if both phone and email are new)
