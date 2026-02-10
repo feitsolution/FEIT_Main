@@ -494,9 +494,9 @@ $rate = cs_condition($conn, $customerId);
 $orderSql = "INSERT INTO order_header (
     customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
     pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-    mobile, mobile_2, city_id, address_line1, address_line2, full_name, delivery_fee, call_log, created_by, `condition`
+    mobile, mobile_2, city_id, address_line1, address_line2, full_name, email, delivery_fee, call_log, created_by, `condition`
 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)";
+         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)";
 
 $orderStmt = $conn->prepare($orderSql);
 if (!$orderStmt) {
@@ -505,7 +505,7 @@ if (!$orderStmt) {
 $notes = !empty($other) ? $other : 'Imported from CSV';
  
 
-$orderStmt->bind_param("iidsdsssisssdii", 
+$orderStmt->bind_param("iidsdsssissssdii", 
     $customerId,                // customer_id (int)
     $assignedUserId,            // user_id (int)
     $subtotal,                  // subtotal (decimal) - WITHOUT delivery
@@ -518,6 +518,7 @@ $orderStmt->bind_param("iidsdsssisssdii",
     $addressLine1,              // address_line1 (string)
     $addressLine2,              // address_line2 (string)
     $fullName,                  // full_name (string)
+    $emailForDb,                // email (string)
     $deliveryFee,               // delivery_fee (decimal)
     $loggedInUserId,            // created_by (int)
     $rate        // condition (int)

@@ -177,16 +177,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         customer_id = ?, issue_date = ?, due_date = ?, 
                         subtotal = ?, discount = ?, total_amount = ?, delivery_fee = ?, 
                         notes = ?, pay_status = ?, pay_date = ?, 
-                        product_code = ?, full_name = ?, mobile = ?, mobile_2 = ?, 
+                        product_code = ?, full_name = ?, email = ?, mobile = ?, mobile_2 = ?, 
                         address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?
                       WHERE order_id = ? AND status = 'pending'";
         
         $stmt = $conn->prepare($updateSql);
-        $stmt->bind_param("issddddsssssssssiiis", 
+        $stmt->bind_param("issddddssssssssssiiis", 
             $customer_id, $order_date, $due_date, 
             $subtotal_before_discounts, $total_discount, $total_amount, $delivery_fee,
             $notes, $pay_status, $pay_date,
-            $product_code_str, $customer_name, $customer_phone, $customer_phone_2,
+            $product_code_str, $customer_name, $customer_email, $customer_phone, $customer_phone_2,
             $address_line1, $address_line2, $city_id, $zone_id, $district_id,
             $order_id
         );

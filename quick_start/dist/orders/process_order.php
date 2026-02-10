@@ -553,9 +553,9 @@ $rate = cs_condition($conn, $customer_id);
     customer_id, user_id, issue_date, due_date, 
     subtotal, discount, total_amount, delivery_fee,
     notes, currency, status, pay_status, pay_date, created_by,
-    product_code, full_name, mobile, mobile_2,
+    product_code, full_name, email, mobile, mobile_2,
     address_line1, address_line2, city_id, zone_id, district_id, `condition`
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($insertOrderSql);
 
@@ -564,7 +564,7 @@ $rate = cs_condition($conn, $customer_id);
     }
 
   $stmt->bind_param(
-    "iissddddsssssissssssiiii",  // Removed one 's' (23 parameters now)
+    "iissddddsssssisssssssiiii",  
     $customer_id,                   // 1.  customer_id
     $user_id,                       // 2.  user_id
     $order_date,                    // 3.  issue_date
@@ -581,14 +581,15 @@ $rate = cs_condition($conn, $customer_id);
     $user_id,                       // 14. created_by
     $final_product_code,            // 15. product_code
     $final_full_name,               // 16. full_name (FROM FORM)
-    $final_mobile,                  // 17. mobile (FROM FORM) - moved up
-    $final_mobile_2,                // 18. mobile_2 (FROM FORM)
-    $final_address_line1,           // 19. address_line1 (FROM FORM)
-    $final_address_line2,           // 20. address_line2 (FROM FORM)
-    $final_city_id,                 // 21. city_id (FROM FORM)
-    $final_zone_id,                 // 22. zone_id (FROM CITY_TABLE)
-    $final_district_id,              // 23. district_id (FROM CITY_TABLE)
-    $rate
+    $final_email,                   // 17. email (FROM FORM)
+    $final_mobile,                  // 18. mobile (FROM FORM)
+    $final_mobile_2,                // 19. mobile_2 (FROM FORM)
+    $final_address_line1,           // 20. address_line1 (FROM FORM)
+    $final_address_line2,           // 21. address_line2 (FROM FORM)
+    $final_city_id,                 // 22. city_id (FROM FORM)
+    $final_zone_id,                 // 23. zone_id (FROM CITY_TABLE)
+    $final_district_id,             // 24. district_id (FROM CITY_TABLE)
+    $rate                           // 25. condition
 );
 
     if (!$stmt->execute()) {
