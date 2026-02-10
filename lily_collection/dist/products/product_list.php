@@ -353,6 +353,18 @@ $result = $conn->query($sql);
                                                         title="View Product Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+
+                                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                <button type="button" class="action-btn stock-update-btn" 
+                                                        style="background: #17a2b8; color: white;"
+                                                        title="Update Stock"
+                                                        data-product-id="<?= $row['id'] ?>"
+                                                        data-product-name="<?= htmlspecialchars($row['name']) ?>"
+                                                        data-product-stock="<?= htmlspecialchars($row['stock_quantity']) ?>"
+                                                        onclick="openStockUpdateModal(this)">
+                                                    <i class="fas fa-boxes"></i>
+                                                </button>
+                                                <?php endif; ?>
                                                 
                                                 <button class="action-btn dispatch-btn" title="Edit Product" 
                                                         onclick="editProduct(<?php echo $row['id']; ?>)">
@@ -493,6 +505,44 @@ $result = $conn->query($sql);
         </div>
     </div>
 
+    <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+    <!-- Stock Update Modal -->
+    <div id="stockUpdateModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h4>Quick Stock Update</h4>
+                <span class="close" onclick="closeStockUpdateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px;">Updating stock for: <strong id="stock-modal-product-name"></strong></p>
+                <p style="margin-bottom: 15px;">Current Stock: <strong id="stock-modal-current-stock"></strong></p>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Action Type</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="stock_operation" value="increase" checked> Increase
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="stock_operation" value="decrease"> Decrease
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="adjustment_value" style="display: block; margin-bottom: 8px; font-weight: 500;">Quantity</label>
+                    <input type="number" id="adjustment_value" class="form-control" min="1" step="1" value="1" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+
+                <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeStockUpdateModal()" style="padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #6c757d; color: white;">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmStockUpdateBtn" style="padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #17a2b8; color: white;">Update Stock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Footer -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
 
@@ -604,8 +654,140 @@ $result = $conn->query($sql);
                 if (event.target === statusModal) {
                     closeConfirmationModal();
                 }
+                const stockModal = document.getElementById('stockUpdateModal');
+                if (event.target === stockModal) {
+                    closeStockUpdateModal();
+                }
             }
         });
+
+        // Stock Update Functionality
+        let currentStockValue = 0;
+
+        function openStockUpdateModal(button) {
+            const productId = button.getAttribute('data-product-id');
+            const productName = button.getAttribute('data-product-name');
+            const productStock = button.getAttribute('data-product-stock');
+            
+            currentStockValue = parseInt(productStock) || 0;
+            
+            document.getElementById('stock-modal-product-name').textContent = productName;
+            document.getElementById('stock-modal-current-stock').textContent = productStock;
+            
+            const adjustmentInput = document.getElementById('adjustment_value');
+            adjustmentInput.value = 1;
+            
+            // Explicitly set default operation to increase
+            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+
+            const confirmBtn = document.getElementById('confirmStockUpdateBtn');
+            confirmBtn.onclick = function() {
+                const operation = document.querySelector('input[name="stock_operation"]:checked').value;
+                updateProductStock(productId, operation, adjustmentInput.value);
+            };
+            
+            document.getElementById('stockUpdateModal').style.display = 'block';
+            adjustmentInput.focus();
+            adjustmentInput.select();
+        }
+
+        // Validate adjustment value when decreasing stock
+        document.addEventListener('DOMContentLoaded', function() {
+            const adjustmentInput = document.getElementById('adjustment_value');
+            const stockOperationRadios = document.querySelectorAll('input[name="stock_operation"]');
+            
+            if (adjustmentInput) {
+                adjustmentInput.addEventListener('input', function() {
+                    const selectedOperation = document.querySelector('input[name="stock_operation"]:checked');
+                    if (selectedOperation && selectedOperation.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            this.value = 1;
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const enteredValue = parseInt(this.value) || 0;
+                        if (enteredValue > currentStockValue) {
+                            this.value = currentStockValue;
+                        }
+                    }
+                });
+            }
+            
+            // Re-validate when switching to decrease operation
+            stockOperationRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const currentValue = parseInt(adjustmentInput.value) || 0;
+                        if (currentValue > currentStockValue) {
+                            adjustmentInput.value = currentStockValue;
+                        }
+                    }
+                });
+            });
+        });
+
+        function closeStockUpdateModal() {
+            const stockModal = document.getElementById('stockUpdateModal');
+            if (stockModal) stockModal.style.display = 'none';
+        }
+
+        function updateProductStock(productId, operation, adjustmentValue) {
+            if (adjustmentValue === '' || isNaN(adjustmentValue) || parseInt(adjustmentValue) <= 0) {
+                alert('Please enter a valid quantity greater than 0.');
+                return;
+            }
+
+            // Check if trying to decrease when stock is 0
+            if (operation === 'decrease' && currentStockValue <= 0) {
+                alert('Cannot decrease stock. Current stock is already 0.');
+                return;
+            }
+
+            const btn = document.getElementById('confirmStockUpdateBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Updating...';
+            btn.disabled = true;
+
+            fetch('update_stock_action.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    operation: operation,
+                    adjustment_value: adjustmentValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeStockUpdateModal();
+                    alert('Stock updated successfully!');
+                    location.reload(); // Simplest way to reflect all changes including threshold icons
+                } else {
+                    alert('Error updating stock: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the stock.');
+            })
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
 
         function openStatusConfirmationModal(button) {
             const productId = button.getAttribute('data-product-id');
