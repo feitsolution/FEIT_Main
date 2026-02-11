@@ -307,9 +307,6 @@ function cs_condition($conn, $customer_id) {
                 if (empty($phoneNumber)) {
                     throw new Exception("Phone Number is required");
                 }
-                if (empty($city)) {
-                    throw new Exception("City is required");
-                }
                 
                 // MUST be exactly 10 digits and start with 0
                 if (!preg_match('/^0\d{9}$/', $phoneNumber)) {
@@ -321,28 +318,31 @@ function cs_condition($conn, $customer_id) {
                 }
                 
 
-                
-               // Get city_id from city name
-$cityId = null;
-$cityError = null;
-$citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
-$cityStmt = $conn->prepare($citySql);
-if (!$cityStmt) {
-    throw new Exception("Failed to prepare city query: " . $conn->error);
-}
-$cityStmt->bind_param("s", $city);
-$cityStmt->execute();
-$cityResult = $cityStmt->get_result();
-
-if ($cityResult->num_rows === 0) {
-    // City not found - store error but continue processing
-    $cityError = "City '$city' not found.";
-    $cityId = null; // Will be NULL in database
+             // Get city_id from city name 
+$cityError = null;  
+if (empty($city)) {
+    $cityError = "City is missing.";
+    $cityId = null;
 } else {
-    $cityData = $cityResult->fetch_assoc();
-    $cityId = $cityData['city_id'];
+    $citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
+    $cityStmt = $conn->prepare($citySql);
+    if (!$cityStmt) {
+        throw new Exception("Failed to prepare city query: " . $conn->error);
+    }
+    $cityStmt->bind_param("s", $city);
+    $cityStmt->execute();
+    $cityResult = $cityStmt->get_result();
+
+    if ($cityResult->num_rows === 0) {
+        // City not found - store error but continue processing
+        $cityError = "City '$city' not found.";
+        $cityId = null; // Will be NULL in database
+    } else {
+        $cityData = $cityResult->fetch_assoc();
+        $cityId = $cityData['city_id'];
+    }
+    $cityStmt->close();
 }
-$cityStmt->close();
 
 // Validate address line 1 
 $addressError = null;
