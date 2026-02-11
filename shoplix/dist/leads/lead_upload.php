@@ -88,6 +88,12 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             throw new Exception("Please select at least one user.");
         }
         
+        // Validate Product Selection
+        if (empty($_POST['product_id'])) {
+            throw new Exception("Please select a product related to this upload.");
+        }
+        $selectedProductCode = $_POST['product_id'];
+        
         // Get the logged-in user ID who is performing the import
         $loggedInUserId = $_SESSION['user_id'];
         
@@ -145,7 +151,6 @@ if ($_POST && isset($_FILES['csv_file']) && isset($_POST['users'])) {
             'email', 
             'address line 1', 
             'address line 2', 
-            'product code', 
             'quantity',
             'other'
         ];
@@ -238,7 +243,6 @@ function cs_condition($conn, $customer_id) {
                 $email = trim($row[$headerMap['email']] ?? '');
                 $addressLine1 = trim($row[$headerMap['address line 1']] ?? '');
                 $addressLine2 = trim($row[$headerMap['address line 2']] ?? '');
-                $productCode = trim($row[$headerMap['product code']] ?? '');
                 
                 $quantityInput = isset($headerMap['quantity']) ? trim($row[$headerMap['quantity']] ?? '') : '';
                 
@@ -306,12 +310,6 @@ function cs_condition($conn, $customer_id) {
                 if (empty($city)) {
                     throw new Exception("City is required");
                 }
-                if (empty($productCode)) {
-                    throw new Exception("Product Code is required");
-                }
-                if (empty($addressLine1)) {
-                    throw new Exception("Address Line 1 is required");
-                }
                 
                 // MUST be exactly 10 digits and start with 0
                 if (!preg_match('/^0\d{9}$/', $phoneNumber)) {
@@ -325,6 +323,8 @@ function cs_condition($conn, $customer_id) {
 
                 
                // Get city_id from city name
+$cityId = null;
+$cityError = null;
 $citySql = "SELECT city_id FROM city_table WHERE LOWER(city_name) = LOWER(?) LIMIT 1";
 $cityStmt = $conn->prepare($citySql);
 if (!$cityStmt) {
@@ -335,32 +335,50 @@ $cityStmt->execute();
 $cityResult = $cityStmt->get_result();
 
 if ($cityResult->num_rows === 0) {
-    throw new Exception("City '$city' not found in database");
+    // City not found - store error but continue processing
+    $cityError = "City '$city' not found.";
+    $cityId = null; // Will be NULL in database
+} else {
+    $cityData = $cityResult->fetch_assoc();
+    $cityId = $cityData['city_id'];
+}
+$cityStmt->close();
+
+// Validate address line 1 
+$addressError = null;
+if (empty($addressLine1)) {
+    $addressError = "Address Line 1 is missing.";
 }
 
-$cityData = $cityResult->fetch_assoc();
-$cityId = $cityData['city_id'];  // Changed from 'id' to 'city_id'
-$cityStmt->close();
+// Combine errors for upload_error
+$upload_error = null;
+if ($cityError || $addressError) {
+    $errors = array_filter([$cityError, $addressError]);
+    $upload_error = implode(" | ", $errors);
+}
                 
-                // Check if product exists and is active
-                $productSql = "SELECT id, lkr_price FROM products WHERE product_code = ? AND LOWER(status) = 'active'";
+                
+                // Get selected product details
+                $selectedProductCode = $_POST['product_id'];
+                
+                $productSql = "SELECT id, lkr_price, product_code FROM products WHERE id = ? AND LOWER(status) = 'active'";
                 $productStmt = $conn->prepare($productSql);
                 if (!$productStmt) {
                     throw new Exception("Failed to prepare product query: " . $conn->error);
                 }
 
-                $productCode = trim($productCode); // remove spaces
-                $productStmt->bind_param("s", $productCode);
+                $productStmt->bind_param("i", $selectedProductCode);
                 $productStmt->execute();
                 $productResult = $productStmt->get_result();
 
                 if ($productResult->num_rows === 0) {
-                    throw new Exception("Product code '$productCode' not found or inactive");
+                    throw new Exception("Product code not found or inactive");
                 }
 
                 $product = $productResult->fetch_assoc();
                 $productId = $product['id'];
                 $unitPrice = (float)$product['lkr_price'];
+                $productCode = $product['product_code'];
                 $subtotal = $unitPrice;
                 $productStmt->close();
 
@@ -494,9 +512,9 @@ $rate = cs_condition($conn, $customerId);
 $orderSql = "INSERT INTO order_header (
     customer_id, user_id, issue_date, due_date, subtotal, discount, notes, 
     pay_status, pay_by, total_amount, currency, status, product_code, interface, 
-    mobile, mobile_2, city_id, address_line1, address_line2, full_name, email, delivery_fee, call_log, created_by, `condition`
+    mobile, mobile_2, city_id, address_line1, address_line2, full_name, email, delivery_fee, call_log, created_by, `condition`, upload_error
 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), ?, 0.00, ?, 
-         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)";
+         'unpaid', 'NULL', ?, 'lkr', 'pending', ?, 'leads', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)";
 
 $orderStmt = $conn->prepare($orderSql);
 if (!$orderStmt) {
@@ -505,13 +523,13 @@ if (!$orderStmt) {
 $notes = !empty($other) ? $other : 'Imported from CSV';
  
 
-$orderStmt->bind_param("iidsdsssissssdii", 
+$orderStmt->bind_param("iidsdississssiiis", 
     $customerId,                // customer_id (int)
     $assignedUserId,            // user_id (int)
     $subtotal,                  // subtotal (decimal) - WITHOUT delivery
     $notes,                     // notes (string)
     $totalAmountWithDelivery,   // total_amount (decimal) - WITH delivery
-    $productCode,               // product_code (string)
+    $productId,               // product_id (int)
     $phoneNumber,               // mobile (string)
     $phoneNumber2,              // mobile_2 (string)
     $cityId,                    // city_id (int)
@@ -521,7 +539,8 @@ $orderStmt->bind_param("iidsdsssissssdii",
     $emailForDb,                // email (string)
     $deliveryFee,               // delivery_fee (decimal)
     $loggedInUserId,            // created_by (int)
-    $rate        // condition (int)
+    $rate,                      // condition (int)
+    $upload_error               // upload_error
 );
 
 if (!$orderStmt->execute()) {
@@ -640,6 +659,16 @@ if ($usersResult && $usersResult->num_rows > 0) {
 }
 $usersStmt->close();
 
+// Fetch active products for dropdown
+$productsSql = "SELECT id, name, product_code, lkr_price, stock_quantity FROM products WHERE status = 'active' ORDER BY name ASC";
+$productsResult = $conn->query($productsSql);
+$products = [];
+if ($productsResult && $productsResult->num_rows > 0) {
+    while ($row = $productsResult->fetch_assoc()) {
+        $products[] = $row;
+    }
+}
+
 include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 ?>
@@ -719,6 +748,34 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
     background-color: #c82333;
     color: white;
 }
+
+.product-option:hover {
+    background-color: #f5f5f5;
+}
+
+.product-option.active {
+    background-color: #e9ecef;
+}
+
+/* Custom layout for lead upload */
+.upload-grid-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.upload-column {
+    flex: 1;
+    min-width: 300px;
+}
+
+@media (max-width: 768px) {
+    .upload-grid-row {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+}
 </style>
 
 <body>
@@ -729,8 +786,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
             
             <div class="page-header">
                 <div class="page-block">
-                    <div class="page-header-title">
+                    <div class="page-header-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <h5 class="mb-0 font-medium">Lead Management</h5>
+                        <a href="/shoplix/dist/templates/generate_template.php" class="choose-file-btn">Download CSV Template</a>
                     </div>
                 </div>
             </div>
@@ -779,18 +837,39 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 
                 <div class="lead-upload-container">
                     <form method="POST" enctype="multipart/form-data" id="uploadForm">
-                        <div class="file-upload-section">
-                            <a href="/shoplix/dist/templates/generate_template.php" class="choose-file-btn">
-                                Download CSV Template
-                            </a>
+                        <div class="upload-grid-row">
+                            <!-- Left Column: Product Selection -->
+                            <div class="upload-column product-selection-section">
+                                <h2 class="section-title">Select Product <span style="color: red;">*</span></h2>
+                                
+                                <div class="form-group" style="position: relative;">
+                                    
+                                    <input type="text" id="product_search" class="form-control" placeholder="Type to search product..." autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px;">
+                                    <input type="hidden" name="product_id" id="product_id" required>
+                                    <div id="product_dropdown" style="display: none; position: absolute; background: white; border: 1px solid #ced4da; border-top: none; max-height: 150px; overflow-y: auto; width: 100%; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                        <?php foreach ($products as $prod): ?>
+                                            <div class="product-option" data-id="<?php echo $prod['id']; ?>" data-name="<?php echo htmlspecialchars($prod['name']); ?>" data-code="<?php echo htmlspecialchars($prod['product_code']); ?>" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
+                                                <strong><?php echo htmlspecialchars($prod['name']); ?></strong> (<?php echo htmlspecialchars($prod['product_code']); ?>)
+                                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                    <span style="color: #6c757d; font-size: 0.9em;"> - Stock: <?php echo $prod['stock_quantity']; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <div id="no_products_found" style="display: none; padding: 10px; color: #999; text-align: center;">No products found</div>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <div class="file-upload-box">
-                                <p><strong>Select CSV File</strong></p>
-                                <p id="file-name">No file selected</p>
-                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;">
-                                <button type="button" class="choose-file-btn" onclick="document.getElementById('csv_file').click()">
-                                     Choose File
-                                </button>
+                            <!-- Right Column: CSV Upload -->
+                            <div class="upload-column file-upload-section" style="margin-bottom: 0; padding-bottom: 0;">
+                                <h2 class="section-title">CSV Upload</h2>
+                                <div class="file-upload-box" style="margin-top: 0.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <p id="file-name" style="margin-bottom: 0.5rem;">No file selected</p>
+                                    <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;">
+                                    <button type="button" class="choose-file-btn" onclick="document.getElementById('csv_file').click()">Choose File</button>
+                                </div>
+                                </div>
                             </div>
                         </div>
 
@@ -838,8 +917,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                             <h4>📋 Upload Guidelines & Error Handling</h4>
                             <ul>
                                 <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
-                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1, Product Code</li>
-                                <li><strong>Note:</strong> Product Price is automatically fetched from the Product Code</li>
+                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1</li>
+                                <li><strong>Note:</strong> Product is selected from the dropdown above</li>
                                 <li><strong>Optional fields:</strong> Quantity, Phone Number 2, Email, Address Line 2, Other</li>
                                 <li><strong>Quantity Rule:</strong> Defaults to 1 if empty or 0</li>
                                 <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
@@ -865,7 +944,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                                 <li><strong>"Phone Number must be exactly 10 digits"</strong> → Use format: 0771234567</li>
                                 <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
                                 <li><strong>"City not found"</strong> → City name must match system database exactly</li>
-                                <li><strong>"Product code not found"</strong> → Verify product code exists and is active</li>
                                 <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
                             </ul>
                             
@@ -889,6 +967,100 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/footer.php'); ?>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/scripts.php'); ?>
     
+    
+    <script>
+        // Product Search Autocomplete
+        const productSearch = document.getElementById('product_search');
+        const productId = document.getElementById('product_id');
+        const productDropdown = document.getElementById('product_dropdown');
+        const productOptions = document.querySelectorAll('.product-option');
+        
+        // Show dropdown when input is focused or typed in
+        productSearch.addEventListener('focus', function() {
+            this.select(); 
+            filterProducts(this.value);
+            productDropdown.style.display = 'block';
+        });
+        
+        productSearch.addEventListener('input', function() {
+            filterProducts(this.value);
+            productDropdown.style.display = 'block';
+        });
+        
+        // Filter products based on search term
+        function filterProducts(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            const noProductsFound = document.getElementById('no_products_found');
+            let hasVisibleOptions = false;
+            
+            productOptions.forEach(option => {
+                const name = option.dataset.name.toLowerCase();
+                const code = option.dataset.code.toLowerCase();
+                const combined = (name + ' (' + code + ')').toLowerCase();
+                
+    
+                if (term === '' || name.includes(term) || code.includes(term) || combined === term) {
+                    option.style.display = 'block';
+                    hasVisibleOptions = true;
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            if (noProductsFound) {
+                noProductsFound.style.display = hasVisibleOptions ? 'none' : 'block';
+            }
+        }
+        
+        // Handle product selection
+        productOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const id = this.dataset.id;
+                const name = this.dataset.name;
+                const code = this.dataset.code;
+                
+                productId.value = id;
+                productSearch.value = name + ' (' + code + ')';
+                productDropdown.style.display = 'none';
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!productSearch.contains(e.target) && !productDropdown.contains(e.target)) {
+                productDropdown.style.display = 'none';
+            }
+        });
+        
+        // Keyboard navigation
+        let activeIndex = -1;
+        productSearch.addEventListener('keydown', function(e) {
+            const visibleOptions = Array.from(productOptions).filter(opt => opt.style.display !== 'none');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = Math.min(activeIndex + 1, visibleOptions.length - 1);
+                updateActiveOption(visibleOptions);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = Math.max(activeIndex - 1, 0);
+                updateActiveOption(visibleOptions);
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                visibleOptions[activeIndex].click();
+            } else if (e.key === 'Escape') {
+                productDropdown.style.display = 'none';
+            }
+        });
+        
+        function updateActiveOption(visibleOptions) {
+            productOptions.forEach(opt => opt.classList.remove('active'));
+            if (activeIndex >= 0 && activeIndex < visibleOptions.length) {
+                visibleOptions[activeIndex].classList.add('active');
+                visibleOptions[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+    </script>
     <script>
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             const fileInput = document.getElementById('csv_file');

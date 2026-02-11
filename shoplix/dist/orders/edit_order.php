@@ -278,6 +278,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                         <h5 class="mb-0 font-medium">Edit Order #<?= htmlspecialchars($order_id) ?></h5>
                         <div style="max-width: 400px;">
                             <div class="alert-container">
+                                <div class="alert-container">
+                                <?php if (!empty($order['upload_error'])): ?>
+                                    <div class="alert alert-warning" id="upload-error-alert">
+                                        <div>
+                                            <span class="alert-icon">⚠️</span>
+                                            <span><strong>Upload Error:</strong> <?php echo htmlspecialchars($order['upload_error']); ?></span>
+                                        </div>
+                                        <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                                    </div>
+                                <?php endif; ?>
                                 <?php
                                 // Display success messages
                                 if (isset($_SESSION['order_success'])) {

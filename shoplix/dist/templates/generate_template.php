@@ -23,7 +23,7 @@ $header = [
     'Email',
     'Address Line 1',
     'Address Line 2',
-    'Product Code',
+    // 'Product Code',
     'Quantity',
     'Other'
 ];

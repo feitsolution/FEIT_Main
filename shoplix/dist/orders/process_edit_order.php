@@ -178,7 +178,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         subtotal = ?, discount = ?, total_amount = ?, delivery_fee = ?, 
                         notes = ?, pay_status = ?, pay_date = ?, 
                         product_code = ?, full_name = ?, email = ?, mobile = ?, mobile_2 = ?, 
-                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?
+                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?,
+                        upload_error = NULL
                       WHERE order_id = ? AND status = 'pending'";
         
         $stmt = $conn->prepare($updateSql);
