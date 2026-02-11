@@ -44,7 +44,7 @@ $offset = ($page - 1) * $limit;
  */
 $sql = "SELECT o.order_id, o.customer_id, o.full_name, o.mobile, o.address_line1, o.address_line2,
                o.status, o.updated_at, o.interface, o.tracking_number, o.total_amount, o.currency,
-               o.delivery_fee, o.discount, o.issue_date,
+               o.delivery_fee, o.discount, o.issue_date, o.notes,
                o.pay_status, o.pay_by, o.pay_date,
                c.name as customer_name, c.phone as customer_phone, 
                c.phone_2 as customer_phone_2,
@@ -437,7 +437,10 @@ function getTrackingFilterText($tracking_filter, $tracking_number = '') {
                             | <strong>Phone 2:</strong> <?php echo $phone_2; ?>
                             <?php endif; ?><br>
                             <strong>Address:</strong> <?php echo htmlspecialchars($order['display_address']); ?><br>
-                            <strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'N/A'; ?>
+                            <strong>City:</strong> <?php echo !empty($order['city_name']) ? htmlspecialchars($order['city_name']) : 'N/A'; ?><br>
+                            <?php if (!empty($order['notes'])): ?>
+                            <strong>Note:</strong> <span style="color: #dc2626; font-weight: bold;"><?php echo htmlspecialchars($order['notes']); ?></span>
+                            <?php endif; ?>
                         </td>
                     </tr>
 

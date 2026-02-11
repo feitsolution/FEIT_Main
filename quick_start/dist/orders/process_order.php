@@ -57,7 +57,7 @@ function cs_condition($conn, $customer_id) {
     if (($rate >= 0) && ($rate <= 25)) return 0; // Excellent
     if (($rate > 25) && ($rate <= 50)) return 1;  // Good
     if (($rate > 50) && ($rate <= 75)) return 2;  // Average
-    return 3;                  // Bad
+    if (($rate > 75)) return 3;                  // Bad
 }
 /**
  * Get user-friendly FDE API status message
