@@ -49,13 +49,25 @@ function callFdeApi($apiData) {
     if (!$data) return ['success' => false, 'message' => 'Invalid response from API'];
     
     $messages = [
-        200 => 'Successfully insert the parcel', 201 => 'Incorrect waybill type. Only allow CRE or CCP',
-        202 => 'The waybill is used', 203 => 'The waybill is not yet assigned', 204 => 'Inactive Client',
-        205 => 'Invalid order id', 206 => 'Invalid weight', 207 => 'Empty or invalid parcel description',
-        208 => 'Empty or invalid name', 209 => 'Invalid contact number 1', 210 => 'Invalid contact number 2',
-        211 => 'Empty or invalid address', 212 => 'Empty or invalid amount', 213 => 'Invalid city',
-        214 => 'Parcel insert unsuccessfully', 215 => 'Invalid or inactive client', 216 => 'Invalid API key',
-        217 => 'Invalid exchange value', 218 => 'System maintain mode is activated'
+            200 => 'Successfully insert the parcel',
+            201 => 'Incorrect waybill type. Only allow CRE or CCP',
+            202 => 'The waybill is used',
+            203 => 'The waybill is not yet assigned',
+            204 => 'Inactive Client',
+            205 => 'Invalid order id',
+            206 => 'Invalid weight',
+            207 => 'Empty or invalid parcel description',
+            208 => 'Empty or invalid name',
+            209 => 'Invalid contact number 1',
+            210 => 'Invalid contact number 2',
+            211 => 'Empty or invalid address',
+            212 => 'Empty or invalid amount',
+            213 => 'Invalid city',
+            214 => 'Parcel insert unsuccessfully',
+            215 => 'Invalid or inactive client',
+            216 => 'Invalid API key',
+            217 => 'Invalid exchange value',
+            218 => 'System maintain mode is activated'
     ];
     
     $status = $data['status'] ?? 999;
