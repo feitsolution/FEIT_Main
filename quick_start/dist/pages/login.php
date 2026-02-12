@@ -148,17 +148,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         error_log("User $email successfully logged in with customer_id: $customer_id");
 
                         // Update last login time in the users table
-                        try {
-                            $update_login_time_sql = "UPDATE users SET login_time = NOW() WHERE id = ?";
-                            $update_stmt = $conn->prepare($update_login_time_sql);
-                            if ($update_stmt) {
-                                $update_stmt->bind_param("i", $_SESSION['user_id']);
-                                $update_stmt->execute();
-                                $update_stmt->close();
-                            }
-                        } catch (Exception $e) {
-                            error_log("Failed to update login_time: " . $e->getMessage());
-                        }
+                        // try {
+                        //     $update_login_time_sql = "UPDATE users SET login_time = NOW() WHERE id = ?";
+                        //     $update_stmt = $conn->prepare($update_login_time_sql);
+                        //     if ($update_stmt) {
+                        //         $update_stmt->bind_param("i", $_SESSION['user_id']);
+                        //         $update_stmt->execute();
+                        //         $update_stmt->close();
+                        //     }
+                        // } catch (Exception $e) {
+                        //     error_log("Failed to update login_time: " . $e->getMessage());
+                        // }
 
                         // ✅ Redirect by role
                         switch ($user['role_id']) {
