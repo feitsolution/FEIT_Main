@@ -21,9 +21,24 @@ $status_filter = trim($_GET['status_filter'] ?? '');
 $date_from = trim($_GET['date_from'] ?? '');
 $date_to = trim($_GET['date_to'] ?? '');
 
-$limit = intval($_GET['limit'] ?? 20);
-$page = max(1, intval($_GET['page'] ?? 1));
-$offset = ($page - 1) * $limit;
+$error_message = '';
+$hasActiveFilters = !empty($courier_id_filter) && !empty($date_from) && !empty($date_to);
+
+if ($hasActiveFilters) {
+    // Check 31 days limit
+    $start = new DateTime($date_from);
+    $end = new DateTime($date_to);
+    $interval = $start->diff($end);
+    $days = $interval->days;
+    
+    if ($start > $end) {
+        $error_message = "Date From cannot be greater than Date To.";
+        $hasActiveFilters = false;
+    } elseif ($days > 31) {
+        $error_message = "Date range cannot exceed 31 days. Selected range: $days days.";
+        $hasActiveFilters = false;
+    }
+}
 
 // Role-based access
 $roleCondition = ($current_user_role != 1) ? " AND i.user_id = $current_user_id" : "";
@@ -52,14 +67,10 @@ $sql = "SELECT i.order_id, i.customer_id, c.name AS customer_name, i.tracking_nu
 
 // Search filters
 $searchConditions = [];
-// MAIN FIX: Only show data if courier OR status is selected, or if other filters are applied
-$hasActiveFilters = !empty($courier_id_filter) || !empty($status_filter) || !empty($order_id_filter) || 
-                   !empty($customer_name_filter) || !empty($tracking_id) || !empty($date_from) || 
-                   !empty($date_to) || !empty($search);
 
 if (!$hasActiveFilters) {
     // No filters selected - show no results
-    $searchConditions[] = "1 = 0"; // This will return no results
+    $searchConditions[] = "1 = 0"; 
 } else {
     // Filters are active - apply normal logic
     if (empty($status_filter)) {
@@ -95,10 +106,10 @@ if ($searchConditions) {
     $sql .= " AND " . implode(' AND ', $searchConditions);
 }
 
-$sql .= " ORDER BY i.order_id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY i.order_id DESC";
 $result = $conn->query($sql);
 
-// Count total rows - fix the count query to match the main query conditions
+// Count total rows
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              LEFT JOIN couriers co ON i.courier_id = co.courier_id
@@ -107,35 +118,10 @@ if ($searchConditions) {
     $countSql .= " AND " . implode(' AND ', $searchConditions);
 }
 $totalRows = (int)$conn->query($countSql)->fetch_assoc()['total'];
-$totalPages = ceil($totalRows / $limit);
 
 // Fetch couriers for filter
 $couriersResult = $conn->query("SELECT courier_id, courier_name FROM couriers ORDER BY courier_name ASC");
 
-// Function to build query string for pagination
-function buildQueryString($params = []) {
-    global $order_id_filter, $customer_name_filter, $status_filter, $tracking_id, $courier_id_filter, $date_from, $date_to, $limit;
-    
-    $defaults = [
-        'order_id_filter' => $order_id_filter,
-        'customer_name_filter' => $customer_name_filter,
-        'status_filter' => $status_filter,
-        'tracking_id' => $tracking_id,
-        'courier_id_filter' => $courier_id_filter,
-        'date_from' => $date_from,
-        'date_to' => $date_to,
-        'limit' => $limit
-    ];
-    
-    $queryParams = array_merge($defaults, $params);
-    
-    // Remove empty values
-    $queryParams = array_filter($queryParams, function($value) {
-        return $value !== '' && $value !== null;
-    });
-    
-    return http_build_query($queryParams);
-}
 
 // Include navbar & sidebar
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
@@ -146,6 +132,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
     <title>Payment Report</title>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/head.php'); ?>
     <link rel="stylesheet" href="../assets/css/style.css" />
@@ -251,11 +238,16 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         </div>
 
         <div class="tracking-container">
+            <?php if (!empty($error_message)): ?>
+                <div id="error-alert" style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                    <i class="fas fa-exclamation-triangle"></i> <?= $error_message ?>
+                </div>
+            <?php endif; ?>
             <form class="tracking-form" method="GET">
                 <!-- Primary Filters - Most Important -->
                 <div class="form-group">
                     <label><strong>Courier</strong> <span style="color: #dc3545;">*</span></label>
-                    <select name="courier_id_filter" class="<?= !empty($courier_id_filter) ? 'auto-submit' : '' ?>">
+                    <select name="courier_id_filter" class="<?= !empty($courier_id_filter) ? 'auto-submit' : '' ?>" required>
                         <option value="">Select Courier</option>
                         <?php 
                         // Reset result pointer for couriers
@@ -281,12 +273,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 
                 <!-- Date Range Filters -->
                 <div class="form-group">
-                    <label>Date From</label>
-                    <input type="date" name="date_from" value="<?= htmlspecialchars($date_from) ?>">
+                    <label>Date From <span style="color: #dc3545;">*</span></label>
+                    <input type="date" name="date_from" value="<?= htmlspecialchars($date_from) ?>" required>
                 </div>
                 <div class="form-group">
-                    <label>Date To</label>
-                    <input type="date" name="date_to" value="<?= htmlspecialchars($date_to) ?>">
+                    <label>Date To <span style="color: #dc3545;">*</span> <small>(Max 31 days)</small></label>
+                    <input type="date" name="date_to" value="<?= htmlspecialchars($date_to) ?>" required>
                 </div>
                 
                 <!-- Action Buttons -->
@@ -442,39 +434,64 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
             </table>
         </div>
 
-        <!-- Pagination Controls -->
-        <?php if ($totalPages > 1): ?>
-        <div class="pagination">
-            <div class="pagination-info">
-                Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?> entries
-            </div>
-            <div class="pagination-controls">
-                <?php if ($page > 1): ?>
-                    <button class="page-btn" onclick="window.location.href='?<?php echo buildQueryString(['page' => $page - 1]); ?>'">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                <?php endif; ?>
-                
-                <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
-                    <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                            onclick="window.location.href='?<?php echo buildQueryString(['page' => $i]); ?>'">
-                        <?php echo $i; ?>
-                    </button>
-                <?php endfor; ?>
-                
-                <?php if ($page < $totalPages): ?>
-                    <button class="page-btn" onclick="window.location.href='?<?php echo buildQueryString(['page' => $page + 1]); ?>'">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
 </div>
+<script>
+    // Automatically hide error message after 5 seconds
+    setTimeout(function() {
+        var errorAlert = document.getElementById('error-alert');
+        if (errorAlert) {
+            errorAlert.style.transition = 'opacity 0.5s ease';
+            errorAlert.style.opacity = '0';
+            setTimeout(function() {
+                errorAlert.style.display = 'none';
+            }, 500);
+        }
+    }, 5000);
+
+    // Date range restriction (Max 31 days)
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateFrom = document.querySelector('input[name="date_from"]');
+        const dateTo = document.querySelector('input[name="date_to"]');
+
+        function updateRestrictions() {
+            if (dateFrom.value) {
+                let fromDate = new Date(dateFrom.value);
+                let maxToDate = new Date(fromDate);
+                maxToDate.setDate(fromDate.getDate() + 31);
+                
+                // Set Date To min/max
+                dateTo.setAttribute('min', dateFrom.value);
+                dateTo.setAttribute('max', maxToDate.toISOString().split('T')[0]);
+            } else {
+                dateTo.removeAttribute('min');
+                dateTo.removeAttribute('max');
+            }
+
+            if (dateTo.value) {
+                let toDate = new Date(dateTo.value);
+                let minFromDate = new Date(toDate);
+                minFromDate.setDate(toDate.getDate() - 31);
+                
+                // Set Date From min/max
+                dateFrom.setAttribute('min', minFromDate.toISOString().split('T')[0]);
+                dateFrom.setAttribute('max', dateTo.value);
+            } else {
+                dateFrom.removeAttribute('min');
+                dateFrom.removeAttribute('max');
+            }
+        }
+
+        dateFrom.addEventListener('change', updateRestrictions);
+        dateTo.addEventListener('change', updateRestrictions);
+        
+        // Run once on load to apply initial restrictions if dates are pre-filled
+        updateRestrictions();
+    });
+</script>
 
 <!-- Footer -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
+<?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
 
 <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 </body>
