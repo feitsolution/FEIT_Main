@@ -291,7 +291,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         <thead>
                             <tr>
                                 <th>Order ID</th>
-                                <th>Update Time</th>
+                                <th>Updated Time</th>
                                 <th>Customer Name</th>
                                 <th>Issue Date</th>
                                 <th>Total Amount</th>
@@ -312,9 +312,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                         </td>
 
                                         <!-- Update Time -->
-                                        <td class="update-time">
+                                        <td class="updated-time">
                                             <?php
-                                            echo isset($row['updated_at']) ? date('Y-m-d H:i', strtotime($row['updated_at'])) : 'N/A';
+                                            if (isset($row['updated_at']) && !empty($row['updated_at'])) {
+                                                $updatedAt = new DateTime($row['updated_at']);
+                                                echo '<span class="updated-date">' . $updatedAt->format('Y-m-d') . '</span>';
+                                                echo '<span class="updated-time-only">' . $updatedAt->format('H:i:s') . '</span>';
+                                            } else {
+                                                echo '<span style="color: #999; font-style: italic;">N/A</span>';
+                                            }
                                             ?>
                                         </td>
                                         
@@ -574,6 +580,24 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
         .edit-btn:hover {
             background-color: #e0a800;
         }
+
+        .updated-time {
+            white-space: nowrap;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .updated-date {
+            display: block;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .updated-time-only {
+            display: block;
+            font-size: 0.8em;
+            color: #999;
+        }
     </style>
 
     <script>
@@ -793,7 +817,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 row.addEventListener('mouseleave', function() {
                     this.style.transform = 'translateX(0)';
                 });
-            });
+                });
             
             // Check if modal elements exist
             const modal = document.getElementById('orderModal');
