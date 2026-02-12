@@ -45,7 +45,7 @@ $offset = ($page - 1) * $limit;
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              LEFT JOIN users u2 ON i.created_by = u2.id
-             WHERE i.interface = 'courier'";
+             WHERE i.status NOT IN ('pending', 'cancelled', 'dispatch','return_handover','removed','waiting')";
 
 // Main query with all required joins
 $sql = "SELECT i.*, c.name as customer_name, 
@@ -57,7 +57,7 @@ $sql = "SELECT i.*, c.name as customer_name,
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.created_by = u2.id
-        WHERE i.interface = 'courier'";
+        WHERE i.status NOT IN ('pending', 'cancelled', 'dispatch','return_handover','removed','waiting')";
 
 // Build search conditions
 $searchConditions = [];
@@ -141,6 +141,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/status-badge-colors.css" id="main-style-link" />
 </head>
 
 <body>
@@ -287,25 +288,65 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             
                                             switch($status) {
                                                 case 'pending':
-                                                    $statusClass = 'status-pending';
+                                                    $statusText = 'Pending';
+                                                    $badgeClass = 'status-pending';
+                                                    break;
+                                                case 'waiting':
+                                                    $statusText = 'Waiting';
+                                                    $badgeClass = 'status-waiting';
+                                                    break;
+                                                case 'pickup':
+                                                    $statusText = 'Pickup';
+                                                    $badgeClass = 'status-pickup';
                                                     break;
                                                 case 'processing':
-                                                    $statusClass = 'status-processing';
+                                                    $statusText = 'Processing';
+                                                    $badgeClass = 'status-processing';
                                                     break;
-                                                case 'shipped':
-                                                    $statusClass = 'status-shipped';
+                                                case 'dispatch':
+                                                    $statusText = 'Dispatched';
+                                                    $badgeClass = 'status-dispatched';
+                                                    break;
+                                                case 'pending to deliver':
+                                                case 'reschedule':
+                                                case 'date changed':
+                                                    $statusText = 'Pending to Deliver';
+                                                    $badgeClass = 'status-pending-deliver';
+                                                    break;
+                                                case 'rearrange':
+                                                    $statusText = 'Rearrange';
+                                                    $badgeClass = 'status-rearrange';
+                                                    break;
+                                                case 'return':
+                                                    $statusText = 'Return';
+                                                    $badgeClass = 'status-return';
+                                                    break;
+                                                case 'return complete':
+                                                    $statusText = 'Return Complete';
+                                                    $badgeClass = 'status-return-complete';
+                                                    break;
+                                                case 'return_handover': 
+                                                    $statusText = 'Return Handover';
+                                                    $badgeClass = 'status-return-handover';
                                                     break;
                                                 case 'delivered':
-                                                    $statusClass = 'status-delivered';
+                                                    $statusText = 'Delivered';
+                                                    $badgeClass = 'status-delivered';
                                                     break;
-                                                case 'returned':
-                                                    $statusClass = 'status-returned';
+                                                case 'done':
+                                                    $statusText = 'Completed';
+                                                    $badgeClass = 'status-completed';
+                                                    break;
+                                                case 'cancel':
+                                                    $statusText = 'Cancelled';
+                                                    $badgeClass = 'status-cancelled';
                                                     break;
                                                 default:
-                                                    $statusClass = 'status-default';
+                                                    $statusText = $status;
+                                                    $badgeClass = 'status-default';
                                             }
                                             ?>
-                                            <span class="status-badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                            <span class="status-badge <?php echo $badgeClass; ?>"><?php echo $statusText; ?></span>
                                         </td>
                                         
                                         <!-- Payment Status Badge -->
@@ -584,11 +625,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             
             // Show status update options
             const statusOptions = [
-                'pending',
-                'processing', 
-                'shipped',
+                'done',
+                'pickup',
+                'processing',
+                'pending to deliver',
+                'return',
                 'delivered',
-                'returned'
+                'removed',
+                'courier_dispatch',
+                'transfer',
+                'damaged',
+                'hold',
+                'courier dispatch',
+                'return pending',
+                'return transfer',
+                'return complete'
             ];
             
             let statusSelect = '<div style="margin: 20px 0;"><label>Update Order Status:</label><br>';
@@ -705,5 +756,3 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
 </body>
 </html>
-
-
