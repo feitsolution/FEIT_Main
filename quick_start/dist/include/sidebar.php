@@ -147,6 +147,7 @@ if (!function_exists('get_logo_with_fallback')) {
             <li class="pc-item"><a class="pc-link" href="../orders/order_list.php"> Processed Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/pending_order_list.php">Pending Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/dispatch_order_list.php">Dispatch Orders</a></li>
+            <li class="pc-item"><a class="pc-link" href="../orders/courier_order_list.php">Courier Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/cancel_order_list.php">Cancel Orders</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/complete_mark_upload.php">Completed Mark Upload</a></li>
             <li class="pc-item"><a class="pc-link" href="../orders/payment_report.php"> Payment Report</a></li>
