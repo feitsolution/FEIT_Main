@@ -147,6 +147,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         }
 
+        if (empty($order_items)) {
+            throw new Exception("No valid products to process in the order.");
+        }
+
+        // Sort order items by product_id ASC
+        usort($order_items, function($a, $b) {
+            return strcmp((string)$a['product_id'], (string)$b['product_id']);
+        });
+
+        // Re-generate product_codes array from sorted items
+        $product_codes = array_map(function($item) {
+            return $item['product_id'];
+        }, $order_items);
+
         $product_code_str = implode(',', $product_codes);
         $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
@@ -164,7 +178,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         subtotal = ?, discount = ?, total_amount = ?, delivery_fee = ?, 
                         notes = ?, pay_status = ?, pay_date = ?, 
                         product_code = ?, full_name = ?, email = ?, mobile = ?, mobile_2 = ?, 
-                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?
+                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?,
+                        upload_error = NULL
                       WHERE order_id = ? AND status = 'pending'";
         
         $stmt = $conn->prepare($updateSql);
@@ -273,7 +288,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $conn->commit();
-        setMessageAndRedirect("success", "Order #{$order_id} updated successfully.");
+        setMessageAndRedirect("success", "Order #$order_id updated successfully.");
 
     } catch (Exception $e) {
         if ($conn) $conn->rollback();

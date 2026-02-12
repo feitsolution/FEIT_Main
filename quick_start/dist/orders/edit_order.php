@@ -275,6 +275,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         <h5 class="mb-0 font-medium">Edit Order #<?= htmlspecialchars($order_id) ?></h5>
                         <div style="max-width: 400px;">
                             <div class="alert-container">
+                                <?php if (!empty($order['upload_error'])): ?>
+                                    <div class="alert alert-warning" id="upload-error-alert">
+                                        <div>
+                                            <span class="alert-icon">⚠️</span>
+                                            <span><strong>Upload Error:</strong> <?php echo htmlspecialchars($order['upload_error']); ?></span>
+                                        </div>
+                                        <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                                    </div>
+                                <?php endif; ?>
                                 <?php
                                 // Display success messages
                                 if (isset($_SESSION['order_success'])) {
@@ -1228,7 +1237,7 @@ const ProductManager = {
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
-            row.querySelector('.discount').value = discount;
+            row.querySelector('.discount').value = discount.toFixed(2);
         }
 
         let subtotal = (price * quantity) - discount;
@@ -1637,11 +1646,11 @@ const FormValidator = {
             });
 
             document.addEventListener('input', (e) => {
-                if (e.target.classList.contains('discount')) {
-                    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
-                    const parts = e.target.value.split('.');
-                    if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
-                }
+                // if (e.target.classList.contains('discount')) {
+                //     e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+                //     const parts = e.target.value.split('.');
+                //     if (parts.length > 2) e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                // }
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
                     if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) e.target.value = 1;
                     ProductManager.updateRowTotal(e.target.closest('tr'));

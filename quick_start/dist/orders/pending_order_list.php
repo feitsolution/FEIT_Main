@@ -89,6 +89,9 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
 // Main query with all required joins
 // Main query with all required joins - UPDATED to fetch customer name from customers table as fallback
 $sql = "SELECT i.*, 
+                -- Count duplicates based on mobile and product_code
+                (SELECT COUNT(*) FROM order_header o2 WHERE o2.mobile = i.mobile AND o2.product_code = i.product_code AND  o2.status = 'pending') as duplicate_count,
+
                -- Customer info: Use order_header full_name, fallback to customers table
                COALESCE(NULLIF(i.full_name, ''), c.name) as customer_name,
                i.customer_id,
@@ -108,7 +111,8 @@ $sql = "SELECT i.*,
                i.slip as payment_slip,
                i.pay_status,
                i.created_at,
-               i.call_log
+               i.call_log, 
+               i.upload_error
         FROM order_header i 
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
@@ -410,6 +414,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         <!-- Order ID -->
                         <td class="order-id">
                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
+                            <?php if (!empty($row['upload_error'])): ?>
+                                <br>
+                                <span class="badge bg-warning text-dark" style="font-size: 10px; cursor: help;" title="<?php echo htmlspecialchars($row['upload_error']); ?>">
+                                    <i class="fas fa-exclamation-triangle"></i> Error
+                                </span>
+                            <?php endif; ?>
                         </td>             
                         <!-- Customer Name with ID -->
                      <td class="customer-name">
@@ -417,6 +427,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
     $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
     echo $customerName . ($customerId ? " ($customerId)" : "");
+
+    //Duplicate Orders Warning
+    if (isset($row['duplicate_count']) && $row['duplicate_count'] > 1) {
+        echo '<br><span class="badge badge-danger" style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block;">Duplicate (' . $row['duplicate_count'] . ')</span>';
+    }
     ?>
 </td>
                   <td class="date-range">
