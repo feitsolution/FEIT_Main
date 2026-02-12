@@ -48,7 +48,7 @@ $countSql = "SELECT COUNT(*) as total FROM order_header i
              WHERE i.status NOT IN ('pending', 'cancelled', 'dispatch','return_handover','removed','waiting')";
 
 // Main query with all required joins
-$sql = "SELECT i.*, c.name as customer_name, 
+$sql = "SELECT i.*, c.name as customer_name, cr.courier_name,
                p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
                u1.name as paid_by_name,
                u2.name as creator_name
@@ -57,6 +57,7 @@ $sql = "SELECT i.*, c.name as customer_name,
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.created_by = u2.id
+        LEFT JOIN couriers cr ON i.courier_id = cr.courier_id
         WHERE i.status NOT IN ('pending', 'cancelled', 'dispatch','return_handover','removed','waiting')";
 
 // Build search conditions
@@ -231,9 +232,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                 <th>Order ID</th>
                                 <th>Customer Name</th>
                                 <th>Issue Date - Due Date</th>
+                                <th>Update Time</th>
                                 <th>Total Amount</th>
                                 <th>Status</th>
                                 <th>Pay Status</th>
+                                <th>Courier & Tracking</th>
                                 <th>Created By</th>
                                 <th>Actions</th>
                             </tr>
@@ -266,6 +269,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                             echo "<span class='date-separator'> - </span>";
                                             echo "<span class='due-date'>" . $dueDate . "</span>";
                                             echo "</div>";
+                                            ?>
+                                        </td>
+
+                                        <!-- Update Time -->
+                                        <td class="update-time">
+                                            <?php
+                                            echo isset($row['updated_at']) ? date('Y-m-d H:i', strtotime($row['updated_at'])) : 'N/A';
                                             ?>
                                         </td>
                                         
@@ -361,6 +371,27 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                                 <span class="status-badge pay-status-unpaid">Unpaid</span>
                                             <?php endif; ?>
                                         </td>
+
+                                        <!-- Courier & Tracking -->
+                                        <td class="courier-tracking">
+                                            <?php
+                                            $courierName = isset($row['courier_name']) ? htmlspecialchars($row['courier_name']) : '';
+                                            $trackingNumber = isset($row['tracking_number']) ? htmlspecialchars($row['tracking_number']) : '';
+                                            
+                                            if ($courierName || $trackingNumber) {
+                                                echo "<div class='courier-info'>";
+                                                if ($courierName) {
+                                                    echo "<strong style='display: block; color: #333;'>" . $courierName . "</strong>";
+                                                }
+                                                if ($trackingNumber) {
+                                                    echo "<span style='color: #666; font-size: 0.9em;'>" . $trackingNumber . "</span>";
+                                                }
+                                                echo "</div>";
+                                            } else {
+                                                echo '<span style="color: #999; font-style: italic;">Not assigned</span>';
+                                            }
+                                            ?>
+                                        </td>
                                         
                                         <!-- Created By User -->
                                         <td>
@@ -376,21 +407,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                                         onclick="openOrderModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="action-btn edit-btn" title="Edit Order" 
-                                                        onclick="editOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="action-btn track-btn" title="Track Order" 
-                                                        onclick="trackOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
-                                                    <i class="fas fa-truck"></i>
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center" style="padding: 40px; text-align: center; color: #666;">
+                                    <td colspan="10" class="text-center" style="padding: 40px; text-align: center; color: #666;">
                                         No courier orders found
                                     </td>
                                 </tr>
@@ -594,28 +617,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
 
-        // Edit order function
-        function editOrder(orderId) {
-            if (!orderId || orderId.trim() === '') {
-                alert('Order ID is required to edit order.');
-                return;
-            }
-            
-            // Redirect to edit page or open edit modal
-            window.location.href = 'edit_order.php?id=' + encodeURIComponent(orderId);
-        }
-
-        // Track order function
-        function trackOrder(orderId) {
-            if (!orderId || orderId.trim() === '') {
-                alert('Order ID is required to track order.');
-                return;
-            }
-            
-            // Open tracking modal or redirect to tracking page
-            window.open('track_order.php?id=' + encodeURIComponent(orderId), '_blank');
-        }
-
         // Update order status function
         function updateOrderStatus() {
             if (!currentOrderId) {
@@ -631,7 +632,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 'pending to deliver',
                 'return',
                 'delivered',
-                'removed',
                 'courier_dispatch',
                 'transfer',
                 'damaged',
