@@ -52,11 +52,7 @@ $couriersResult = $conn->query($couriersQuery);
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              LEFT JOIN users u2 ON i.created_by = u2.id
-<<<<<<< HEAD
              WHERE i.status NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting','done','return complete')";
-=======
-             WHERE i.status NOT IN NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting','done','return complete')";
->>>>>>> 360a37440d2126882f7767c6b2e9930d9fe587a7
 
 // Main query with all required joins
 $sql = "SELECT i.*, c.name as customer_name, cr.courier_name,
