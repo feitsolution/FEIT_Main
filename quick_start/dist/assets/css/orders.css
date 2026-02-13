@@ -324,6 +324,28 @@
 }
 
 /* ====================================
+   ZONE TYPE BADGES
+   ==================================== */
+
+.zone-type-suburb {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.zone-type-outstation {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+
+.zone-type-remote {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  color: #7c3aed;
+  border: 1px solid #c4b5fd;
+}
+
+/* ====================================
    ACTION BUTTONS
    ==================================== */
 

@@ -63,6 +63,7 @@ $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
 $call_status_filter = isset($_GET['call_status_filter']) ? trim($_GET['call_status_filter']) : '';
 $condition_filter = isset($_GET['condition_filter']) ? $_GET['condition_filter'] : '';
+$phone_filter = isset($_GET['phone_filter']) ? trim($_GET['phone_filter']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -106,13 +107,13 @@ $sql = "SELECT i.*,
                
                -- User who created the order
                u2.name as creator_name,
-               
                -- Order details
                i.slip as payment_slip,
                i.pay_status,
                i.created_at,
                i.call_log, 
-               i.upload_error
+               i.upload_error,
+               i.notes
         FROM order_header i 
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
@@ -131,6 +132,8 @@ if (!empty($search)) {
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
                         i.full_name LIKE '%$searchTerm%' OR 
+                        i.mobile LIKE '%$searchTerm%' OR 
+                        i.mobile_2 LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -166,7 +169,6 @@ if (!empty($pay_status_filter)) {
     $payStatusTerm = $conn->real_escape_string($pay_status_filter);
     $searchConditions[] = "i.pay_status = '$payStatusTerm'";
 }
-
 // Call Answer filter
 if (!empty($call_status_filter !== '')) {
     $callStatusTerm = $conn->real_escape_string($call_status_filter);
@@ -177,6 +179,12 @@ if (!empty($call_status_filter !== '')) {
 if ($condition_filter !== '') {
     $conditionTerm = (int)$condition_filter;
     $searchConditions[] = "i.condition = $conditionTerm";
+}
+
+// Phone number filter
+if (!empty($phone_filter)) {
+    $phoneTerm = $conn->real_escape_string($phone_filter);
+    $searchConditions[] = "(i.mobile LIKE '%$phoneTerm%' OR i.mobile_2 LIKE '%$phoneTerm%')";
 }
 
 // Apply search conditions
@@ -239,6 +247,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 .actions {
     white-space: nowrap;
 }
+
+.status-badge.pay-status-paid,
+.status-badge.pay-status-unpaid {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+}
 </style>
 </head>
 <body>
@@ -289,11 +303,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                    value="<?php echo htmlspecialchars($order_id_filter); ?>">
                         </div>
                         
-                        <div class="form-group">
+<div class="form-group">
                             <label for="customer_name_filter">Customer Name</label>
                             <input type="text" id="customer_name_filter" name="customer_name_filter" 
                                    placeholder="Enter customer name" 
                                    value="<?php echo htmlspecialchars($customer_name_filter); ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone_filter">Phone Number</label>
+                            <input type="text" id="phone_filter" name="phone_filter" 
+                                   placeholder="Enter phone number" 
+                                   value="<?php echo htmlspecialchars($phone_filter); ?>">
                         </div>
                         
                         <div class="form-group">
@@ -314,7 +335,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                 <option value="">All Payment Status</option>
                                 <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
                                 <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
-                                <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
                             </select>
                         </div>
 
@@ -390,13 +410,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 <th>
                     <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                 </th>
-                <th>Order ID</th>
+<th>Order ID</th>
                 <th>Customer Name</th>
-                <th>Issue Date - Due Date</th>
+                <th>Issue Date</th>
                 <th>Total Amount</th>
-                <th>Pay Status</th>
                 <th>Created By</th>
                 <th>Success Rate</th>
+                <th>Note</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -436,52 +456,25 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 </td>
                   <td class="date-range">
     <?php
-    // Issue & Due dates (DATE only)
     $issueDate = !empty($row['issue_date']) ? date('Y-m-d', strtotime($row['issue_date'])) : 'N/A';
-    $dueDate   = !empty($row['due_date']) ? date('Y-m-d', strtotime($row['due_date'])) : 'N/A';
-
-    // Time from created_at (FULL TIMESTAMP)
     $createdTime = !empty($row['created_at']) ? date('H:i:s', strtotime($row['created_at'])) : 'N/A';
-
-    echo "<div class='date-container'>";
-
-    // Issue date
-    echo "<span class='issue-date'>{$issueDate}</span>";
-
-    // Separator
-    echo "<span class='date-separator'> - </span>";
-
-    // Due date
-    echo "<span class='due-date'>{$dueDate}</span>";
-
-    // Time (new line)
-    echo "<div class='created-time'> <strong>{$createdTime}</strong></div>";
-
-    echo "</div>";
-    ?>
+    echo $issueDate." ".$createdTime;?>
 </td>
 
                         
-                        <!-- Total Amount with Currency -->
+                        <!-- Total Amount -->
                         <td class="amount">
                             <?php
                             $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
                             $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
                             $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
                             echo $currencySymbol . number_format($amount, 2);
-                            ?>
-                        </td>
-                        
-                        <!-- Payment Status Badge -->
-                        <td>
-                            <?php
+                            
                             $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
                             if ($payStatus == 'paid'): ?>
-                                <span class="status-badge pay-status-paid">Paid</span>
-                            <?php elseif ($payStatus == 'partial'): ?>
-                                <span class="status-badge pay-status-partial">Partial</span>
+                                <br><span class="status-badge pay-status-paid">Paid</span>
                             <?php else: ?>
-                                <span class="status-badge pay-status-unpaid">Unpaid</span>
+                                <br><span class="status-badge pay-status-unpaid">Unpaid</span>
                             <?php endif; ?>
                         </td>
                         
@@ -522,6 +515,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                     break;
                                 default:
                                     echo '<span class="status-badge rate-new">New</span>';
+                            }
+                            ?>
+                        </td>
+
+<!-- Note -->
+                        <td>
+                            <?php
+                            $additionalNote = isset($row['notes']) ? htmlspecialchars($row['notes']) : '';
+                            if (empty($additionalNote)) {
+                                echo '-';
+                            } else {
+                                echo strlen($additionalNote) > 50 ? substr($additionalNote, 0, 50) . '...' : $additionalNote;
                             }
                             ?>
                         </td>
@@ -598,21 +603,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?> entries
                     </div>
                     <div class="pagination-controls">
-                        <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+<?php if ($page > 1): ?>
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
@@ -658,10 +663,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
         let currentPaymentSlip = null; // Store payment slip filename
         let currentPayStatus = null; // Store payment status
 
-        // Clear all filter inputs
+// Clear all filter inputs
         function clearFilters() {
             document.getElementById('order_id_filter').value = '';
             document.getElementById('customer_name_filter').value = '';
+            document.getElementById('phone_filter').value = '';
             document.getElementById('date_from').value = '';
             document.getElementById('date_to').value = '';
             document.getElementById('pay_status_filter').value = '';

@@ -551,12 +551,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             font-weight: 500;
             color: #333;
         }
-
-        .updated-time-only {
-            display: block;
-            font-size: 0.8em;
-            color: #999;
-        }
     </style>
 
     <script>

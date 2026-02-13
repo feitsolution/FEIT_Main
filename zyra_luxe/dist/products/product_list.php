@@ -969,26 +969,6 @@ $result = $conn->query($sql);
             }
         });
 
-        // Enhanced search with debouncing
-        let searchTimeout;
-        function debounceSearch(func, delay) {
-            return function(...args) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => func.apply(this, args), delay);
-            };
-        }
-
-        // Auto-submit search form with debouncing
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInputs = document.querySelectorAll('#product_name_filter, #description_filter');
-            const debouncedSubmit = debounceSearch(function() {
-                document.querySelector('.tracking-form').submit();
-            }, 500);
-            
-            searchInputs.forEach(input => {
-                input.addEventListener('input', debouncedSubmit);
-            });
-        });
     </script>
 
 </body>
