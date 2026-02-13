@@ -52,7 +52,7 @@ $couriersResult = $conn->query($couriersQuery);
 $countSql = "SELECT COUNT(*) as total FROM order_header i 
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              LEFT JOIN users u2 ON i.created_by = u2.id
-             WHERE i.status NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting')";
+             WHERE i.status NOT IN NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting','done','return complete')";
 
 // Main query with all required joins
 $sql = "SELECT i.*, c.name as customer_name, cr.courier_name,
@@ -65,7 +65,7 @@ $sql = "SELECT i.*, c.name as customer_name, cr.courier_name,
         LEFT JOIN users u1 ON p.pay_by = u1.id
         LEFT JOIN users u2 ON i.created_by = u2.id
         LEFT JOIN couriers cr ON i.courier_id = cr.courier_id
-        WHERE i.status NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting')";
+        WHERE i.status NOT IN ('pending', 'cancel', 'dispatch','return_handover','removed','waiting','done','return complete')";
 
 // Build search conditions
 $searchConditions = [];
@@ -223,12 +223,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                 <option value="">All Status</option>
                                 <option value="pickup" <?php echo ($status_filter == 'pickup') ? 'selected' : ''; ?>>Pickup</option>
                                 <option value="processing" <?php echo ($status_filter == 'processing') ? 'selected' : ''; ?>>Processing</option>
-                                <option value="dispatch" <?php echo ($status_filter == 'dispatch') ? 'selected' : ''; ?>>Dispatched</option>
+                                <option value="courier dispatch" <?php echo ($status_filter == 'courier dispatch') ? 'selected' : ''; ?>>Courier Dispatch</option>
                                 <option value="pending to deliver" <?php echo ($status_filter == 'pending to deliver') ? 'selected' : ''; ?>>Pending to Deliver</option>
                                 <option value="rearrange" <?php echo ($status_filter == 'rearrange') ? 'selected' : ''; ?>>Rearrange</option>
                                 <option value="return" <?php echo ($status_filter == 'return') ? 'selected' : ''; ?>>Return</option>
+                                <option value="return pending" <?php echo ($status_filter == 'return pending') ? 'selected' : ''; ?>>Return Pending</option>
                                 <option value="delivered" <?php echo ($status_filter == 'delivered') ? 'selected' : ''; ?>>Delivered</option>
-                                <option value="done" <?php echo ($status_filter == 'done') ? 'selected' : ''; ?>>Completed</option>
+                                <option value="hold" <?php echo ($status_filter == 'hold') ? 'selected' : ''; ?>>Hold</option>
+                                <option value="damaged" <?php echo ($status_filter == 'damaged') ? 'selected' : ''; ?>>Damaged</option>
+                                <option value="transfer" <?php echo ($status_filter == 'transfer') ? 'selected' : ''; ?>>Transfer</option>
                             </select>
                         </div>
 
@@ -358,14 +361,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                             $statusText = ucfirst($status);
                                             
                                             switch($status) {
-                                                case 'pending':
-                                                    $statusText = 'Pending';
-                                                    $badgeClass = 'status-pending';
-                                                    break;
-                                                case 'waiting':
-                                                    $statusText = 'Waiting';
-                                                    $badgeClass = 'status-waiting';
-                                                    break;
                                                 case 'pickup':
                                                     $statusText = 'Pickup';
                                                     $badgeClass = 'status-pickup';
@@ -374,9 +369,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                                     $statusText = 'Processing';
                                                     $badgeClass = 'status-processing';
                                                     break;
-                                                case 'dispatch':
-                                                    $statusText = 'Dispatched';
-                                                    $badgeClass = 'status-dispatched';
+                                                case 'courier dispatch':
+                                                    $statusText = 'Courier Dispatched';
+                                                    $badgeClass = 'status-courier-dispatched';
                                                     break;
                                                 case 'pending to deliver':
                                                 case 'reschedule':
@@ -387,26 +382,32 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                                 case 'rearrange':
                                                     $statusText = 'Rearrange';
                                                     $badgeClass = 'status-rearrange';
-                                                    break;
-                                                case 'return':
-                                                    $statusText = 'Return';
-                                                    $badgeClass = 'status-return';
-                                                    break;
-                                                case 'return complete':
-                                                    $statusText = 'Return Complete';
-                                                    $badgeClass = 'status-return-complete';
-                                                    break;
-                                                case 'return_handover': 
-                                                    $statusText = 'Return Handover';
-                                                    $badgeClass = 'status-return-handover';
-                                                    break;
+                                                break;
                                                 case 'delivered':
                                                     $statusText = 'Delivered';
                                                     $badgeClass = 'status-delivered';
                                                     break;
-                                                case 'done':
-                                                    $statusText = 'Completed';
-                                                    $badgeClass = 'status-completed';
+                                                
+                                                case 'return':
+                                                    $statusText = 'Return';
+                                                    $badgeClass = 'status-return';
+                                                    break;
+                                                case 'return pending':
+                                                    $statusText = 'Return Pending';
+                                                    $badgeClass = 'status-return-pending';
+                                                    break;
+                                                case 'transfer':
+                                                    $statusText = 'Transfer';
+                                                    $badgeClass = 'status-transfer';
+                                                    break;
+                                                
+                                                case 'damaged':
+                                                    $statusText = 'Damaged';
+                                                    $badgeClass = 'status-damaged';
+                                                    break;
+                                                case 'hold':
+                                                    $statusText = 'On Hold';
+                                                    $badgeClass = 'status-hold';
                                                     break;
                                                 default:
                                                     $statusText = $status;
@@ -539,48 +540,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
     </div>
 
     <style>
-        /* Additional CSS for courier-specific styling */
-        .status-pending {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        .status-processing {
-            background-color: #17a2b8;
-            color: white;
-        }
-        .status-shipped {
-            background-color: #007bff;
-            color: white;
-        }
-        .status-delivered {
-            background-color: #28a745;
-            color: white;
-        }
-        .status-returned {
-            background-color: #dc3545;
-            color: white;
-        }
-        .status-default {
-            background-color: #6c757d;
-            color: white;
-        }
-        
-        .track-btn {
-            background-color: #17a2b8;
-            color: white;
-        }
-        .track-btn:hover {
-            background-color: #138496;
-        }
-        
-        .edit-btn {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        .edit-btn:hover {
-            background-color: #e0a800;
-        }
-        
         .updated-time {
             white-space: nowrap;
             font-size: 0.9em;
@@ -704,20 +663,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
             
             // Show status update options
             const statusOptions = [
-                'done',
-                'pickup',
-                'processing',
-                'pending to deliver',
-                'return',
-                'delivered',
-                'courier_dispatch',
-                'transfer',
-                'damaged',
-                'hold',
-                'courier dispatch',
-                'return pending',
-                'return transfer',
-                'return complete'
+                'done','pending','cancel','dispatch','no_answer','return_handover','waiting','pickup','processing','pending to deliver','return','delivered','removed','transfer','damaged','hold','courier dispatch','return pending','return transfer','return complete','rearrange'
             ];
             
             let statusSelect = '<div style="margin: 20px 0;"><label>Update Order Status:</label><br>';
