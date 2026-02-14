@@ -152,11 +152,13 @@ $result = $conn->query($sql);
                                         <td class="category-name"><?php echo htmlspecialchars($row['name']); ?></td>
                                         <td>
                                             <?php if ($row['parent_name']): ?>
-                                                <span class="badge bg-light-secondary text-secondary">
+                                                <span class="badge" style="background-color: #e2e8f0; color: #475569;">
                                                     <i class="fas fa-level-up-alt"></i> <?php echo htmlspecialchars($row['parent_name']); ?>
                                                 </span>
                                             <?php else: ?>
-                                                <span class="badge bg-light-success text-success">Top Level</span>
+                                                <span class="badge" style="background-color: #dbeafe; color: #1e40af;">
+                                                    <i class="fas fa-star"></i> Top Level
+                                                </span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
