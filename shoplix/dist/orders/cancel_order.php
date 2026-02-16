@@ -44,7 +44,7 @@ try {
     
     try {
        // Check if order exists and can be cancelled
-$check_sql = "SELECT order_id, status, customer_id, total_amount 
+$check_sql = "SELECT order_id, status, customer_id, total_amount, interface 
               FROM order_header 
               WHERE order_id = ? AND interface IN ('individual', 'leads')";
 
@@ -93,23 +93,34 @@ $check_sql = "SELECT order_id, status, customer_id, total_amount
 
         // Restore inventory
         if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-            $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status != 'canceled'";
-            $items_stmt = $conn->prepare($getItemsSql);
-            $items_stmt->bind_param("s", $order_id);
-            $items_stmt->execute();
-            $items_result = $items_stmt->get_result();
-            
-            $update_stock_sql = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
-            $stock_stmt = $conn->prepare($update_stock_sql);
-            
-            while ($item = $items_result->fetch_assoc()) {
-                $stock_stmt->bind_param("ii", $item['quantity'], $item['product_id']);
-                if (!$stock_stmt->execute()) {
-                    throw new Exception('Failed to restore stock for product ID: ' . $item['product_id']);
-                }
+            $restore_stock = false;
+            if ($order['interface'] == 'individual') {
+                $restore_stock = true;
+            } elseif ($order['interface'] == 'leads' && $previous_status == 'dispatch') {
+                $restore_stock = true;
+            }else{
+                  $restore_stock = false;
             }
-            $items_stmt->close();
-            $stock_stmt->close();
+
+            if ($restore_stock) {
+                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status != 'canceled'";
+                $items_stmt = $conn->prepare($getItemsSql);
+                $items_stmt->bind_param("s", $order_id);
+                $items_stmt->execute();
+                $items_result = $items_stmt->get_result();
+                
+                $update_stock_sql = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
+                $stock_stmt = $conn->prepare($update_stock_sql);
+                
+                while ($item = $items_result->fetch_assoc()) {
+                    $stock_stmt->bind_param("ii", $item['quantity'], $item['product_id']);
+                    if (!$stock_stmt->execute()) {
+                        throw new Exception('Failed to restore stock for product ID: ' . $item['product_id']);
+                    }
+                }
+                $items_stmt->close();
+                $stock_stmt->close();
+            }
         }
         
         // Update order_items status to 'canceled'

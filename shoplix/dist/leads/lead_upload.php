@@ -383,34 +383,34 @@ if ($cityError || $addressError) {
                 $productStmt->close();
 
                 // Check and deduct stock
-                if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-                    $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
-                    $stockUpdateStmt = $conn->prepare($updateStockSql);
-                    if (!$stockUpdateStmt) {
-                        throw new Exception("Failed to prepare stock update query: " . $conn->error);
-                    }
-                    $stockUpdateStmt->bind_param("iii", $quantity, $productId, $quantity);
+                // if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                //     $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
+                //     $stockUpdateStmt = $conn->prepare($updateStockSql);
+                //     if (!$stockUpdateStmt) {
+                //         throw new Exception("Failed to prepare stock update query: " . $conn->error);
+                //     }
+                //     $stockUpdateStmt->bind_param("iii", $quantity, $productId, $quantity);
                     
-                    if (!$stockUpdateStmt->execute()) {
-                        throw new Exception("Failed to update stock for product code: " . $productCode);
-                    }
+                //     if (!$stockUpdateStmt->execute()) {
+                //         throw new Exception("Failed to update stock for product code: " . $productCode);
+                //     }
                     
-                    if ($stockUpdateStmt->affected_rows === 0) {
-                        // Fetch product name
-                        $getNameSql = "SELECT name FROM products WHERE id = ?";
-                        $nameStmt = $conn->prepare($getNameSql);
-                        $nameStmt->bind_param("i", $productId);
-                        $nameStmt->execute();
-                        $productResult = $nameStmt->get_result();
-                        $productName = $productCode; // Fallback
-                        if ($productResult && $productRow = $productResult->fetch_assoc()) {
-                            $productName = $productRow['name'];
-                        }
-                        $nameStmt->close();
-                        throw new Exception("Insufficient stock for product: " . $productName . " (Code: " . $productCode . ")");
-                    }
-                    $stockUpdateStmt->close();
-                }
+                //     if ($stockUpdateStmt->affected_rows === 0) {
+                //         // Fetch product name
+                //         $getNameSql = "SELECT name FROM products WHERE id = ?";
+                //         $nameStmt = $conn->prepare($getNameSql);
+                //         $nameStmt->bind_param("i", $productId);
+                //         $nameStmt->execute();
+                //         $productResult = $nameStmt->get_result();
+                //         $productName = $productCode; // Fallback
+                //         if ($productResult && $productRow = $productResult->fetch_assoc()) {
+                //             $productName = $productRow['name'];
+                //         }
+                //         $nameStmt->close();
+                //         throw new Exception("Insufficient stock for product: " . $productName . " (Code: " . $productCode . ")");
+                //     }
+                //     $stockUpdateStmt->close();
+                // }
 
                 // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
