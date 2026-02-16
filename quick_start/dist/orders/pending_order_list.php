@@ -542,16 +542,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     }
     ?>
 </td>
-<td>
-                            <?php
-                            $additionalNote = isset($row['notes']) ? htmlspecialchars($row['notes']) : '';
-                            if (empty($additionalNote)) {
-                                echo '-';
-                            } else {
-                                echo strlen($additionalNote) > 50 ? substr($additionalNote, 0, 50) . '...' : $additionalNote;
-                            }
-                            ?>
-                        </td>
                  <!-- Action Buttons - Updated to pass interface parameter -->
 <td class="actions">
     <div class="action-buttons-group">
