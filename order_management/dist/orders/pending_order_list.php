@@ -111,7 +111,8 @@ $sql = "SELECT i.*,
                i.slip as payment_slip,
                i.pay_status,
                i.created_at,
-               i.call_log
+               i.call_log, 
+               i.upload_error
         FROM order_header i 
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
@@ -411,6 +412,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                         <!-- Order ID -->
                         <td class="order-id">
                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
+                            <?php if (!empty($row['upload_error'])): ?>
+                                <br>
+                                <span class="badge bg-warning text-dark" style="font-size: 10px; cursor: help;" title="<?php echo htmlspecialchars($row['upload_error']); ?>">
+                                    <i class="fas fa-exclamation-triangle"></i> Error
+                                </span>
+                            <?php endif; ?>
                         </td>             
                         <!-- Customer Name with ID -->
                      <td class="customer-name">
