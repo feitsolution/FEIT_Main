@@ -416,7 +416,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 <th>Total Amount</th>
                 <th>Created By</th>
                 <th>Success Rate</th>
-                <th>Note</th>
+                <th>Call Note</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -521,6 +521,28 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 <!-- Note -->
                         <td>
+    <?php
+    $callLog = isset($row['call_log']) ? $row['call_log'] : null;
+    $note = '';
+    
+    if ($callLog == 1) { // Answered
+        // Check answer_reason
+        $note = isset($row['answer_reason']) ? htmlspecialchars($row['answer_reason']) : '';
+    } elseif ($callLog === '0' || $callLog === 0) { // No Answer
+        // Check no_answer_reason
+        $note = isset($row['no_answer_reason']) ? htmlspecialchars($row['no_answer_reason']) : '';
+    }
+    
+    if (!empty($note)) {
+        // Truncate long notes if necessary
+        $displayNote = (strlen($note) > 30) ? substr($note, 0, 30) . '...' : $note;
+        echo "<span title='" . $note . "'>" . $displayNote . "</span>";
+    } else {
+        echo "-";
+    }
+    ?>
+</td>
+<td>
                             <?php
                             $additionalNote = isset($row['notes']) ? htmlspecialchars($row['notes']) : '';
                             if (empty($additionalNote)) {
@@ -1419,66 +1441,73 @@ function openAnswerModal(orderId, callLogStatus) {
     document.getElementById('current_call_log').value = currentCallLog;
     document.getElementById('displayOrderId').textContent = currentAnswerOrderId;
     
-    // Determine new status (toggle: 0->1, 1->0)
-    const newCallLog = currentCallLog === 0 ? 1 : 0;
-    document.getElementById('new_call_log').value = newCallLog;
-    
-    // Update modal content based on action
-    updateModalContent(currentCallLog, newCallLog);
-    
     // Reset form
     document.getElementById('answer-status-form').reset();
-    // Re-set the hidden fields after reset
+    
+    // Re-set the hidden fields and order ID after reset
     document.getElementById('answer_order_id').value = currentAnswerOrderId;
     document.getElementById('current_call_log').value = currentCallLog;
-    document.getElementById('new_call_log').value = newCallLog;
     document.getElementById('displayOrderId').textContent = currentAnswerOrderId;
     
+    // Pre-select the current status or suggestion
+    const statusAnswer = document.getElementById('status_answer');
+    const statusNoAnswer = document.getElementById('status_no_answer');
+    
+    // Clear previous selection
+    if(statusAnswer) statusAnswer.checked = false;
+    if(statusNoAnswer) statusNoAnswer.checked = false;
+
+    // Set to opposite of current status as default suggestion if applicable
+    const suggestedStatus = (currentCallLog === 0) ? 1 : 0;
+    
+    if (suggestedStatus === 1 && statusAnswer) {
+        statusAnswer.checked = true;
+    } else if (suggestedStatus === 0 && statusNoAnswer) {
+        statusNoAnswer.checked = true;
+    }
+    
+    // Trigger update content
+    updateModalContentBySelection();
+
     // Show the modal
     const modal = document.getElementById('answerStatusModal');
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // Focus on textarea
-    setTimeout(() => {
-        document.getElementById('answer_reason').focus();
-    }, 100);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 /**
- * Update Modal Content Based on Action
- * @param {number} currentStatus - Current call_log value
- * @param {number} newStatus - New call_log value to set
+ * Update Modal Content Based on Selected Status
+ * This function is called when the user changes the call status dropdown
  */
-function updateModalContent(currentStatus, newStatus) {
-    const modalTitle = document.getElementById('answerModalTitle');
-    const alertMessage = document.getElementById('answerAlertMessage');
-    const alertText = document.getElementById('alertText');
+function updateModalContentBySelection() {
+    let selectedStatus = null;
+    const answerRadio = document.getElementById('status_answer');
+    const noAnswerRadio = document.getElementById('status_no_answer');
+    
+    if (answerRadio && answerRadio.checked) selectedStatus = 1;
+    if (noAnswerRadio && noAnswerRadio.checked) selectedStatus = 0;
+    
     const reasonLabel = document.getElementById('reasonLabel');
     const reasonHelp = document.getElementById('reasonHelp');
-    const submitButtonText = document.getElementById('submitButtonText');
-    const submitBtn = document.getElementById('answer-submit-btn');
+    const answerReason = document.getElementById('answer_reason');
     
-    if (newStatus === 1) {
-        // Marking as ANSWERED (call_log = 1)
-        modalTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Answered';
-        alertMessage.className = 'alert alert-success mb-3';
-        alertText.textContent = 'Mark this order as answered and provide call notes';
+    if (selectedStatus === 1) {
+        // ANSWERED (call_log = 1)
         reasonLabel.innerHTML = 'Answer Notes';
         reasonHelp.textContent = 'Please provide details about the customer conversation';
-        submitButtonText.textContent = 'Mark as Answered';
-        submitBtn.style.background = '#28a745 !important';
-        document.getElementById('answer_reason').placeholder = 'Enter details about customer conversation...';
-    } else {
-        // Marking as NO ANSWER (call_log = 0)
-        modalTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i>Mark as No Answer';
-        alertMessage.className = 'alert alert-warning mb-3';
-        alertText.textContent = 'Mark this order as no answer and provide reason';
+        answerReason.placeholder = 'Enter details about customer conversation...';
+    } else if (selectedStatus === 0) {
+        // NO ANSWER (call_log = 0)
         reasonLabel.innerHTML = 'No Answer Reason';
         reasonHelp.textContent = 'Please specify why the customer did not answer';
-        submitButtonText.textContent = 'Mark as No Answer';
-        submitBtn.style.background = '#dc3545 !important';
-        document.getElementById('answer_reason').placeholder = 'Enter reason for no answer (busy, unreachable, etc.)...';
+        answerReason.placeholder = 'Enter reason for no answer (busy, unreachable, etc.)...';
+    } else {
+        // Default state
+        reasonLabel.innerHTML = 'Call Notes';
+        reasonHelp.textContent = 'Please provide details about the call interaction';
+        answerReason.placeholder = 'Enter call notes or reason...';
     }
 }
 
@@ -1503,13 +1532,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const answerForm = document.getElementById('answer-status-form');
     const modal = document.getElementById('answerStatusModal');
     
+    // Handle radio button changes
+    const radioButtons = document.querySelectorAll('.call-status-radio');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', updateModalContentBySelection);
+    });
+    
     // Handle answer form submission
     if (answerForm) {
         answerForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const orderId = document.getElementById('answer_order_id').value;
-            const newCallLog = document.getElementById('new_call_log').value;
+            let selectedCallLog = '';
+            const answerRadio = document.getElementById('status_answer');
+            const noAnswerRadio = document.getElementById('status_no_answer');
+            
+            if (answerRadio && answerRadio.checked) selectedCallLog = '1';
+            if (noAnswerRadio && noAnswerRadio.checked) selectedCallLog = '0';
             const answerReason = document.getElementById('answer_reason').value.trim();
             const submitBtn = document.getElementById('answer-submit-btn');
             
@@ -1519,8 +1559,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            if (selectedCallLog !== '1' && selectedCallLog !== '0') {
+                alert('Please select a call status (Answer or No Answer)');
+                return;
+            }
+            
             // Confirm action
-            const actionText = (newCallLog == 1) ? 'mark as answered' : 'mark as no answer';
+            const actionText = (selectedCallLog == 1) ? 'mark as answered' : 'mark as no answer';
             if (!confirm(`Are you sure you want to ${actionText} for Order ID: ${orderId}?`)) {
                 return;
             }
@@ -1533,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create FormData object
             const formData = new FormData();
             formData.append('order_id', orderId);
-            formData.append('call_log', newCallLog);
+            formData.append('call_log', selectedCallLog);
             formData.append('answer_reason', answerReason);
             formData.append('action', 'update_call_status');
             
@@ -1550,7 +1595,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    const statusText = (newCallLog == 1) ? 'answered' : 'no answer';
+                    const statusText = (selectedCallLog == 1) ? 'answered' : 'no answer';
                     alert(`Order marked as ${statusText} successfully!`);
                     closeAnswerModal();
                     // Reload the page to reflect changes
