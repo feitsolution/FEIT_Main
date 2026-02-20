@@ -3,7 +3,7 @@
 $servername = getenv('DB_HOST');
 $username   = getenv('DB_USER');
 $password   = getenv('DB_PASS');
-$dbname     = getenv('DB_NAME_ROYAL_DEALS');
+$dbname     = 'royal_deals';
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
