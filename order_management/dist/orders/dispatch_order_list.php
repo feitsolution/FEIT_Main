@@ -943,17 +943,7 @@ function confirmCancelOrder() {
         return;
     }
     
-    if (!cancellationReason) {
-        alert('Please provide a reason for cancellation.');
-        document.getElementById('cancellationReason').focus();
-        return;
-    }
     
-    if (cancellationReason.length < 10) {
-        alert('Please provide a more detailed reason (minimum 10 characters).');
-        document.getElementById('cancellationReason').focus();
-        return;
-    }
     
     // Final confirmation
     if (!confirm(`Are you sure you want to cancel Order ID: ${currentCancelOrderId}? This action cannot be undone.`)) {

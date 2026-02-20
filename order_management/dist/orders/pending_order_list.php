@@ -63,6 +63,7 @@ $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $pay_status_filter = isset($_GET['pay_status_filter']) ? trim($_GET['pay_status_filter']) : '';
 $call_status_filter = isset($_GET['call_status_filter']) ? trim($_GET['call_status_filter']) : '';
 $condition_filter = isset($_GET['condition_filter']) ? $_GET['condition_filter'] : '';
+$phone_filter = isset($_GET['phone_filter']) ? trim($_GET['phone_filter']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -106,13 +107,13 @@ $sql = "SELECT i.*,
                
                -- User who created the order
                u2.name as creator_name,
-               
                -- Order details
                i.slip as payment_slip,
                i.pay_status,
                i.created_at,
                i.call_log, 
-               i.upload_error
+               i.upload_error,
+               i.notes
         FROM order_header i 
         LEFT JOIN payments p ON i.order_id = p.order_id
         LEFT JOIN users u1 ON p.pay_by = u1.id
@@ -131,6 +132,8 @@ if (!empty($search)) {
     $searchConditions[] = "(
                         i.order_id LIKE '%$searchTerm%' OR 
                         i.full_name LIKE '%$searchTerm%' OR 
+                        i.mobile LIKE '%$searchTerm%' OR 
+                        i.mobile_2 LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -176,6 +179,12 @@ if (!empty($call_status_filter !== '')) {
 if ($condition_filter !== '') {
     $conditionTerm = (int)$condition_filter;
     $searchConditions[] = "i.condition = $conditionTerm";
+}
+
+// Phone number filter
+if (!empty($phone_filter)) {
+    $phoneTerm = $conn->real_escape_string($phone_filter);
+    $searchConditions[] = "(i.mobile LIKE '%$phoneTerm%' OR i.mobile_2 LIKE '%$phoneTerm%')";
 }
 
 // Apply search conditions
@@ -238,6 +247,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 .actions {
     white-space: nowrap;
 }
+
+.status-badge.pay-status-paid,
+.status-badge.pay-status-unpaid {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+}
 </style>
 </head>
 <body>
@@ -246,6 +261,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
     <div class="pc-container">
         <div class="pc-content">
+            
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-block">
@@ -287,11 +303,18 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                    value="<?php echo htmlspecialchars($order_id_filter); ?>">
                         </div>
                         
-                        <div class="form-group">
+<div class="form-group">
                             <label for="customer_name_filter">Customer Name</label>
                             <input type="text" id="customer_name_filter" name="customer_name_filter" 
                                    placeholder="Enter customer name" 
                                    value="<?php echo htmlspecialchars($customer_name_filter); ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone_filter">Phone Number</label>
+                            <input type="text" id="phone_filter" name="phone_filter" 
+                                   placeholder="Enter phone number" 
+                                   value="<?php echo htmlspecialchars($phone_filter); ?>">
                         </div>
                         
                         <div class="form-group">
@@ -312,7 +335,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                                 <option value="">All Payment Status</option>
                                 <option value="paid" <?php echo ($pay_status_filter == 'paid') ? 'selected' : ''; ?>>Paid</option>
                                 <option value="unpaid" <?php echo ($pay_status_filter == 'unpaid') ? 'selected' : ''; ?>>Unpaid</option>
-                                <!-- <option value="partial" <?php echo ($pay_status_filter == 'partial') ? 'selected' : ''; ?>>Partial</option> -->
                             </select>
                         </div>
 
@@ -390,11 +412,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                 </th>
                 <th>Order ID</th>
                 <th>Customer Name</th>
-                <th>Issue Date - Due Date</th>
+                <th>Issue Date</th>
                 <th>Total Amount</th>
-                <th>Pay Status</th>
                 <th>Created By</th>
                 <th>Success Rate</th>
+                <th>Call Note</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -434,52 +456,25 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 </td>
                   <td class="date-range">
     <?php
-    // Issue & Due dates (DATE only)
     $issueDate = !empty($row['issue_date']) ? date('Y-m-d', strtotime($row['issue_date'])) : 'N/A';
-    $dueDate   = !empty($row['due_date']) ? date('Y-m-d', strtotime($row['due_date'])) : 'N/A';
-
-    // Time from created_at (FULL TIMESTAMP)
     $createdTime = !empty($row['created_at']) ? date('H:i:s', strtotime($row['created_at'])) : 'N/A';
-
-    echo "<div class='date-container'>";
-
-    // Issue date
-    echo "<span class='issue-date'>{$issueDate}</span>";
-
-    // Separator
-    echo "<span class='date-separator'> - </span>";
-
-    // Due date
-    echo "<span class='due-date'>{$dueDate}</span>";
-
-    // Time (new line)
-    echo "<div class='created-time'> <strong>{$createdTime}</strong></div>";
-
-    echo "</div>";
-    ?>
+    echo $issueDate." ".$createdTime;?>
 </td>
 
                         
-                        <!-- Total Amount with Currency -->
+                        <!-- Total Amount -->
                         <td class="amount">
                             <?php
                             $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
                             $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
                             $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
                             echo $currencySymbol . number_format($amount, 2);
-                            ?>
-                        </td>
-                        
-                        <!-- Payment Status Badge -->
-                        <td>
-                            <?php
+                            
                             $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
                             if ($payStatus == 'paid'): ?>
-                                <span class="status-badge pay-status-paid">Paid</span>
-                            <?php elseif ($payStatus == 'partial'): ?>
-                                <span class="status-badge pay-status-partial">Partial</span>
+                                <br><span class="status-badge pay-status-paid">Paid</span>
                             <?php else: ?>
-                                <span class="status-badge pay-status-unpaid">Unpaid</span>
+                                <br><span class="status-badge pay-status-unpaid">Unpaid</span>
                             <?php endif; ?>
                         </td>
                         
@@ -523,6 +518,30 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                             }
                             ?>
                         </td>
+
+<!-- Note -->
+                        <td>
+    <?php
+    $callLog = isset($row['call_log']) ? $row['call_log'] : null;
+    $note = '';
+    
+    if ($callLog == 1) { // Answered
+        // Check answer_reason
+        $note = isset($row['answer_reason']) ? htmlspecialchars($row['answer_reason']) : '';
+    } elseif ($callLog === '0' || $callLog === 0) { // No Answer
+        // Check no_answer_reason
+        $note = isset($row['no_answer_reason']) ? htmlspecialchars($row['no_answer_reason']) : '';
+    }
+    
+    if (!empty($note)) {
+        // Truncate long notes if necessary
+        $displayNote = (strlen($note) > 30) ? substr($note, 0, 30) . '...' : $note;
+        echo "<span title='" . $note . "'>" . $displayNote . "</span>";
+    } else {
+        echo "-";
+    }
+    ?>
+</td>
                  <!-- Action Buttons - Updated to pass interface parameter -->
 <td class="actions">
     <div class="action-buttons-group">
@@ -596,21 +615,21 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
                         Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?> entries
                     </div>
                     <div class="pagination-controls">
-                        <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+<?php if ($page > 1): ?>
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&order_id_filter=<?php echo urlencode($order_id_filter); ?>&customer_name_filter=<?php echo urlencode($customer_name_filter); ?>&phone_filter=<?php echo urlencode($phone_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&pay_status_filter=<?php echo urlencode($pay_status_filter); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
@@ -656,10 +675,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         let currentPaymentSlip = null; // Store payment slip filename
         let currentPayStatus = null; // Store payment status
 
-        // Clear all filter inputs
+// Clear all filter inputs
         function clearFilters() {
             document.getElementById('order_id_filter').value = '';
             document.getElementById('customer_name_filter').value = '';
+            document.getElementById('phone_filter').value = '';
             document.getElementById('date_from').value = '';
             document.getElementById('date_to').value = '';
             document.getElementById('pay_status_filter').value = '';
@@ -1411,66 +1431,73 @@ function openAnswerModal(orderId, callLogStatus) {
     document.getElementById('current_call_log').value = currentCallLog;
     document.getElementById('displayOrderId').textContent = currentAnswerOrderId;
     
-    // Determine new status (toggle: 0->1, 1->0)
-    const newCallLog = currentCallLog === 0 ? 1 : 0;
-    document.getElementById('new_call_log').value = newCallLog;
-    
-    // Update modal content based on action
-    updateModalContent(currentCallLog, newCallLog);
-    
     // Reset form
     document.getElementById('answer-status-form').reset();
-    // Re-set the hidden fields after reset
+    
+    // Re-set the hidden fields and order ID after reset
     document.getElementById('answer_order_id').value = currentAnswerOrderId;
     document.getElementById('current_call_log').value = currentCallLog;
-    document.getElementById('new_call_log').value = newCallLog;
     document.getElementById('displayOrderId').textContent = currentAnswerOrderId;
     
+    // Pre-select the current status or suggestion
+    const statusAnswer = document.getElementById('status_answer');
+    const statusNoAnswer = document.getElementById('status_no_answer');
+    
+    // Clear previous selection
+    if(statusAnswer) statusAnswer.checked = false;
+    if(statusNoAnswer) statusNoAnswer.checked = false;
+
+    // Set to opposite of current status as default suggestion if applicable
+    const suggestedStatus = (currentCallLog === 0) ? 1 : 0;
+    
+    if (suggestedStatus === 1 && statusAnswer) {
+        statusAnswer.checked = true;
+    } else if (suggestedStatus === 0 && statusNoAnswer) {
+        statusNoAnswer.checked = true;
+    }
+    
+    // Trigger update content
+    updateModalContentBySelection();
+
     // Show the modal
     const modal = document.getElementById('answerStatusModal');
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // Focus on textarea
-    setTimeout(() => {
-        document.getElementById('answer_reason').focus();
-    }, 100);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 /**
- * Update Modal Content Based on Action
- * @param {number} currentStatus - Current call_log value
- * @param {number} newStatus - New call_log value to set
+ * Update Modal Content Based on Selected Status
+ * This function is called when the user changes the call status dropdown
  */
-function updateModalContent(currentStatus, newStatus) {
-    const modalTitle = document.getElementById('answerModalTitle');
-    const alertMessage = document.getElementById('answerAlertMessage');
-    const alertText = document.getElementById('alertText');
+function updateModalContentBySelection() {
+    let selectedStatus = null;
+    const answerRadio = document.getElementById('status_answer');
+    const noAnswerRadio = document.getElementById('status_no_answer');
+    
+    if (answerRadio && answerRadio.checked) selectedStatus = 1;
+    if (noAnswerRadio && noAnswerRadio.checked) selectedStatus = 0;
+    
     const reasonLabel = document.getElementById('reasonLabel');
     const reasonHelp = document.getElementById('reasonHelp');
-    const submitButtonText = document.getElementById('submitButtonText');
-    const submitBtn = document.getElementById('answer-submit-btn');
+    const answerReason = document.getElementById('answer_reason');
     
-    if (newStatus === 1) {
-        // Marking as ANSWERED (call_log = 1)
-        modalTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Answered';
-        alertMessage.className = 'alert alert-success mb-3';
-        alertText.textContent = 'Mark this order as answered and provide call notes';
+    if (selectedStatus === 1) {
+        // ANSWERED (call_log = 1)
         reasonLabel.innerHTML = 'Answer Notes';
         reasonHelp.textContent = 'Please provide details about the customer conversation';
-        submitButtonText.textContent = 'Mark as Answered';
-        submitBtn.style.background = '#28a745 !important';
-        document.getElementById('answer_reason').placeholder = 'Enter details about customer conversation...';
-    } else {
-        // Marking as NO ANSWER (call_log = 0)
-        modalTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i>Mark as No Answer';
-        alertMessage.className = 'alert alert-warning mb-3';
-        alertText.textContent = 'Mark this order as no answer and provide reason';
+        answerReason.placeholder = 'Enter details about customer conversation...';
+    } else if (selectedStatus === 0) {
+        // NO ANSWER (call_log = 0)
         reasonLabel.innerHTML = 'No Answer Reason';
         reasonHelp.textContent = 'Please specify why the customer did not answer';
-        submitButtonText.textContent = 'Mark as No Answer';
-        submitBtn.style.background = '#dc3545 !important';
-        document.getElementById('answer_reason').placeholder = 'Enter reason for no answer (busy, unreachable, etc.)...';
+        answerReason.placeholder = 'Enter reason for no answer (busy, unreachable, etc.)...';
+    } else {
+        // Default state
+        reasonLabel.innerHTML = 'Call Notes';
+        reasonHelp.textContent = 'Please provide details about the call interaction';
+        answerReason.placeholder = 'Enter call notes or reason...';
     }
 }
 
@@ -1495,13 +1522,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const answerForm = document.getElementById('answer-status-form');
     const modal = document.getElementById('answerStatusModal');
     
+    // Handle radio button changes
+    const radioButtons = document.querySelectorAll('.call-status-radio');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', updateModalContentBySelection);
+    });
+    
     // Handle answer form submission
     if (answerForm) {
         answerForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const orderId = document.getElementById('answer_order_id').value;
-            const newCallLog = document.getElementById('new_call_log').value;
+            let selectedCallLog = '';
+            const answerRadio = document.getElementById('status_answer');
+            const noAnswerRadio = document.getElementById('status_no_answer');
+            
+            if (answerRadio && answerRadio.checked) selectedCallLog = '1';
+            if (noAnswerRadio && noAnswerRadio.checked) selectedCallLog = '0';
             const answerReason = document.getElementById('answer_reason').value.trim();
             const submitBtn = document.getElementById('answer-submit-btn');
             
@@ -1511,8 +1549,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            if (selectedCallLog !== '1' && selectedCallLog !== '0') {
+                alert('Please select a call status (Answer or No Answer)');
+                return;
+            }
+            
             // Confirm action
-            const actionText = (newCallLog == 1) ? 'mark as answered' : 'mark as no answer';
+            const actionText = (selectedCallLog == 1) ? 'mark as answered' : 'mark as no answer';
             if (!confirm(`Are you sure you want to ${actionText} for Order ID: ${orderId}?`)) {
                 return;
             }
@@ -1525,7 +1568,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create FormData object
             const formData = new FormData();
             formData.append('order_id', orderId);
-            formData.append('call_log', newCallLog);
+            formData.append('call_log', selectedCallLog);
             formData.append('answer_reason', answerReason);
             formData.append('action', 'update_call_status');
             
@@ -1542,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    const statusText = (newCallLog == 1) ? 'answered' : 'no answer';
+                    const statusText = (selectedCallLog == 1) ? 'answered' : 'no answer';
                     alert(`Order marked as ${statusText} successfully!`);
                     closeAnswerModal();
                     // Reload the page to reflect changes
@@ -1673,18 +1716,7 @@ function confirmCancelOrder() {
         alert('No order selected for cancellation.');
         return;
     }
-    
-    if (!cancellationReason) {
-        alert('Please provide a reason for cancellation.');
-        document.getElementById('cancellationReason').focus();
-        return;
-    }
-    
-    if (cancellationReason.length < 10) {
-        alert('Please provide a more detailed reason (minimum 10 characters).');
-        document.getElementById('cancellationReason').focus();
-        return;
-    }
+
     
     // Final confirmation
     if (!confirm(`Are you sure you want to cancel Order ID: ${currentCancelOrderId}? This action cannot be undone.`)) {

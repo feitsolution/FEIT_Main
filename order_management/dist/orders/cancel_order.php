@@ -31,14 +31,6 @@ try {
         throw new Exception('Order ID is required');
     }
     
-    if (empty($cancellation_reason)) {
-        throw new Exception('Cancellation reason is required');
-    }
-    
-    if (strlen($cancellation_reason) < 10) {
-        throw new Exception('Cancellation reason must be at least 10 characters');
-    }
-    
     // Start database transaction
     $conn->begin_transaction();
     
