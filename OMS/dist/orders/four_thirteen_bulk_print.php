@@ -203,8 +203,7 @@ function getCurrencySymbol($currency) {
 }
 
 function getBarcodeUrl($data) {
-    // Using Code128 format which is widely supported by barcode scanners
-    return "https://barcodeapi.org/api/code128/{$data}";
+    return "../include/barcode.php?text=" . urlencode($data);
 }
 
 // NEW: Function to check if tracking number exists
@@ -703,6 +702,9 @@ foreach ($orders as $order) {
                         <div class="barcode-section">
                             <?php if ($has_tracking): ?>
                                 <img src="<?php echo $barcode_url; ?>" alt="Tracking Barcode" class="barcode-image" onerror="this.style.display='none'">
+                                <div style="font-size: 16px; margin-top: 2px; color: #000; font-weight: bold; font-family: sans-serif; text-align:center;">
+                                    <?php echo htmlspecialchars($order['tracking_number']); ?>
+                                </div>
                             <?php else: ?>
                                 <div class="no-tracking-barcode">
                                     NO TRACKING<br>
