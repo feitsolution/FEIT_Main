@@ -82,7 +82,7 @@ $sql = "SELECT o.order_id, o.tenant_id, o.customer_id, o.full_name, o.mobile, o.
         FROM order_header o 
         LEFT JOIN customers c ON o.customer_id = c.customer_id
         LEFT JOIN couriers cr ON o.co_id = cr.co_id
-        LEFT JOIN city_table ct ON c.city_id = ct.city_id AND ct.is_active = 1
+        LEFT JOIN city_table ct ON o.city_id = ct.city_id AND ct.is_active = 1
         WHERE o.interface IN ('individual', 'leads')";
 
 // Build search conditions
