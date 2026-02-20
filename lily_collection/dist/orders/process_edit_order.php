@@ -168,8 +168,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $deliveryFeeSql = "SELECT delivery_fee FROM branding LIMIT 1";
         $deliveryFeeResult = $conn->query($deliveryFeeSql);
         $brandingFee = ($deliveryFeeResult && $row = $deliveryFeeResult->fetch_assoc()) ? floatval($row['delivery_fee']) : 0;
+        // $delivery_fee = ($subtotal_after_discount >= 5000) ? 0 : $brandingFee;
+        // $total_amount = $subtotal_after_discount + $delivery_fee;
         
-        $delivery_fee = ($subtotal_after_discount >= 5000) ? 0 : $brandingFee;
+        $delivery_fee = $brandingFee;
         $total_amount = $subtotal_after_discount + $delivery_fee;
 
         // Update order_header
