@@ -96,7 +96,7 @@ if (!empty($searchConditions)) {
 }
 
 // Add ordering - prioritize default courier first, then by creation date
-$sql .= " ORDER BY c.is_default DESC, c.created_at DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY is_default DESC, co_id ASC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);

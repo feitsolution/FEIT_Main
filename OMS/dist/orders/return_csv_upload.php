@@ -748,17 +748,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 return false;
             }
             
-            // Check if file is selected
             if (!fileInput.files.length) {
                 e.preventDefault();
                 alert('Please upload the CSV file before proceeding.');
                 return false;
             }
             
-            // Additional file validation
             const file = fileInput.files[0];
-            
-            // Check file extension
             const validExtensions = ['.csv'];
             const fileName = file.name.toLowerCase();
             const isValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
@@ -769,8 +765,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 return false;
             }
             
-            // Check file size (5MB limit)
-            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxSize = 5 * 1024 * 1024;
             if (file.size > maxSize) {
                 e.preventDefault();
                 alert('File size must be less than 5MB.');
@@ -778,11 +773,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
             }
             
             importBtn.disabled = true;
-            importBtn.innerHTML = ' Processing...';
-            
-            // Auto-refresh after success message
-            setTimeout(function() {
-            }, 5000);
+            importBtn.innerHTML = '⏳ Processing...';
             
             return true;
         });
@@ -797,7 +788,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 courierSelect.innerHTML = '<option value="">Select Tenant First </option>';
                 courierSelect.disabled = true;
                 
-                // Reset import button
                 const importBtn = document.getElementById('importBtn');
                 importBtn.disabled = false;
                 importBtn.innerHTML = ' Update to Return Handover';
@@ -815,7 +805,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
             const fileNameEl = document.getElementById('file-name');
             
             if (file) {
-                // Check file extension
                 const validExtensions = ['.csv'];
                 const fileName = file.name.toLowerCase();
                 const isValidExtension = validExtensions.some(ext => fileName.endsWith(ext));

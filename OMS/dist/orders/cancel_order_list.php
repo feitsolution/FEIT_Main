@@ -372,6 +372,26 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
         transform: scale(0.95);
     }
 
+    .restore-btn {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        padding: 8px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 5px;
+        transition: background-color 0.3s;
+    }
+
+    .restore-btn:hover {
+        background-color: #138496;
+    }
+
+    .restore-btn:active {
+        transform: scale(0.95);
+    }
+
     .actions {
         white-space: nowrap;
     }
@@ -474,7 +494,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                             </select>
                         </div>
 
-                        <?php if (($is_admin == 1) && $is_main_admin) { ?>
+                        <?php if ($is_admin && $is_main_admin) { ?>
                         <div class="form-group">
                             <label for="tenant_id_filter">Tenant ID</label>
                             <select id="tenant_id_filter" name="tenant_id_filter">
@@ -524,7 +544,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Order ID</th>
                                 <th>Customer Name</th>
                                 <?php if ($is_main_admin == 1) { ?>
-                                <th>Tenant Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>
@@ -638,6 +658,13 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                         <button class="action-btn print-btn" title="Print Order"
                                             onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
                                             <i class="fas fa-print"></i>
+                                        </button>
+
+                                        <!-- Restore Button -->
+                                        <button class="action-btn restore-btn" title="Restore Order"
+                                            onclick="restoreOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')"
+                                            style="background-color: #17a2b8; color: white;">
+                                            <i class="fas fa-undo"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -950,6 +977,45 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
         // printWindow.onload = function() {
         //     printWindow.print();
         // };
+    }
+
+    // Restore order function
+    function restoreOrder(orderId) {
+        if (!orderId || orderId.trim() === '') {
+            alert('Order ID is required to restore order.');
+            return;
+        }
+
+        // Confirm before restoring
+        if (!confirm('Are you sure you want to restore this order?\nOrder ID: ' + orderId)) {
+            return;
+        }
+
+        console.log('Restoring Order ID:', orderId);
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('order_id', orderId.trim());
+
+        // Send restore request
+        fetch('restore_order.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Order restored successfully!\nOrder ID: ' + data.order_id);
+                // Reload the page to show updated list
+                window.location.reload();
+            } else {
+                alert('Error restoring order: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error restoring order:', error);
+            alert('Error restoring order. Please try again.');
+        });
     }
     </script>
 

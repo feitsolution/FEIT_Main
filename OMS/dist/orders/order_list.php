@@ -473,7 +473,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                             </select>
                         </div>
 
-                        <?php if (($is_admin == 1) && $is_main_admin) { ?>
+                        <?php if ($is_admin && $is_main_admin) { ?>
                         <div class="form-group">
                             <label for="tenant_id_filter">Tenant ID</label>
                             <select id="tenant_id_filter" name="tenant_id_filter">
@@ -548,7 +548,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
                                 <?php if ($is_main_admin == 1) { ?>
-                                <th>Tenant Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>
@@ -776,6 +776,19 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                         <i class="fas fa-eye"></i>
                                     </button>
 
+                                    <!-- Mark as Paid / Unmark as Paid -->
+                                    <?php if ($payStatus == 'unpaid'): ?>
+                                    <button class="action-btn paid-btn" title="Mark as Paid"
+                                        onclick="markAsPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </button>
+                                    <?php elseif ($payStatus == 'paid'): ?>
+                                    <button class="action-btn cancel-btn" title="Unmark as Paid"
+                                        onclick="unmarkPaid('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <?php endif; ?>
+
                                     <!-- NEW PRINT BUTTON -->
                                     <button class="action-btn print-btn" title="Print Order"
                                         onclick="printOrder('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>')">
@@ -832,6 +845,8 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
 
     <!-- Order View Modal -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/order_view_modal.php'); ?>
+    <!-- Paid Mark Modal -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/paid_mark_modal.php'); ?>
 
     <script>
     // MODIFIED: Enhanced JavaScript functionality with always-show payment slip button for paid orders
@@ -846,6 +861,139 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
     const currentUserId = <?php echo $current_user_id; ?>;
 
 
+    // Clear all filter inputs - Updated to include user_id_filter
+    function clearFilters() {
+        // ... (existing clearFilters code)
+    }
+
+    // Mark as Paid Modal Functionality
+    function markAsPaid(orderId) {
+        if (!orderId || orderId.trim() === '') {
+            alert('Order ID is required to mark as paid.');
+            return;
+        }
+        document.getElementById('modal_order_id').value = orderId.trim();
+        document.getElementById('markPaidForm').reset();
+        document.getElementById('fileInfo').style.display = 'none';
+        const modal = document.getElementById('markPaidModal');
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePaidModal() {
+        const modal = document.getElementById('markPaidModal');
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        document.getElementById('markPaidForm').reset();
+        document.getElementById('fileInfo').style.display = 'none';
+    }
+
+    function unmarkPaid(orderId) {
+        if (!orderId || orderId.trim() === '') {
+            alert('Order ID is required to unmark as paid.');
+            return;
+        }
+        if (confirm('Are you sure you want to unmark this order as paid? This will delete the payment record and set the order back to unpaid.')) {
+            const formData = new FormData();
+            formData.append('order_id', orderId);
+            formData.append('action', 'unmark_paid');
+            fetch('unmark_paid.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order unmarked as paid successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while unmarking the payment. Please try again.');
+                });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const markPaidForm = document.getElementById('markPaidForm');
+        if (markPaidForm) {
+            markPaidForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const orderId = document.getElementById('modal_order_id').value;
+                const fileInput = document.getElementById('payment_slip');
+                const submitBtn = document.getElementById('submitPaidBtn');
+                submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                submitBtn.disabled = true;
+                const formData = new FormData();
+                formData.append('order_id', orderId);
+                formData.append('payment_slip', fileInput.files[0]);
+                formData.append('action', 'mark_paid');
+                fetch('mark_paid.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Order marked as paid successfully!');
+                            closePaidModal();
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + (data.message || 'Failed to mark order as paid'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while processing the payment.');
+                    })
+                    .finally(() => {
+                        submitBtn.innerHTML = '<i class="fas fa-check me-1"></i>Mark as Paid';
+                        submitBtn.disabled = false;
+                    });
+            });
+        }
+
+        const fileInput = document.getElementById('payment_slip');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('File size must be less than 2MB');
+                        fileInput.value = '';
+                        fileInfo.style.display = 'none';
+                        return;
+                    }
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert('Please select a valid file format (JPG, JPEG, PNG, PDF)');
+                        fileInput.value = '';
+                        fileInfo.style.display = 'none';
+                        return;
+                    }
+                    fileName.textContent = file.name;
+                    fileInfo.style.display = 'block';
+                } else {
+                    fileInfo.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(e) {
+        const paidModal = document.getElementById('markPaidModal');
+        if (paidModal && e.target === paidModal) {
+            closePaidModal();
+        }
+    });
     // Clear all filter inputs - Updated to include user_id_filter
     function clearFilters() {
         document.getElementById('order_id_filter').value = '';

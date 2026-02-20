@@ -1850,7 +1850,7 @@ $updateOrderStmt->bind_param("iisi", $co_id, $default_courier_id, $tracking_numb
                        ($tracking_assigned && isset($tracking_number) ? " with tracking($tracking_number)" : "");
         
         // Log the order creation action - SINGLE LOG ENTRY
-        $log_success = logUserAction($conn, $user_id, 'CREATE_ORDER', $order_id, $log_details);
+        $log_success = logUserAction($conn, $user_id, 'create_order', $order_id, $log_details);
         
         // Optional: Log any errors (but don't stop the process)
         if (!$log_success) {

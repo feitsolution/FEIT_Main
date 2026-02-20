@@ -378,7 +378,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Issue Date - Due Date</th>
                                 <th>Total Amount</th>
                                 <?php if ($is_main_admin == 1) { ?>
-                                <th>Teanet Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>

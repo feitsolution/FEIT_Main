@@ -313,7 +313,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
                 alert('Please allow popups for this site to open the print window.');
             }
         }
-
         // Clear filters function
         function clearFilters() {
             // Reset date and time fields only

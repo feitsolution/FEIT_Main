@@ -240,7 +240,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
     data-pc-theme="light">
 
 <head>
-    <title>Return Complete Orders - Lily Collection Admin Portal</title>
+    <title>Return Complete Orders - Admin Portal</title>
 
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/head.php'); ?>
 
@@ -374,7 +374,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Tracking Number</th>
                                 <th>Processed By</th>
                                 <?php if ($is_main_admin == 1 && $current_user_role == 1) { ?>
-                                <th>Tenant Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>

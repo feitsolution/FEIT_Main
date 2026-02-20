@@ -56,14 +56,6 @@ try {
         throw new Exception('Invalid call log status');
     }
     
-    if (empty($answer_reason)) {
-        throw new Exception('Call notes/reason is required');
-    }
-    
-    if (strlen($answer_reason) < 5) {
-        throw new Exception('Call notes must be at least 5 characters long');
-    }
-    
     // Start database transaction
     $conn->begin_transaction();
     

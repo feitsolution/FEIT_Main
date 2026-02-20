@@ -458,7 +458,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
                                 <?php if ($is_main_admin == 1) { ?>
-                                <th>Tenant Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>

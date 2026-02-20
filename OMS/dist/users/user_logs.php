@@ -343,7 +343,8 @@ function formatLogDetails($details) {
                         <thead>
                             <tr>
                                 <th>Log ID</th>
-                                <th>User Info & Action</th>
+                                <th>User Info</th>
+                                <th>Action</th>
                                 <th>Inquiry ID</th>
                                 <th>Details</th>
                                 <th>Date & Time</th>
@@ -361,8 +362,8 @@ function formatLogDetails($details) {
                                             </div>
                                         </td>
                                         
-                                        <!-- Combined User Info & Action -->
-                                        <td class="user-action-combined">
+                                        <!-- User Info -->
+                                        <td class="user-info-cell">
                                             <div class="user-info-section">
                                                 <h6 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #333;">
                                                     <?php echo htmlspecialchars($row['username'] ?: 'Unknown User'); ?>
@@ -382,22 +383,24 @@ function formatLogDetails($details) {
                                                     </small>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="action-section" style="margin-top: 8px;">
-                                                <span class="status-badge <?php 
-                                                    $action = strtolower($row['action_type']);
-                                                    if (strpos($action, 'create') !== false || strpos($action, 'add') !== false) {
-                                                        echo 'pay-status-paid'; // Green for create/add actions
-                                                    } elseif (strpos($action, 'delete') !== false || strpos($action, 'remove') !== false) {
-                                                        echo 'pay-status-unpaid'; // Red for delete/remove actions
-                                                    } elseif (strpos($action, 'update') !== false || strpos($action, 'edit') !== false) {
-                                                        echo 'status-badge-warning'; // Orange for update/edit actions
-                                                    } else {
-                                                        echo 'status-badge-info'; // Blue for other actions
-                                                    }
-                                                ?>">
-                                                    <?php echo htmlspecialchars($row['action_type']); ?>
-                                                </span>
-                                            </div>
+                                        </td>
+                                        
+                                        <!-- Action -->
+                                        <td class="action-cell">
+                                            <span class="status-badge <?php 
+                                                $action = strtolower($row['action_type']);
+                                                if (strpos($action, 'create') !== false || strpos($action, 'add') !== false) {
+                                                    echo 'pay-status-paid'; // Green for create/add actions
+                                                } elseif (strpos($action, 'delete') !== false || strpos($action, 'remove') !== false) {
+                                                    echo 'pay-status-unpaid'; // Red for delete/remove actions
+                                                } elseif (strpos($action, 'update') !== false || strpos($action, 'edit') !== false) {
+                                                    echo 'status-badge-warning'; // Orange for update/edit actions
+                                                } else {
+                                                    echo 'status-badge-info'; // Blue for other actions
+                                                }
+                                            ?>">
+                                                <?php echo htmlspecialchars($row['action_type']); ?>
+                                            </span>
                                         </td>
                                         
                                         <!-- Inquiry ID -->
@@ -458,7 +461,7 @@ function formatLogDetails($details) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                        <td colspan="6" class="text-center" style="padding: 40px; text-align: center; color: #666;">
+                                        <td colspan="7" class="text-center" style="padding: 40px; text-align: center; color: #666;">
                                         <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
                                         No activity logs found
                                     </td>

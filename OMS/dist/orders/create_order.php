@@ -98,7 +98,7 @@ function checkCourierStatus($conn, $tenant_id) {
             }
         }
     } else {
-        $status['info_message'] = "No default courier selected for this tenant.";
+        $status['info_message'] = "No default courier selected.";
     }
     
     return $status;
@@ -111,18 +111,28 @@ $courierStatus = checkCourierStatus($conn, $selected_tenant_id);
 $sql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
 $result = $conn->query($sql);
 
-// Updated customer query with selected tenant filter
-$customerSql = "SELECT c.*, ct.city_name 
-                FROM customers c 
-                LEFT JOIN city_table ct ON c.city_id = ct.city_id 
-                WHERE c.tenant_id = ? 
-                AND c.status = 'Active' 
-                ORDER BY c.name ASC";
-
-$customerStmt = $conn->prepare($customerSql);
-$customerStmt->bind_param("i", $selected_tenant_id);
-$customerStmt->execute();
-$customerResult = $customerStmt->get_result();
+// Fetch customer data 
+if ($is_main_admin === 1 && $role_id === 1) {
+    // Main admin sees all customers from all tenants
+    $customerSql = "SELECT c.*, ct.city_name 
+                    FROM customers c 
+                    LEFT JOIN city_table ct ON c.city_id = ct.city_id 
+                    WHERE c.status = 'Active' 
+                    ORDER BY c.customer_id DESC";
+    $customerResult = $conn->query($customerSql);
+} else {
+    // Regular users see only their tenant's customers
+    $customerSql = "SELECT c.*, ct.city_name 
+                    FROM customers c 
+                    LEFT JOIN city_table ct ON c.city_id = ct.city_id 
+                    WHERE c.tenant_id = ? 
+                    AND c.status = 'Active' 
+                    ORDER BY c.customer_id DESC";
+    $customerStmt = $conn->prepare($customerSql);
+    $customerStmt->bind_param("i", $selected_tenant_id);
+    $customerStmt->execute();
+    $customerResult = $customerStmt->get_result();
+}
 
 // Fetch cities for dropdown
 $citySql = "SELECT city_id, city_name FROM city_table WHERE is_active = 1 ORDER BY city_name ASC";
@@ -429,7 +439,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/sidebar.php');
 <!-- REMOVED THE ELSE BLOCK COMPLETELY -->
 
       <!-- Alert Messages and Courier Status -->
-<div class="alert-container" style="position: absolute; top: 85px; right: 20px; z-index: 1000; max-width: 400px;">
+<div class="alert-container" style="position: absolute; top: 25px; right: 20px; z-index: 1000; max-width: 400px;">
     <?php
     // Display session messages
     if (isset($_SESSION['order_success'])) {

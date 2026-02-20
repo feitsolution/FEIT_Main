@@ -315,7 +315,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <th>Phone & Email</th>
                                 <th>Address</th>
                                 <?php if ($is_main_admin == 1 && $is_admin == 1) { ?>
-                                <th>Teanet Company Name</th>
+                                <th>Tenant Company</th>
                                 <?php } else { ?>
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>
@@ -795,26 +795,26 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
     }
 
     // Enhanced search with debouncing
-    let searchTimeout;
+    // let searchTimeout;
 
-    function debounceSearch(func, delay) {
-        return function(...args) {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
+    // function debounceSearch(func, delay) {
+    //     return function(...args) {
+    //         clearTimeout(searchTimeout);
+    //         searchTimeout = setTimeout(() => func.apply(this, args), delay);
+    //     };
+    // }
 
-    // Auto-submit search form with debouncing
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInputs = document.querySelectorAll('#customer_name_filter, #email_filter, #phone_filter');
-        const debouncedSubmit = debounceSearch(function() {
-            document.querySelector('.tracking-form').submit();
-        }, 500);
+    // // Auto-submit search form with debouncing
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     const searchInputs = document.querySelectorAll('#customer_name_filter, #email_filter, #phone_filter');
+    //     const debouncedSubmit = debounceSearch(function() {
+    //         document.querySelector('.tracking-form').submit();
+    //     }, 500);
 
-        searchInputs.forEach(input => {
-            input.addEventListener('input', debouncedSubmit);
-        });
-    });
+    //     searchInputs.forEach(input => {
+    //         input.addEventListener('input', debouncedSubmit);
+    //     });
+    // });
     </script>
 
 
