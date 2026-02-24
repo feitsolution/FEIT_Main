@@ -1429,14 +1429,14 @@ const ProductManager = {
         let subtotalAfterDiscount = subtotalGross - totalDiscount;
 
         if (hasProducts) {
-            // if (subtotalAfterDiscount >= 5000) {
-            //     finalDeliveryFee = 0; // Free delivery
-            //     // Add visual indicator for free delivery
-            //     document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
-            // } else {
+            if (subtotalAfterDiscount >= 5000) {
+                finalDeliveryFee = 0; // Free delivery
+                // Add visual indicator for free delivery
+                document.getElementById('delivery_fee_display').innerHTML = '<s style="color: #999;">' + deliveryFee.toFixed(2) + '</s> <span style="color: #28a745; font-weight: bold;">0.00 (FREE)</span>';
+            } else {
                 finalDeliveryFee = deliveryFee; // Normal delivery fee
                 document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
-            // }
+            }
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
         }

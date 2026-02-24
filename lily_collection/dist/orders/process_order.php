@@ -544,9 +544,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $subtotal_after_discount = $subtotal_before_discounts - $total_discount;
 
             // Apply free delivery rule for orders >= 5000
-            // if ($subtotal_after_discount >= 5000) {
-            //     $delivery_fee = 0;
-            // }
+            if ($subtotal_after_discount >= 5000) {
+                $delivery_fee = 0;
+            }
 
 // Calculate total amount with delivery fee
 $total_amount = $subtotal_after_discount + $delivery_fee;

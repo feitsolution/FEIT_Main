@@ -171,7 +171,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // $delivery_fee = ($subtotal_after_discount >= 5000) ? 0 : $brandingFee;
         // $total_amount = $subtotal_after_discount + $delivery_fee;
         
-        $delivery_fee = $brandingFee;
+        $delivery_fee = ($subtotal_after_discount >= 5000) ? 0 : $brandingFee;
         $total_amount = $subtotal_after_discount + $delivery_fee;
 
         // Update order_header
