@@ -61,7 +61,7 @@ function callFdeApi($apiData) {
             209 => 'Invalid contact number 1',
             210 => 'Invalid contact number 2',
             211 => 'Empty or invalid address',
-            212 => 'Empty or invalid amount',
+            212 => 'Empty or invalid amount (If you have CRE numbers, you can ignore or set as a 0 value to this)',
             213 => 'Invalid city',
             214 => 'Parcel insert unsuccessfully',
             215 => 'Invalid or inactive client',

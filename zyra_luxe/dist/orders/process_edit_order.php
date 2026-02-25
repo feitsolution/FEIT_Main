@@ -60,15 +60,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Begin transaction
         $conn->begin_transaction();
 
-        // Fetch current pay_status of the order before updating
-        $currentPayStatusSql = "SELECT pay_status FROM order_header WHERE order_id = ?";
+        // Fetch current pay_status and interface of the order before updating
+        $currentPayStatusSql = "SELECT pay_status, interface FROM order_header WHERE order_id = ?";
         $currentPayStatusStmt = $conn->prepare($currentPayStatusSql);
         $currentPayStatusStmt->bind_param("s", $order_id);
         $currentPayStatusStmt->execute();
         $currentPayResult = $currentPayStatusStmt->get_result();
         $old_pay_status = 'unpaid';
+        $order_interface = 'individual'; // default to individual
         if ($old_row = $currentPayResult->fetch_assoc()) {
             $old_pay_status = $old_row['pay_status'];
+            $order_interface = $old_row['interface'] ?? 'individual';
         }
         $currentPayStatusStmt->close();
 
@@ -172,13 +174,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $delivery_fee = $brandingFee;
         $total_amount = $subtotal_after_discount + $delivery_fee;
 
-        // Update order_header
+        // Update order_header (clear upload_error when editing)
         $updateSql = "UPDATE order_header SET 
                         customer_id = ?, issue_date = ?, due_date = ?, 
                         subtotal = ?, discount = ?, total_amount = ?, delivery_fee = ?, 
                         notes = ?, pay_status = ?, pay_date = ?, 
                         product_code = ?, full_name = ?, email = ?, mobile = ?, mobile_2 = ?, 
-                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?
+                        address_line1 = ?, address_line2 = ?, city_id = ?, zone_id = ?, district_id = ?,
+                        upload_error = NULL
                       WHERE order_id = ? AND status = 'pending'";
         
         $stmt = $conn->prepare($updateSql);
@@ -238,18 +241,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $old_item = $current_items_map[$item['item_id']] ?? null;
                 
                 if ($old_item) {
-                    // Stock management - only if enabled
+                    // Stock management - only if enabled and only for individual orders
                     if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-                        // Restore old stock
-                        $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
-                        $restoreStockStmt->execute();
-                        
-                        // Deduct new stock
-                        $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
-                        $deductStockStmt->execute();
-                        
-                        if ($deductStockStmt->affected_rows === 0) {
-                            throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                        // Only manage stock for individual orders
+                        // Lead orders have stock deducted at dispatch time (via API), not during edits
+                        if ($order_interface == 'individual') {
+                            // Restore old stock
+                            $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
+                            $restoreStockStmt->execute();
+                            
+                            // Deduct new stock
+                            $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
+                            $deductStockStmt->execute();
+                            
+                            if ($deductStockStmt->affected_rows === 0) {
+                                throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                            }
                         }
                     }
                     
@@ -264,12 +271,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 // NEW ITEM - INSERT IT
                 if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-                    // Deduct stock for the new item
-                    $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
-                    $deductStockStmt->execute();
-                    
-                    if ($deductStockStmt->affected_rows === 0) {
-                        throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                    // Only deduct stock for individual orders
+                    // Lead orders have stock deducted at dispatch time (via API), not during edits
+                    if ($order_interface == 'individual') {
+                        // Deduct stock for the new item
+                        $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
+                        $deductStockStmt->execute();
+                        
+                        if ($deductStockStmt->affected_rows === 0) {
+                            throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                        }
                     }
                 }
 
@@ -286,8 +297,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (!in_array($item_id, $processed_item_ids)) {
                 // This item was removed - restore its stock and delete it
                 if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-                    $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
-                    $restoreStockStmt->execute();
+                    // Only restore stock for individual orders
+                    // Lead orders have stock deducted at dispatch time (via API), not during edits
+                    if ($order_interface == 'individual') {
+                        $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
+                        $restoreStockStmt->execute();
+                    }
                 }
                 
                 $deleteStmt = $conn->prepare("DELETE FROM order_items WHERE item_id = ? AND order_id = ?");
