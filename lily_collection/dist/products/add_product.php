@@ -240,7 +240,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                     <input type="number" class="form-control" id="low_stock_threshold" name="low_stock_threshold"
                                         placeholder="10" required min="0" step="1" value="10">
                                     <div class="error-feedback" id="low_stock_threshold-error"></div>
-                                    <div class="code-hint">Threshold for low stock alerts</div>
+                                    <div class="code-hint">Minimum Stock Alert Level</div>
                                 </div>
                             </div>
                             <?php else: ?>

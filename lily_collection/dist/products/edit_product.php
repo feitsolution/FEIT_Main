@@ -254,7 +254,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         placeholder="10" required min="0" step="1"
                                         value="<?php echo (int)($product['low_stock_threshold'] ?? 10); ?>">
                                     <div class="error-feedback" id="low_stock_threshold-error"></div>
-                                    <div class="code-hint">Threshold for low stock alerts</div>
+                                    <div class="code-hint">Minimum Stock Alert Level</div>
                                 </div>
                             </div>
                             <?php else: ?>
