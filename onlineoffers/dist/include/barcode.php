@@ -102,7 +102,7 @@ function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal"
 	
 	for ( $i=1; $i <= strlen($code_string); $i++ ){
 		$code_length = $code_length + (integer)(substr($code_string,($i-1),1));
-    }
+        }
 
 	if ( strtolower($orientation) == "horizontal" ) {
 		$img_width = $code_length*$SizeFactor;
@@ -112,46 +112,33 @@ function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal"
 		$img_height = $code_length*$SizeFactor;
 	}
 
-	// Generate SVG
-	$svg_width = $img_width;
-	$svg_height = $img_height + $text_height;
-	
-	$output = '<?xml version="1.0" standalone="no"?>' . "\n";
-	$output .= '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' . "\n";
-	$output .= '<svg width="' . $svg_width . '" height="' . $svg_height . '" viewBox="0 0 ' . $svg_width . ' ' . $svg_height . '" xmlns="http://www.w3.org/2000/svg" version="1.1">' . "\n";
-	$output .= '  <rect width="100%" height="100%" fill="white" />' . "\n";
+	$image = imagecreate($img_width, $img_height + $text_height);
+	$black = imagecolorallocate ($image, 0, 0, 0);
+	$white = imagecolorallocate ($image, 255, 255, 255);
+
+	imagefill( $image, 0, 0, $white );
+	if ( $print ) {
+		imagestring($image, 5, 31, $img_height, $text, $black );
+	}
 
 	$location = 10;
 	for ( $position = 1 ; $position <= strlen($code_string); $position++ ) {
-		$bar_width = (integer)(substr($code_string, ($position-1), 1));
-		$cur_size = $location + $bar_width;
-		
-		if ($position % 2 != 0) { // Odd positions are bars (black)
-			if ( strtolower($orientation) == "horizontal" ) {
-				$output .= '  <rect x="' . ($location*$SizeFactor) . '" y="0" width="' . ($bar_width*$SizeFactor) . '" height="' . $img_height . '" fill="black" />' . "\n";
-			} else {
-				$output .= '  <rect x="0" y="' . ($location*$SizeFactor) . '" width="' . $img_width . '" height="' . ($bar_width*$SizeFactor) . '" fill="black" />' . "\n";
-			}
-		}
+		$cur_size = $location + ( substr($code_string, ($position-1), 1) );
+		if ( strtolower($orientation) == "horizontal" )
+			imagefilledrectangle( $image, $location*$SizeFactor, 0, $cur_size*$SizeFactor, $img_height, ($position % 2 == 0 ? $white : $black) );
+		else
+			imagefilledrectangle( $image, 0, $location*$SizeFactor, $img_width, $cur_size*$SizeFactor, ($position % 2 == 0 ? $white : $black) );
 		$location = $cur_size;
 	}
 	
-	if ( $print ) {
-		// Basic text centered at the bottom
-		$text_x = ($svg_width / 2);
-		$text_y = $img_height + 20;
-		$output .= '  <text x="' . $text_x . '" y="' . $text_y . '" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="black">' . htmlspecialchars($text) . '</text>' . "\n";
-	}
-
-	$output .= '</svg>';
-
-	// Output or save
+	// Draw barcode to the screen or save in a file
 	if ( $filepath=="" ) {
-		header('Content-Type: image/svg+xml');
-		header('Vary: Accept-Encoding');
-		echo $output;
+		header ('Content-type: image/png');
+		imagepng($image);
+		imagedestroy($image);
 	} else {
-		file_put_contents($filepath, $output);
+		imagepng($image,$filepath);
+		imagedestroy($image);		
 	}
 }
 
