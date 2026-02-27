@@ -246,6 +246,29 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 .actions {
     white-space: nowrap;
 }
+
+/* NEW: Issue Date Styling */
+.issued-time {
+    font-size: 0.9em;
+    color: #333;
+    line-height: 1.2;
+}
+
+.issued-date {
+    display: block;
+    font-weight: 600;
+}
+
+.issued-time-only {
+    display: block;
+    color: #666;
+    font-size: 0.85em;
+}
+.status-badge.pay-status-paid,
+.status-badge.pay-status-unpaid {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+}
 </style>
 </head>
 
@@ -389,10 +412,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                         <thead>
                             <tr>
                                 <th>Order ID</th>
+                                <th>Issue Date</th>
                                 <th>Customer Name</th>
                                 <th>Total Amount</th>
                                 <th>Status</th>
-                                <th>Pay Status</th>
                                 <th>Tracking Number</th>
                                 <th>Processed By</th>
                                <?php if ($current_user_role == 1): ?>
@@ -409,6 +432,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                                         <td class="order-id">
                                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
                                         </td>
+
+                                        <!-- NEW: Issue Date Column -->
+                                        <td class="issued-time">
+                                            <?php
+                                            if (isset($row['created_at']) && !empty($row['created_at'])) {
+                                                $createdAt = new DateTime($row['created_at']);
+                                                echo '<span class="issued-date">' . $createdAt->format('Y-m-d') . '</span>';
+                                                echo '<span class="issued-time-only">' . $createdAt->format('H:i:s') . '</span>';
+                                            } else {
+                                                echo '<span style="color: #999; font-style: italic;">N/A</span>';
+                                            }
+                                            ?>
+                                        </td>
                                         
                                         <!-- Customer Name with ID -->
                                         <td class="customer-name">
@@ -421,13 +457,19 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                                        
                                         <!-- Total Amount with Currency -->
                                         <td class="amount">
-                                            <?php
-                                            $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
-                                            $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
-                                            $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
-                                            echo $currencySymbol . number_format($amount, 2);
-                                            ?>
-                                        </td>
+                            <?php
+                            $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
+                            $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
+                            $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
+                            echo $currencySymbol . number_format($amount, 2);
+                            
+                            $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
+                            if ($payStatus == 'paid'): ?>
+                                <br><span class="status-badge pay-status-paid">Paid</span>
+                            <?php else: ?>
+                                <br><span class="status-badge pay-status-unpaid">Unpaid</span>
+                            <?php endif; ?>
+                        </td>
                                         
                                         <!-- Order Status Badge -->
                                         <td>
@@ -529,18 +571,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                                             ?>
                                             <span class="status-badge <?php echo $badgeClass; ?>"><?php echo $statusText; ?></span>
                                         </td>
-                                        
-                                        <!-- Payment Status Badge -->
-                                        <td>
-                                            <?php
-                                            $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
-                                            if ($payStatus == 'paid'): ?>
-                                                <span class="status-badge pay-status-paid">Paid</span>
-                                            <?php else: ?>
-                                                <span class="status-badge pay-status-unpaid">Unpaid</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        
                                         <!-- Tracking Number -->
                                         <td class="tracking-number">
                                             <?php
