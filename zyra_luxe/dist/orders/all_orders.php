@@ -456,7 +456,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                         </td>
                                        
                                         <!-- Total Amount with Currency -->
-                                        <<td class="amount">
+                                        <td class="amount">
                             <?php
                             $amount = isset($row['total_amount']) ? (float)$row['total_amount'] : 0;
                             $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
