@@ -264,11 +264,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
     color: #666;
     font-size: 0.85em;
 }
+<<<<<<< HEAD
 .status-badge.pay-status-paid,
 .status-badge.pay-status-unpaid {
     font-size: 0.65rem;
     padding: 2px 8px;
 }
+=======
+>>>>>>> 0d6dba4bc3b94df22c1fb0b8dd3b5536744e0685
 </style>
 </head>
 
