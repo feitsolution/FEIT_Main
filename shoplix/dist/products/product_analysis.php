@@ -123,7 +123,7 @@ $summarySql = "SELECT
                 COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oi.product_id END) as unique_products,
                 SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_items_sold,
                 SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
-                COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oi.order_id END) as total_orders
+                COUNT(DISTINCT oi.order_id) as total_orders
             FROM order_items oi 
             JOIN order_header oh ON oi.order_id = oh.order_id 
             LEFT JOIN products p ON oi.product_id = p.id 
