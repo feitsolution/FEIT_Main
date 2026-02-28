@@ -67,7 +67,7 @@ if (!$is_admin) {
     $roleCondition = " AND oh.user_id = $current_user_id";
 }
 
-$searchConditions = ["oh.interface IN ('individual', 'leads')", "oh.status NOT IN ('pending', 'cancel')", "DATE(oh.created_at) BETWEEN '$date_from' AND '$date_to'"];
+$searchConditions = ["oh.interface IN ('individual', 'leads')", "DATE(oh.created_at) BETWEEN '$date_from' AND '$date_to'"];
 
 if (!empty($category_filter)) {
     $catTerm = $conn->real_escape_string($category_filter);
@@ -97,9 +97,9 @@ $sql = "SELECT
             SUM(oi.quantity) as total_quantity,
             SUM(oi.total_amount) as total_revenue,
             COUNT(DISTINCT oi.order_id) as order_count,
-            COUNT(DISTINCT CASE WHEN oi.status = 'dispatch' THEN oi.order_id END) as dispatched_count,
-            COUNT(DISTINCT CASE WHEN oi.status = 'complete' THEN oi.order_id END) as completed_count,
-            COUNT(DISTINCT CASE WHEN oi.status = 'cancel' THEN oi.order_id END) as cancelled_count
+            COUNT(DISTINCT CASE WHEN oh.status = 'dispatch' THEN oh.order_id END) as dispatched_count,
+            COUNT(DISTINCT CASE WHEN oh.status IN ('Done', 'Delivered') THEN oh.order_id END) as completed_count,
+            COUNT(DISTINCT CASE WHEN oh.status = 'cancel' THEN oh.order_id END) as cancelled_count
         FROM order_items oi 
         JOIN order_header oh ON oi.order_id = oh.order_id 
         LEFT JOIN products p ON oi.product_id = p.id 
@@ -226,7 +226,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                     <div class="col-span-12 xl:col-span-3 md:col-span-6">
                         <div class="card">
                             <div class="card-header !pb-0 !border-b-0">
-                                <h5>Unique Products Sold</h5>
+                                <h5>Products Sold</h5>
                                 <i class="fas fa-box text-blue-500 text-xl"></i>
                             </div>
                             <div class="card-body">

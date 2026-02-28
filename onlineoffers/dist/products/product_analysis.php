@@ -5,13 +5,13 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
         ob_end_clean();
     }
-    header("Location: /royal_deals/dist/pages/login.php");
+    header("Location: /onlineoffers/dist/pages/login.php");
     exit();
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/sidebar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
@@ -39,7 +39,7 @@ if ($current_user_id == 0 || $current_user_role == 0) {
 }
 
 if ($current_user_id == 0) {
-    header("Location: /royal_deals/dist/pages/login.php");
+    header("Location: /onlineoffers/dist/pages/login.php");
     exit();
 }
 
@@ -145,7 +145,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
 
 <head>
     <title>Product Analysis - Order Management</title>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/head.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/head.php'); ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
@@ -153,7 +153,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
 </head>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -431,8 +431,8 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
         </div>
     </div>
 
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/footer.php'); ?>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/royal_deals/dist/include/scripts.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/footer.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/scripts.php'); ?>
 
     <script>
         function clearFilters() {
