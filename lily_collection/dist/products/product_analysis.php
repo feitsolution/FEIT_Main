@@ -86,13 +86,8 @@ $sql = "SELECT
             COUNT(DISTINCT CASE WHEN oh.status = 'cancel' THEN oh.order_id END) as cancelled_count
         FROM order_items oi 
         JOIN order_header oh ON oi.order_id = oh.order_id 
-<<<<<<< HEAD
         LEFT JOIN products p ON oi.product_id = p.id" . $whereClause . "
         GROUP BY p.id, p.name, p.product_code, p.lkr_price
-=======
-        LEFT JOIN products p ON oi.product_id = p.d" . $whereClause . "
-        GROUP BY p.id, p.name, p.product_code, p.lkr_price, c.name, pc.name
->>>>>>> fe9ff2b9d0c857f16a818992ec7f5eb4c8c0202f
         ORDER BY total_revenue DESC, total_quantity DESC
         LIMIT $limit OFFSET $offset";
 
