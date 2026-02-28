@@ -94,12 +94,12 @@ $sql = "SELECT
             p.lkr_price,
             c.name as category_name,
             pc.name as parent_category_name,
-            SUM(CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.quantity ELSE 0 END) as total_quantity,
-            SUM(CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
+            SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_quantity,
+            SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
             COUNT(DISTINCT oi.order_id) as order_count,
             COUNT(DISTINCT CASE WHEN oh.status = 'pending' THEN oh.order_id END) as pending_count,
             COUNT(DISTINCT CASE WHEN oh.status = 'dispatch' THEN oh.order_id END) as dispatched_count,
-            COUNT(DISTINCT CASE WHEN oh.status IN ('Done', 'Delivered') THEN oh.order_id END) as completed_count,
+            COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oh.order_id END) as completed_count,
             COUNT(DISTINCT CASE WHEN oh.status = 'cancel' THEN oh.order_id END) as cancelled_count
         FROM order_items oi 
         JOIN order_header oh ON oi.order_id = oh.order_id 
@@ -120,10 +120,10 @@ $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
 $summarySql = "SELECT 
-                COUNT(DISTINCT CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.product_id END) as unique_products,
-                SUM(CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.quantity ELSE 0 END) as total_items_sold,
-                SUM(CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
-                COUNT(DISTINCT CASE WHEN oh.status IN ('Done', 'Delivered') THEN oi.order_id END) as total_orders
+                COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oi.product_id END) as unique_products,
+                SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_items_sold,
+                SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
+                COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oi.order_id END) as total_orders
             FROM order_items oi 
             JOIN order_header oh ON oi.order_id = oh.order_id 
             LEFT JOIN products p ON oi.product_id = p.id 
