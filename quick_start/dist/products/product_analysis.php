@@ -292,6 +292,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                 <th>Unit Price</th>
                                 <th>Qty Sold</th>
                                 <th>Earn</th>
+                                <th>Orders</th>
                                 <th>Success %</th>
                                 <th>Pending</th>
                                 <th>Dispatched</th>
@@ -324,6 +325,9 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                             LKR <?php echo number_format($row['total_earn'] ?? 0, 2); ?>
                                         </td>
                                         <td>
+                                            <?php echo number_format($row['order_count'] ?? 0); ?>
+                                        </td>
+                                        <td>
                                             <div class="d-flex align-items-center">
                                                 <span class="mr-2"><?php echo number_format($row['success_rate'] ?? 0, 1); ?>%</span>
                                                 <div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700" style="width: 50px;">
@@ -353,7 +357,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="11" class="text-center" style="padding: 40px; text-align: center; color: #666;">
+                                    <td colspan="12" class="text-center" style="padding: 40px; text-align: center; color: #666;">
                                         <i class="fas fa-chart-bar" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
                                         No product analysis data found for the selected filters
                                     </td>
