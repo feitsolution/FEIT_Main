@@ -576,7 +576,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
         
         <button class="action-btn <?php echo ($row['call_log'] == 0) ? 'answer-btn' : 'no-answer-btn'; ?>" 
                 title="<?php echo ($row['call_log'] == 0) ? 'Mark as Answered' : 'Mark as No Answer'; ?>" 
-                onclick="openAnswerModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', <?php echo $row['call_log']; ?>)">
+                onclick="openAnswerModal('<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>', <?php echo $row['call_log']; ?>, '<?php echo isset($row['answer_reason']) ? addslashes(htmlspecialchars($row['answer_reason'])) : ''; ?>', '<?php echo isset($row['no_answer_reason']) ? addslashes(htmlspecialchars($row['no_answer_reason'])) : ''; ?>')">
             <i class="fas <?php echo ($row['call_log'] == 0) ? 'fas fa-phone-slash' : 'fas fa-phone'; ?>"></i>
         </button>
         
@@ -1408,13 +1408,17 @@ function debugModalFooter() {
 // Global variable to store current modal state
 let currentAnswerOrderId = null;
 let currentCallLog = null;
+let currentExistingAnswerReason = '';
+let currentExistingNoAnswerReason = '';
 
 /**
  * Open Answer Status Modal
  * @param {string} orderId - The order ID to update
  * @param {number} callLogStatus - Current call_log status (0 or 1)
+ * @param {string} existingAnswerReason - Existing answer reason
+ * @param {string} existingNoAnswerReason - Existing no answer reason
  */
-function openAnswerModal(orderId, callLogStatus) {
+function openAnswerModal(orderId, callLogStatus, existingAnswerReason = '', existingNoAnswerReason = '') {
     if (!orderId || orderId.trim() === '') {
         alert('Order ID is required to update call status.');
         return;
@@ -1425,6 +1429,8 @@ function openAnswerModal(orderId, callLogStatus) {
     // Store current values
     currentAnswerOrderId = orderId.trim();
     currentCallLog = parseInt(callLogStatus);
+    currentExistingAnswerReason = existingAnswerReason || '';
+    currentExistingNoAnswerReason = existingNoAnswerReason || '';
     
     // Set form values
     document.getElementById('answer_order_id').value = currentAnswerOrderId;
@@ -1447,8 +1453,13 @@ function openAnswerModal(orderId, callLogStatus) {
     if(statusAnswer) statusAnswer.checked = false;
     if(statusNoAnswer) statusNoAnswer.checked = false;
 
-    // Set to opposite of current status as default suggestion if applicable
-    const suggestedStatus = (currentCallLog === 0) ? 1 : 0;
+    // Set to current status if it exists, otherwise opposite as default suggestion
+    let suggestedStatus;
+    if (currentCallLog === 1 || currentCallLog === 0) {
+        suggestedStatus = currentCallLog;
+    } else {
+        suggestedStatus = (currentCallLog === 0) ? 1 : 0;
+    }
     
     if (suggestedStatus === 1 && statusAnswer) {
         statusAnswer.checked = true;
@@ -1488,16 +1499,19 @@ function updateModalContentBySelection() {
         reasonLabel.innerHTML = 'Answer Notes';
         reasonHelp.textContent = 'Please provide details about the customer conversation';
         answerReason.placeholder = 'Enter details about customer conversation...';
+        answerReason.value = currentExistingAnswerReason;
     } else if (selectedStatus === 0) {
         // NO ANSWER (call_log = 0)
         reasonLabel.innerHTML = 'No Answer Reason';
         reasonHelp.textContent = 'Please specify why the customer did not answer';
         answerReason.placeholder = 'Enter reason for no answer (busy, unreachable, etc.)...';
+        answerReason.value = currentExistingNoAnswerReason;
     } else {
         // Default state
         reasonLabel.innerHTML = 'Call Notes';
         reasonHelp.textContent = 'Please provide details about the call interaction';
         answerReason.placeholder = 'Enter call notes or reason...';
+        answerReason.value = '';
     }
 }
 
@@ -1513,6 +1527,8 @@ function closeAnswerModal() {
     document.getElementById('answer-status-form').reset();
     currentAnswerOrderId = null;
     currentCallLog = null;
+    currentExistingAnswerReason = '';
+    currentExistingNoAnswerReason = '';
 }
 
 /**
