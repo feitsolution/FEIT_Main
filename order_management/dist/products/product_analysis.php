@@ -94,11 +94,12 @@ $sql = "SELECT
             p.lkr_price,
             c.name as category_name,
             pc.name as parent_category_name,
-            SUM(oi.quantity) as total_quantity,
-            SUM(oi.total_amount) as total_revenue,
+            SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_quantity,
+            SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
             COUNT(DISTINCT oi.order_id) as order_count,
+            COUNT(DISTINCT CASE WHEN oh.status = 'pending' THEN oh.order_id END) as pending_count,
             COUNT(DISTINCT CASE WHEN oh.status = 'dispatch' THEN oh.order_id END) as dispatched_count,
-            COUNT(DISTINCT CASE WHEN oh.status IN ('Done', 'Delivered') THEN oh.order_id END) as completed_count,
+            COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oh.order_id END) as completed_count,
             COUNT(DISTINCT CASE WHEN oh.status = 'cancel' THEN oh.order_id END) as cancelled_count
         FROM order_items oi 
         JOIN order_header oh ON oi.order_id = oh.order_id 
@@ -119,9 +120,9 @@ $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
 $summarySql = "SELECT 
-                COUNT(DISTINCT oi.product_id) as unique_products,
-                SUM(oi.quantity) as total_items_sold,
-                SUM(oi.total_amount) as total_revenue,
+                COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oi.product_id END) as unique_products,
+                SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_items_sold,
+                SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_revenue,
                 COUNT(DISTINCT oi.order_id) as total_orders
             FROM order_items oi 
             JOIN order_header oh ON oi.order_id = oh.order_id 
@@ -323,6 +324,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                 <th>Qty Sold</th>
                                 <th>Revenue</th>
                                 <th>Orders</th>
+                                <th>Pending</th>
                                 <th>Dispatched</th>
                                 <th>Completed</th>
                                 <th>Cancelled</th>
@@ -365,6 +367,11 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                         </td>
                                         <td>
                                             <?php echo number_format($row['order_count'] ?? 0); ?>
+                                        </td>
+                                        <td>
+                                            <span style="color: #f59e0b; font-weight: 600;">
+                                                <?php echo number_format($row['pending_count'] ?? 0); ?>
+                                            </span>
                                         </td>
                                         <td>
                                             <?php echo number_format($row['dispatched_count'] ?? 0); ?>
