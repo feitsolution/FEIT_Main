@@ -218,6 +218,9 @@
 .customer-name {
   font-weight: 500;
   color: #1e293b;
+  max-width: 220px;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .amount {
@@ -455,6 +458,10 @@ PAGINATION STYLES
   .orders-table {
     min-width: 800px;
   }
+  
+  .orders-table td {
+    vertical-align: middle;
+}
 
   .orders-table thead th,
   .orders-table tbody td {
