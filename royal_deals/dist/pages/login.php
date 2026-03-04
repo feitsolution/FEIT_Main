@@ -278,7 +278,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 
     <!-- FOOTER -->
-          <div class="footer-wrapper container-fluid mx-10">
+          <!-- <div class="footer-wrapper container-fluid mx-10">
         <div class="grid grid-cols-12 gap-1.5">
           <div class="col-span-12 sm:col-span-6 my-1">
             <p class="m-0"></p>
@@ -286,12 +286,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
               Copyright © 2025 FEITSolutions</a>
                ,Designed by FEIT All rights reserved
             </p>
-          </div>
+          </div> -->
           <!-- <div class="col-span-12 sm:col-span-6 my-1 justify-self-end">
                    <p class="inline-block max-sm:mr-3 sm:ml-2">Distributed by <a href="https://themewagon.com" target="_blank">Themewagon</a></p>
           </div> -->
-        </div>
-      </div>
+        <!-- </div>
+      </div> -->
     <!-- END FOOTER -->
 
     <!-- SCRIPTS -->
