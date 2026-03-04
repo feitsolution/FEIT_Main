@@ -214,7 +214,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                                         <i class="fas fa-rupee-sign"></i> Price (LKR)<span class="required">*</span>
                                     </label>
                                     <input type="number" class="form-control" id="lkr_price" name="lkr_price"
-                                        placeholder="0.00" required min="0" max="99999999.99" step="0.01"
+                                        placeholder="0.00" required min="0"  step="0.01"
                                         value="<?php echo number_format($product['lkr_price'], 2, '.', ''); ?>">
                                     <div class="error-feedback" id="lkr_price-error"></div>
                                     <div class="price-hint">Enter price in Sri Lankan Rupees (e.g., 1500.00)</div>
