@@ -23,35 +23,6 @@ function generateCSRFToken() {
     return $_SESSION['csrf_token'];
 }
 
-// Get product ID from URL
-$product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
-if ($product_id <= 0) {
-    header("Location: products.php");
-    exit();
-}
-
-// Fetch existing product data
-$product = null;
-try {
-    $query = "SELECT * FROM products WHERE id = ? LIMIT 1";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $product_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 0) {
-        header("Location: products.php");
-        exit();
-    }
-    
-    $product = $result->fetch_assoc();
-    $stmt->close();
-} catch (Exception $e) {
-    header("Location: products.php");
-    exit();
-}
-
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
@@ -61,7 +32,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
 <head>
     <!-- TITLE -->
-    <title>Order Management Admin Portal - Edit Product</title>
+    <title>Order Management Admin Portal - Add Material</title>
 
     <?php
     include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php');
@@ -69,7 +40,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     
     <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
-    <link rel="stylesheet" href="../assets/css/products.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/products.css" />
  
     <!-- Custom CSS for AJAX notifications -->
     <style>
@@ -178,7 +149,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         <div class="loading-spinner">
             <div class="spinner"></div>
             <h5>Processing...</h5>
-            <p>Please wait while we update the product</p>
+            <p>Please wait while we add the material</p>
         </div>
     </div>
 
@@ -189,7 +160,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             <div class="page-header">
                 <div class="page-block">
                     <div class="page-header-title">
-                        <h5 class="mb-0 font-medium">Edit Product</h5>
+                        <h5 class="mb-0 font-medium">Add New Material</h5>
                     </div>
                 </div>
             </div>
@@ -197,110 +168,69 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
             <!-- [ Main Content ] start -->
             <div class="main-container">
-                <form method="POST" id="editProductForm" class="product-form" novalidate>
+                <form method="POST" id="addMaterialForm" class="product-form" novalidate>
                     <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    <!-- Product ID -->
-                    <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                     
-                    <!-- Product Details Section -->
+                    <!-- Material Details Section -->
                     <div class="form-section">
                         <div class="section-content">
-                            <!-- First Row: Name and Status -->
+                            <!-- First Row: Code and Name -->
                             <div class="form-row">
                                 <div class="product-form-group">
                                     <label for="name" class="form-label">
-                                        <i class="fas fa-box"></i> Product Name<span class="required">*</span>
+                                        <i class="fas fa-layer-group"></i> Material Name<span class="required">*</span>
                                     </label>
                                     <input type="text" class="form-control" id="name" name="name"
-                                        placeholder="Enter product name" required maxlength="255"
-                                        value="<?php echo htmlspecialchars($product['name']); ?>">
+                                    placeholder="Enter material name" required maxlength="255">
                                     <div class="error-feedback" id="name-error"></div>
                                 </div>
+                                <div class="product-form-group">
+                                <label for="material_code" class="form-label">
+                                    <i class="fas fa-barcode"></i> Material Code<span class="required">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="material_code" name="material_code"
+                                    placeholder="Enter material code" required maxlength="50">
+                                <div class="error-feedback" id="material_code-error"></div>
+                                <div class="code-hint">Unique identifier for the material</div>
+                            </div>
+                            </div>
+                            
+                            
+                            <!-- Second Row: Stock Quantity and Low Stock Threshold -->
+                            <div class="form-row">
+                                <div class="product-form-group">
+                                    <label for="stock_quantity" class="form-label">
+                                        <i class="fas fa-cubes"></i> Initial Stock Quantity<span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" id="stock_quantity" name="stock_quantity"
+                                        placeholder="0" required min="0" step="1" value="0">
+                                    <div class="error-feedback" id="stock_quantity-error"></div>
+                                    <div class="code-hint">Initial stock level for this material (PCS)</div>
+                                </div>
 
+                                <div class="product-form-group">
+<label for="low_stock_threshold" class="form-label">
+                                        <i class="fas fa-exclamation-triangle"></i> Low Stock Threshold<span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" id="low_stock_threshold" name="low_stock_threshold"
+                                        placeholder="10" required min="0" step="1">
+                                    <div class="error-feedback" id="low_stock_threshold-error"></div>
+                                    <div class="code-hint">Minimum Stock Alert Level</div>
+                                </div>
+                            </div>
+
+                            <!-- Third Row: Status -->
+                            <div class="form-row">
                                 <div class="product-form-group">
                                     <label for="status" class="form-label">
                                         <i class="fas fa-toggle-on"></i> Status<span class="required">*</span>
                                     </label>
                                     <select class="form-select" id="status" name="status" required>
-                                        <option value="active" <?php echo $product['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
-                                        <option value="inactive" <?php echo $product['status'] === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                        <option value="active" selected>Active</option>
+                                        <option value="inactive">Inactive</option>
                                     </select>
                                     <div class="error-feedback" id="status-error"></div>
-                                </div>
-                            </div>
-
-                            <!-- Second Row: Price and Product Code -->
-                            <div class="form-row">
-                                <div class="product-form-group">
-                                    <label for="lkr_price" class="form-label">
-                                        <i class="fas fa-rupee-sign"></i> Price (LKR)<span class="required">*</span>
-                                    </label>
-                                    <input type="number" class="form-control" id="lkr_price" name="lkr_price"
-                                        placeholder="0.00" required min="0"  step="0.01"
-                                        value="<?php echo number_format($product['lkr_price'], 2, '.', ''); ?>">
-                                    <div class="error-feedback" id="lkr_price-error"></div>
-                                    <div class="price-hint">Enter price in Sri Lankan Rupees (e.g., 1500.00)</div>
-                                </div>
-
-                                <div class="product-form-group">
-                                    <label for="product_code" class="form-label">
-                                        <i class="fas fa-barcode"></i> Product Code<span class="required">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="product_code" name="product_code"
-                                        placeholder="Enter product code" required maxlength="50"
-                                        value="<?php echo htmlspecialchars($product['product_code']); ?>">
-                                    <div class="error-feedback" id="product_code-error"></div>
-                                    <div class="code-hint">Unique identifier for the product</div>
-                                </div>
-                            </div>
-
-                            <!-- New Row: Stock Quantity and Low Stock Threshold - only if enabled -->
-                            <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
-                            <div class="form-row">
-                                <div class="product-form-group">
-                                    <label for="stock_quantity" class="form-label">
-                                        <i class="fas fa-cubes"></i> Stock Quantity<span class="required">*</span>
-                                    </label>
-                                    <input type="number" class="form-control" id="stock_quantity" name="stock_quantity"
-                                        placeholder="0" required min="0" step="1"
-                                        value="<?php echo (int)($product['stock_quantity'] ?? 0); ?>">
-                                    <div class="error-feedback" id="stock_quantity-error"></div>
-                                    <div class="code-hint">Current stock level</div>
-                                </div>
-
-                                <div class="product-form-group">
-                                    <label for="low_stock_threshold" class="form-label">
-                                        <i class="fas fa-exclamation-circle"></i> Low Stock Threshold<span class="required">*</span>
-                                    </label>
-                                    <input type="number" class="form-control" id="low_stock_threshold" name="low_stock_threshold"
-                                        placeholder="10" required min="0" step="1"
-                                        value="<?php echo (int)($product['low_stock_threshold'] ?? 10); ?>">
-                                    <div class="error-feedback" id="low_stock_threshold-error"></div>
-                                    <div class="code-hint">Minimum Stock Alert Level</div>
-                                </div>
-                            </div>
-                            <?php else: ?>
-                            <input type="hidden" name="stock_quantity" value="<?php echo (int)($product['stock_quantity'] ?? 0); ?>">
-                            <input type="hidden" name="low_stock_threshold" value="<?php echo (int)($product['low_stock_threshold'] ?? 0); ?>">
-                            <?php endif; ?>
-
-                          
-                          <!-- Third Row: Description -->
-                            <div class="form-row">
-                                <div class="product-form-group full-width">
-                                    <label for="description" class="form-label">
-                                        <i class="fas fa-align-left"></i> Description <span class="required">*</span>
-                                    </label>
-
-                                    <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description" required><?php echo trim(preg_replace('/\s+/', ' ', $product['description'])); ?> </textarea>
-
-                                    <div class="error-feedback" id="description-error"></div>
-
-                                    <div class="char-counter">
-                                        <span id="desc-char-count">0</span> characters
-                                    </div>
                                 </div>
                             </div>
 
@@ -310,10 +240,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     <!-- Submit Buttons -->
                     <div class="submit-container">
                         <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <i class="fas fa-save"></i> Update Product
+                            <i class="fas fa-plus"></i> Add Material
                         </button>
-                        <button type="button" class="btn btn-secondary ms-2" id="cancelBtn" onclick="window.location.href='product_list.php'">
-                            <i class="fas fa-times"></i> Back to Products
+                        <button type="button" class="btn btn-secondary ms-2" id="resetBtn">
+                            <i class="fas fa-undo"></i> Reset Form
                         </button>
                     </div>
                 </form>
@@ -338,21 +268,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <script>
-        // Store original values for reset functionality
-        const originalValues = {
-            name: '<?php echo addslashes($product['name']); ?>',
-            status: '<?php echo $product['status']; ?>',
-            lkr_price: '<?php echo number_format($product['lkr_price'], 2, '.', ''); ?>',
-            product_code: '<?php echo addslashes($product['product_code']); ?>',
-            description: '<?php echo preg_replace('/\s+/', ' ', $product['description'] ?? '') ?>'
-        };
-
         $(document).ready(function() {
             // Initialize form
             initializeForm();
             
             // AJAX Form submission
-            $('#editProductForm').on('submit', function(e) {
+            $('#addMaterialForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 // Clear previous validations
@@ -387,14 +308,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             // Disable submit button
             const $submitBtn = $('#submitBtn');
             const originalText = $submitBtn.html();
-            $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating Product...');
+            $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding Material...');
             
             // Prepare form data
-            const formData = new FormData($('#editProductForm')[0]);
+            const formData = new FormData($('#addMaterialForm')[0]);
             
             // AJAX request
             $.ajax({
-                url: 'update_product.php',
+                url: 'save_material.php',
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -406,24 +327,24 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     $submitBtn.prop('disabled', false).html(originalText);
                     
                     if (response.success) {
-                        showSuccessNotification(response.message || 'Product updated successfully!');
+                        showSuccessNotification(response.message || 'Material added successfully!');
                         
-                        // Update original values with new values for reset functionality
-                        updateOriginalValues();
+                        // Reset form after success
+                        resetForm();
                     } else {
                         if (response.errors) {
                             // Show field-specific errors
                             showFieldErrors(response.errors);
                         }
                         
-                        showErrorNotification(response.message || 'Failed to update product. Please try again.');
+                        showErrorNotification(response.message || 'Failed to add material. Please try again.');
                     }
                 },
                 error: function(xhr, status, error) {
                     hideLoading();
                     $submitBtn.prop('disabled', false).html(originalText);
                     
-                    let errorMessage = 'An error occurred while updating the product.';
+                    let errorMessage = 'An error occurred while adding the material.';
                     
                     if (status === 'timeout') {
                         errorMessage = 'Request timeout. Please try again.';
@@ -444,15 +365,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     });
                 }
             });
-        }
-        
-        // Update original values after successful update
-        function updateOriginalValues() {
-            originalValues.name = $('#name').val();
-            originalValues.status = $('#status').val();
-            originalValues.lkr_price = $('#lkr_price').val();
-            originalValues.product_code = $('#product_code').val();
-            originalValues.description = $('#description').val();
         }
         
         // Show field-specific errors from server
@@ -491,7 +403,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             const alertClasses = {
                 'success': 'alert-success',
                 'danger': 'alert-danger',
-                'warning': 'alert-warning'
+                'warning': 'alert-warning',
+                'info': 'alert-info'
             };
             
             const iconClass = type === 'success' ? 'fas fa-check-circle' : 
@@ -526,16 +439,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             }
         }
         
-        // Form reset function - restore original values
+        // Form reset function
         function resetForm() {
-            $('#name').val(originalValues.name);
-            $('#status').val(originalValues.status);
-            $('#lkr_price').val(originalValues.lkr_price);
-            $('#product_code').val(originalValues.product_code);
-            $('#description').val(originalValues.description);
-            
+            $('#addMaterialForm')[0].reset();
             clearAllValidations();
-            updateCharCount();
             $('#name').focus();
         }
         
@@ -559,7 +466,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         // Initialize form
         function initializeForm() {
             $('#name').focus();
-            updateCharCount();
         }
         
         // Setup real-time validation
@@ -572,47 +478,37 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                     showSuccess('name');
                 }
             });
-            
-            $('#lkr_price').on('blur', function() {
-                const validation = validatePrice($(this).val());
+
+            $('#material_code').on('blur', function() {
+                const validation = validateMaterialCode($(this).val());
                 if (!validation.valid) {
-                    showError('lkr_price', validation.message);
+                    showError('material_code', validation.message);
                 } else {
-                    showSuccess('lkr_price');
+                    showSuccess('material_code');
                 }
             });
             
-            $('#product_code').on('blur', function() {
-                const validation = validateProductCode($(this).val());
+$('#stock_quantity').on('blur', function() {
+                const validation = validateStock($(this).val());
                 if (!validation.valid) {
-                    showError('product_code', validation.message);
+                    showError('stock_quantity', validation.message);
                 } else {
-                    showSuccess('product_code');
+                    showSuccess('stock_quantity');
                 }
             });
-            
-            $('#description').on('blur', function() {
-                const validation = validateDescription($(this).val());
+
+            $('#low_stock_threshold').on('blur', function() {
+                const validation = validateThreshold($(this).val());
                 if (!validation.valid) {
-                    showError('description', validation.message);
-                } else if ($(this).val().trim() !== '') {
-                    showSuccess('description');
+                    showError('low_stock_threshold', validation.message);
                 } else {
-                    clearValidation('description');
+                    showSuccess('low_stock_threshold');
                 }
             });
         }
         
         // Setup other event listeners
         function setupEventListeners() {
-            // Character counter for description
-            $('#description').on('input', function() {
-                updateCharCount();
-                if ($(this).hasClass('is-invalid')) {
-                    clearValidation('description');
-                }
-            });
-
             // Prevent form submission on Enter key in input fields
             $('input:not([type="submit"])').on('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -626,82 +522,55 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
             });
         }
 
-        // Character counter for description
-        function updateCharCount() {
-            const textarea = $('#description');
-            const counter = $('#desc-char-count');
-            if (textarea.length && counter.length) {
-                counter.text(textarea.val().length);
+        // Validation functions
+        function validateMaterialCode(code) {
+            if (code.trim() === '') {
+                return { valid: false, message: 'Material code is required' };
             }
+            if (code.trim().length < 2) {
+                return { valid: false, message: 'Material code must be at least 2 characters long' };
+            }
+            if (code.length > 50) {
+                return { valid: false, message: 'Material code is too long (maximum 50 characters)' };
+            }
+            if (!/^[a-zA-Z0-9\-_]+$/.test(code.trim())) {
+                return { valid: false, message: 'Material code can only contain letters, numbers, hyphens, and underscores' };
+            }
+            return { valid: true, message: '' };
         }
 
-        // Validation functions
         function validateName(name) {
             if (name.trim() === '') {
-                return { valid: false, message: 'Product name is required' };
+                return { valid: false, message: 'Material name is required' };
             }
             if (name.trim().length < 2) {
-                return { valid: false, message: 'Product name must be at least 2 characters long' };
+                return { valid: false, message: 'Material name must be at least 2 characters long' };
             }
             if (name.length > 255) {
-                return { valid: false, message: 'Product name is too long (maximum 255 characters)' };
+                return { valid: false, message: 'Material name is too long (maximum 255 characters)' };
             }
             return { valid: true, message: '' };
         }
 
-        function validatePrice(price) {
-            if (price.trim() === '' || isNaN(price)) {
-                return { valid: false, message: 'Price is required and must be a valid number' };
+function validateStock(stock) {
+            if (stock === undefined || stock === null || stock.toString().trim() === '' || isNaN(stock)) {
+                return { valid: false, message: 'Stock quantity is required and must be a number' };
             }
-            
-            const numPrice = parseFloat(price);
-            
-            if (numPrice < 0) {
-                return { valid: false, message: 'Price cannot be negative' };
+            if (parseInt(stock) < 0) {
+                return { valid: false, message: 'Stock quantity cannot be negative' };
             }
-            
-            if (numPrice > 99999999.99) {
-                return { valid: false, message: 'Price is too high (maximum 99,999,999.99)' };
-            }
-            
-            // Check for too many decimal places
-            if (price.includes('.') && price.split('.')[1].length > 2) {
-                return { valid: false, message: 'Price can have maximum 2 decimal places' };
-            }
-            
             return { valid: true, message: '' };
         }
 
-        function validateProductCode(code) {
-            if (code.trim() === '') {
-                return { valid: false, message: 'Product code is required' };
+        function validateThreshold(threshold) {
+            if (threshold === undefined || threshold === null || threshold.toString().trim() === '' || isNaN(threshold)) {
+                return { valid: false, message: 'Low stock threshold is required' };
             }
-            
-            if (code.trim().length < 2) {
-                return { valid: false, message: 'Product code must be at least 2 characters long' };
+            if (parseInt(threshold) < 0) {
+                return { valid: false, message: 'Low stock threshold cannot be negative' };
             }
-            
-            if (code.length > 50) {
-                return { valid: false, message: 'Product code is too long (maximum 50 characters)' };
-            }
-            
-            // Allow alphanumeric, hyphens, underscores
-            if (!/^[a-zA-Z0-9\-_]+$/.test(code.trim())) {
-                return { valid: false, message: 'Product code can only contain letters, numbers, hyphens, and underscores' };
-            }
-            
             return { valid: true, message: '' };
         }
-            function validateDescription(desc) {
-                if (desc.trim() === '') {
-                    return { valid: false, message: 'Description is required' };
-                }
-                if (desc.length < 10) {
-                    return { valid: false, message: 'Description must be at least 10 characters long' };
-                }
-                return { valid: true, message: '' };
-            }
-
 
         // Show/hide error functions
         function showError(fieldId, message) {
@@ -738,18 +607,15 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
         function validateForm() {
             let isValid = true;
             
-            // Get all field values
             const name = $('#name').val();
-            const price = $('#lkr_price').val();
-            const productCode = $('#product_code').val();
-            const description = $('#description').val();
+            const materialCode = $('#material_code').val();
+            const stock = $('#stock_quantity').val();
             
-            // Validate required fields
-            const validations = [
+const validations = [
                 { field: 'name', validator: validateName, value: name },
-                { field: 'lkr_price', validator: validatePrice, value: price },
-                { field: 'product_code', validator: validateProductCode, value: productCode },
-                { field: 'description', validator: validateDescription, value: description }
+                { field: 'material_code', validator: validateMaterialCode, value: materialCode },
+                { field: 'stock_quantity', validator: validateStock, value: stock },
+                { field: 'low_stock_threshold', validator: validateThreshold, value: $('#low_stock_threshold').val() }
             ];
             
             validations.forEach(function(validation) {
@@ -757,9 +623,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
                 if (!result.valid) {
                     showError(validation.field, result.message);
                     isValid = false;
-                } else if (validation.field === 'description' && validation.value.trim() !== '') {
-                    showSuccess(validation.field);
-                } else if (validation.field !== 'description') {
+                } else {
                     showSuccess(validation.field);
                 }
             });

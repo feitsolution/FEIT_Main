@@ -243,6 +243,22 @@ if (!function_exists('get_logo_with_fallback')) {
           </ul>
         </li>
 
+        <li class="pc-item pc-hasmenu">
+          <a href="#!" class="pc-link">
+            <span class="pc-micon"> <i data-feather="layers"></i></span>
+            <span class="pc-mtext">Materials</span>
+            <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
+          </a>
+          <ul class="pc-submenu">
+            <li class="pc-item"><a class="pc-link" href="../materials/add_material.php">Add Material</a></li>
+            <li class="pc-item"><a class="pc-link" href="../materials/material_list.php">Material List</a></li>  
+            <?php if ($is_admin == 1): ?>
+            <li class="pc-item"><a class="pc-link" href="../handover/create_handover.php">Create Material Handover</a></li>
+            <li class="pc-item"><a class="pc-link" href="../handover/handover_list.php">Material Handover List</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+
         <li class="pc-item pc-caption">
           <label>Lead Management</label>
           <i data-feather="feather"></i>
