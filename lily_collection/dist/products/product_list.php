@@ -17,21 +17,6 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connect
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 
-// Generate CSRF token
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-// Fetch all active materials for BOM modal autocomplete
-$materialsQuery = "SELECT id, name, material_code FROM material WHERE status = 'active' ORDER BY name ASC";
-$materialsResult = $conn->query($materialsQuery);
-$materialsData = [];
-if ($materialsResult && $materialsResult->num_rows > 0) {
-    while ($m = $materialsResult->fetch_assoc()) {
-        $materialsData[] = $m;
-    }
-}
-
 // Handle search and filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $product_id_filter = isset($_GET['product_id_filter']) ? trim($_GET['product_id_filter']) : '';
@@ -45,17 +30,15 @@ $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
 // Pagination settings
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 // Base SQL for counting total records
 $countSql = "SELECT COUNT(*) as total FROM products";
 
-// Main query
-$sql = "SELECT id, name, product_code, description, lkr_price, created_at, status, stock_quantity, low_stock_threshold, 
-               (SELECT COUNT(*) FROM product_materials pm WHERE pm.product_id = products.id) as material_count 
-        FROM products";
+// Main query - Updated to include product_code
+$sql = "SELECT id, name, product_code, description, lkr_price, created_at, status, stock_quantity, low_stock_threshold FROM products";
 
 // Build search conditions
 $searchConditions = [];
@@ -149,93 +132,6 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
-    <style>
-        .autocomplete-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .autocomplete-suggestions {
-            position: absolute;
-            background: white;
-            border: 1px solid #ddd;
-            border-top: none;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 100%;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: none;
-            border-radius: 0 0 4px 4px;
-        }
-        .autocomplete-suggestion {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
-        }
-        .autocomplete-suggestion:hover {
-            background-color: #f8f9fa;
-        }
-        .autocomplete-suggestion.active {
-            background-color: #e9ecef;
-        }
-        .autocomplete-suggestion:last-child {
-            border-bottom: none;
-        }
-        .no-results {
-            padding: 8px 12px;
-            color: #999;
-            font-size: 13px;
-            text-align: center;
-        }
-        .bom-material-search {
-            background-color: #fff !important;
-        }
-        /* BOM Modal Styles */
-        #bomModal .modal-content {
-            max-width: 80%;
-        }
-        .manage-bom-btn {
-            width: auto !important;
-            padding: 0 16px !important;
-            height: 36px;
-            font-size: 13px;
-            background: #2196F3;
-            color: white !important;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            font-weight: 500;
-        }
-        .manage-bom-btn:hover {
-            background: #1976D2;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
-        }
-        .manage-bom-btn i {
-            font-size: 14px;
-        }
-        #bomModal .modal-body .table-wrapper {
-            overflow: visible !important;
-        }
-        #bomModal .modal-body .orders-table {
-            overflow: visible !important;
-        }
-        .bom-row.active-autocomplete {
-            position: relative;
-            z-index: 1010 !important;
-        }
-        .bom-row.active-autocomplete .autocomplete-wrapper {
-            z-index: 1011 !important;
-        }
-        .autocomplete-suggestions {
-            z-index: 99999 !important;
-        }
-    </style>
 </head>
 
 <body>
@@ -352,12 +248,13 @@ $result = $conn->query($sql);
                                 <th>ID</th>
                                 <th>Product Name</th>
                                 <th>Product Code</th>
+                                <th>Description</th>
                                 <th>Price (LKR)</th>
                                 <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
                                 <th>Stock</th>
                                 <?php endif; ?>
+                                <th>Created Date</th>
                                 <th>Status</th>
-                                <th>BOM Items</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -379,6 +276,16 @@ $result = $conn->query($sql);
                                         <td>
                                             <div class="product-code" style="font-family: monospace; font-size: 13px; color: #495057; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; display: inline-block;">
                                                 <?php echo htmlspecialchars($row['product_code'] ?? 'N/A'); ?>
+                                            </div>
+                                        </td>
+                                        
+                                        <!-- Description -->
+                                        <td>
+                                            <div class="description-truncate" title="<?php echo htmlspecialchars($row['description'] ?? ''); ?>">
+                                                <?php 
+                                                $description = $row['description'] ?? '';
+                                                echo htmlspecialchars(strlen($description) > 50 ? substr($description, 0, 50) . '...' : $description); 
+                                                ?>
                                             </div>
                                         </td>
                                         
@@ -410,6 +317,15 @@ $result = $conn->query($sql);
                                         </td>
                                         <?php endif; ?>
                                         
+                                        <!-- Created Date -->
+                                        <td>
+                                            <div style="font-size: 13px;">
+                                                <?php echo date('Y-m-d', strtotime($row['created_at'])); ?>
+                                                <br>
+                                                <small style="color: #6c757d;"><?php echo date('H:i:s', strtotime($row['created_at'])); ?></small>
+                                            </div>
+                                        </td>
+                                        
                                         <!-- Status Badge -->
                                         <td>
                                             <?php if ($row['status'] === 'active'): ?>
@@ -418,14 +334,6 @@ $result = $conn->query($sql);
                                                 <span class="status-badge pay-status-unpaid">Inactive</span>
                                             <?php endif; ?>
                                         </td>
-
-                                        <td id="bom-count-<?= $row['id'] ?>">
-                                                <?php if ($row['material_count'] > 0): ?>
-                                                    <span class="status-badge pay-status-paid"><?php echo $row['material_count']; ?> materials</span>
-                                                <?php else: ?>
-                                                    <span class="status-badge pay-status-unpaid">No BOM</span>
-                                                <?php endif; ?>
-                                            </td>
                                         
                                         <!-- Action Buttons -->
                                         <td class="actions">
@@ -471,14 +379,6 @@ $result = $conn->query($sql);
                                                    title="<?= $row['status'] == 'active' ? 'Deactivate Product' : 'Activate Product' ?>"
                                                    data-action="<?= $row['status'] == 'active' ? 'deactivate' : 'activate' ?>">
                                                        <i class="fas <?= $row['status'] == 'active' ? 'fa-toggle-off' : 'fa-toggle-on' ?>"></i>
-                                                </button>
-
-                                                <!-- Manage BOM Button -->
-                                                <button type="button" class="manage-bom-btn"
-                                                        data-id="<?= $row['id'] ?>"
-                                                        data-name="<?= htmlspecialchars($row['name'], ENT_QUOTES) ?>"
-                                                        title="Manage Bill of materials">
-                                                    <i class="fas fa-cog"></i> BOM
                                                 </button>
                                             </div>
                                         </td>
@@ -643,52 +543,6 @@ $result = $conn->query($sql);
     </div>
     <?php endif; ?>
 
-    <!-- BOM Management Modal -->
-    <div id="bomModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 id="bomModalTitle">Manage Bill of materials</h4>
-                <span class="close" onclick="closeBomModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="bomForm" method="POST">
-                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    <input type="hidden" name="product_id" id="modal_product_id">
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h6 style="margin:0; font-weight:600;">materials Required (per 1 unit)</h6>
-                        <button type="button" class="search-btn" onclick="addBomRow()" style="padding: 8px 16px; font-size: 13px;">
-                            <i class="fas fa-plus"></i> Add material
-                        </button>
-                    </div>
-
-                    <div class="table-wrapper">
-                        <table class="orders-table" id="bomTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 5%;">#</th>
-                                    <th style="width: 45%;">material</th>
-                                    <th style="width: 35%;">Qty Required</th>
-                                    <th style="width: 15%;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bomBody">
-                                <!-- Loaded via AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div style="margin-top: 25px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="search-btn" style="background: #6c757d;" onclick="closeBomModal()">Cancel</button>
-                        <button type="submit" class="search-btn" id="saveBomBtn">
-                            <i class="fas fa-save"></i> Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Footer -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/footer.php'); ?>
 
@@ -800,7 +654,6 @@ $result = $conn->query($sql);
                 if (event.target === statusModal) {
                     closeConfirmationModal();
                 }
-
                 const stockModal = document.getElementById('stockUpdateModal');
                 if (event.target === stockModal) {
                     closeStockUpdateModal();
@@ -1041,311 +894,6 @@ $result = $conn->query($sql);
             }
         });
 
-        // Enhanced search with debouncing
-        let searchTimeout;
-        function debounceSearch(func, delay) {
-            return function(...args) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => func.apply(this, args), delay);
-            };
-        }
-
-        // Auto-submit search form with debouncing
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInputs = document.querySelectorAll('#product_name_filter, #description_filter');
-            const debouncedSubmit = debounceSearch(function() {
-                document.querySelector('.tracking-form').submit();
-            }, 500);
-            
-            searchInputs.forEach(input => {
-                input.addEventListener('input', debouncedSubmit);
-            });
-        });
-
-        // ===================== BOM MODAL LOGIC =====================
-        (function() {
-            const materialsData = <?php echo json_encode($materialsData); ?>;
-            let bomRowCounter = 0;
-
-            // Event delegation for manage-bom-btn clicks
-            document.addEventListener('click', function(e) {
-                const btn = e.target.closest('.manage-bom-btn');
-                if (btn) {
-                    const productId = btn.dataset.id;
-                    const productName = btn.dataset.name;
-                    openBomModal(productId, productName);
-                }
-            });
-
-            window.openBomModal = function(productId, productName) {
-                document.getElementById('bomModalTitle').textContent = `Manage BOM: ${productName}`;
-                document.getElementById('modal_product_id').value = productId;
-                const tbody = document.getElementById('bomBody');
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
-                document.getElementById('bomModal').style.display = 'block';
-                bomRowCounter = 0;
-
-                fetch(`../handover/get_product_bom.php?product_id=${productId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        tbody.innerHTML = '';
-                        if (data.success && data.data.length > 0) {
-                            data.data.forEach(item => addBomRow(item));
-                        } else {
-                            addBomRow();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching BOM:', error);
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #dc3545; padding: 20px;"><i class="fas fa-exclamation-circle"></i> Failed to load BOM. Please try again.</td></tr>';
-                    });
-            };
-
-            window.closeBomModal = function() {
-                document.getElementById('bomModal').style.display = 'none';
-            };
-
-            window.addBomRow = function(data = null) {
-                // Validate last row is complete before adding a new one (skip for pre-populated data)
-                if (!data) {
-                    const existingRows = document.querySelectorAll('#bomBody .bom-row');
-                    if (existingRows.length > 0) {
-                        const lastRow = existingRows[existingRows.length - 1];
-                        const lastmaterialId = lastRow.querySelector('.bom-material-id').value;
-                        const lastQty = lastRow.querySelector('.bom-qty-input').value;
-                        if (!lastmaterialId || !lastQty) {
-                            alert('Please complete the current row (select a material and enter quantity) before adding a new one.');
-                            return;
-                        }
-                    }
-                }
-
-                bomRowCounter++;
-                const tbody = document.getElementById('bomBody');
-                const row = document.createElement('tr');
-                row.className = 'bom-row';
-
-                const materialDisplay = data ? `${data.material_name} (${data.material_code})` : '';
-                const materialId = data ? data.material_id : '';
-                const bomId = data ? data.id : '';
-                const quantity = data ? data.quantity : '';
-
-                row.innerHTML = `
-                    <td>${bomRowCounter}</td>
-                    <td>
-                        <div class="autocomplete-wrapper">
-                            <input type="text"
-                                   class="form-control bom-material-search"
-                                   placeholder="Search material..."
-                                   value="${materialDisplay}"
-                                   autocomplete="off"
-                                   required
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <input type="hidden" name="bom[${bomRowCounter - 1}][material_id]"
-                                   class="bom-material-id"
-                                   value="${materialId}"
-                                   required>
-                            <div class="autocomplete-suggestions"></div>
-                        </div>
-                    </td>
-                    <td>
-                        <input type="number" name="bom[${bomRowCounter - 1}][quantity_required]"
-                               min="0" step="1" required
-                               class="bom-qty-input" placeholder="Qty"
-                               value="${quantity}"
-                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <input type="hidden" name="bom[${bomRowCounter - 1}][id]" value="${bomId}" class="bom-record-id">
-                    </td>
-                    <td>
-                        <button type="button" class="action-btn" style="background: #dc3545; color: white;"
-                                onclick="removeBomRow(this)" title="Remove">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-                materialAutocomplete.initRow(row);
-                renumberBomRows();
-            };
-
-            window.removeBomRow = function(btn) {
-                btn.closest('tr').remove();
-                renumberBomRows();
-            };
-
-            window.renumberBomRows = function() {
-                const rows = document.querySelectorAll('#bomBody .bom-row');
-                bomRowCounter = rows.length;
-                rows.forEach((row, index) => {
-                    row.querySelector('td:first-child').textContent = index + 1;
-                    row.querySelector('.bom-material-id').name = `bom[${index}][material_id]`;
-                    row.querySelector('.bom-qty-input').name = `bom[${index}][quantity_required]`;
-                    row.querySelector('.bom-record-id').name = `bom[${index}][id]`;
-                });
-            };
-
-            const materialAutocomplete = {
-                selectedIndex: -1,
-                initRow: function(row) {
-                    const searchInput = row.querySelector('.bom-material-search');
-                    const idInput = row.querySelector('.bom-material-id');
-                    const suggestionsDiv = row.querySelector('.autocomplete-suggestions');
-
-                    searchInput.addEventListener('input', (e) => {
-                        const term = e.target.value.trim().toLowerCase();
-                        
-                        // Get currently selected material IDs from other rows
-                        const selectedIds = Array.from(document.querySelectorAll('.bom-material-id'))
-                            .map(input => input.value)
-                            .filter(val => val !== '' && val !== idInput.value);
-
-                        const filtered = term.length === 0
-                            ? materialsData.filter(m => !selectedIds.includes(m.id.toString()))
-                            : materialsData.filter(m =>
-                                (m.name.toLowerCase().includes(term) || 
-                                m.material_code.toLowerCase().includes(term)) &&
-                                !selectedIds.includes(m.id.toString())
-                            );
-                        this.showSuggestions(filtered, suggestionsDiv, searchInput, idInput, row);
-                    });
-
-                    searchInput.addEventListener('focus', () => {
-                        searchInput.dispatchEvent(new Event('input'));
-                    });
-
-                    searchInput.addEventListener('keydown', (e) => {
-                        const items = suggestionsDiv.querySelectorAll('.autocomplete-suggestion');
-                        if (items.length === 0) return;
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex + 1) % items.length;
-                            this.updateSelection(items);
-                        } else if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            this.selectedIndex = (this.selectedIndex - 1 + items.length) % items.length;
-                            this.updateSelection(items);
-                        } else if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (this.selectedIndex >= 0) {
-                                items[this.selectedIndex].click();
-                            } else if (items.length === 1) {
-                                items[0].click();
-                            }
-                        } else if (e.key === 'Escape') {
-                            this.hideSuggestions(suggestionsDiv, row);
-                        }
-                    });
-
-                    searchInput.addEventListener('blur', () => {
-                        setTimeout(() => {
-                            if (searchInput.value.trim() === '') idInput.value = '';
-                            this.hideSuggestions(suggestionsDiv, row);
-                        }, 200);
-                    });
-                },
-                showSuggestions: function(filtered, div, input, idInput, row) {
-                    if (filtered.length === 0) {
-                        div.innerHTML = '<div class="no-results">No results</div>';
-                        div.style.display = 'block';
-                        row.classList.add('active-autocomplete');
-                        return;
-                    }
-                    div.innerHTML = filtered.map(m => `
-                        <div class="autocomplete-suggestion" data-id="${m.id}" data-text="${m.name} (${m.material_code})">
-                            <strong>${m.name}</strong> <small>(${m.material_code})</small>
-                        </div>
-                    `).join('');
-                    div.style.display = 'block';
-                    row.classList.add('active-autocomplete');
-                    this.selectedIndex = -1;
-                    div.querySelectorAll('.autocomplete-suggestion').forEach(item => {
-                        item.addEventListener('click', () => {
-                            const materialId = item.dataset.id;
-                            
-                            // Double check for duplicates
-                            const selectedIds = Array.from(document.querySelectorAll('.bom-material-id'))
-                                .map(input => input.value)
-                                .filter(val => val !== '' && val !== idInput.value);
-                            
-                            if (selectedIds.includes(materialId)) {
-                                alert('This material is already added to the BOM.');
-                                input.value = '';
-                                idInput.value = '';
-                                this.hideSuggestions(div, row);
-                                return;
-                            }
-
-                            input.value = item.dataset.text;
-                            idInput.value = materialId;
-                            this.hideSuggestions(div, row);
-                        });
-                    });
-                },
-                hideSuggestions: function(div, row) {
-                    div.style.display = 'none';
-                    row.classList.remove('active-autocomplete');
-                    this.selectedIndex = -1;
-                },
-                updateSelection: function(items) {
-                    items.forEach((item, idx) => idx === this.selectedIndex ? item.classList.add('active') : item.classList.remove('active'));
-                }
-            };
-
-            document.getElementById('bomForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Final validation for duplicate materials
-                const materialIds = Array.from(document.querySelectorAll('.bom-material-id'))
-                    .map(input => input.value)
-                    .filter(val => val !== '');
-                
-                if (new Set(materialIds).size !== materialIds.length) {
-                    alert('Duplicate materials found in the BOM. Each material can only be added once.');
-                    return;
-                }
-
-                const btn = document.getElementById('saveBomBtn');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                btn.disabled = true;
-                fetch('../handover/save_product_materials.php', { method: 'POST', body: new FormData(this) })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        
-                        // Update material count in table
-                        const productId = document.getElementById('modal_product_id').value;
-                        const rowCount = document.querySelectorAll('#bomBody .bom-row').length;
-                        const countTd = document.getElementById('bom-count-' + productId);
-                        if (countTd) {
-                            if (rowCount > 0) {
-                                countTd.innerHTML = `<span class="status-badge pay-status-paid">${rowCount} materials</span>`;
-                            } else {
-                                countTd.innerHTML = `<span class="status-badge pay-status-unpaid">No BOM</span>`;
-                            }
-                        }
-                        
-                        closeBomModal();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(() => alert('Connection error.'))
-                .finally(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
-            });
-
-            // Close BOM modal on outside click (merged with existing window.onclick)
-            const _existingOnClick = window.onclick;
-            window.onclick = function(event) {
-                if (_existingOnClick) _existingOnClick(event);
-                if (event.target == document.getElementById('bomModal')) closeBomModal();
-            };
-        })();
-        // ===================== END BOM MODAL LOGIC =====================
     </script>
 
 </body>
