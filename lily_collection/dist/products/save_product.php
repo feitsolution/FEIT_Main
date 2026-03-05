@@ -137,31 +137,7 @@ try {
 
         // Success response
         $response['success'] = true;
-        
-        // Insert BOM items
-        $bomItems = $_POST['bom'] ?? [];
-        $bomCount = 0;
-        if (!empty($bomItems)) {
-            $bomStmt = $conn->prepare(
-                "INSERT INTO Product_materials (product_id, material_id, quantity_required) VALUES (?, ?, ?)"
-            );
-            if ($bomStmt) {
-                foreach ($bomItems as $item) {
-                    $mat_id = intval($item['material_id'] ?? 0);
-                    $qty    = floatval($item['quantity_required'] ?? 0);
-                    if ($mat_id > 0 && $qty > 0) {
-                        $bomStmt->bind_param("iid", $product_id, $mat_id, $qty);
-                        if ($bomStmt->execute()) {
-                            $bomCount++;
-                        }
-                    }
-                }
-                $bomStmt->close();
-            }
-        }
-
-        $bomMsg = $bomCount > 0 ? " and {$bomCount} material(s) assigned" : "";
-        $response['message'] = "Product '{$name}' has been successfully added to the system{$bomMsg}!";
+        $response['message'] = "Product '{$name}' has been successfully added to the system!";
         $response['product_id'] = $product_id;
 
     } else {
