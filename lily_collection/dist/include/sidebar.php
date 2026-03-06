@@ -244,6 +244,29 @@ if (!function_exists('get_logo_with_fallback')) {
         </li>
 
         <li class="pc-item pc-caption">
+          <label>Production Management</label>
+          <i data-feather="settings"></i>
+        </li>
+
+        <li class="pc-item pc-hasmenu">
+          <a href="#!" class="pc-link">
+            <span class="pc-micon"> <i data-feather="scissors"></i></span>
+            <span class="pc-mtext">Production</span>
+            <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
+          </a>
+          <ul class="pc-submenu">
+            <li class="pc-item"><a class="pc-link" href="../production/cutting.php">Cutting</a></li>
+            <li class="pc-item"><a class="pc-link" href="../production/sewing.php">Sewing</a></li>
+            <li class="pc-item"><a class="pc-link" href="../production/finishing.php">Finishing</a></li>
+            <li class="pc-item"><a class="pc-link" href="../production/packing.php">Packing</a></li>
+            <?php if ($is_admin == 1): ?>
+            <li class="pc-item"><a class="pc-link" href="../production/production_status.php">Production Status</a></li>
+            <li class="pc-item"><a class="pc-link" href="../production/production_list.php">Production History</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+        
+        <li class="pc-item pc-caption">
           <label>Lead Management</label>
           <i data-feather="feather"></i>
         </li>
