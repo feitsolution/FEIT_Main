@@ -88,7 +88,7 @@ try {
     // Get pending orders with district information
     $placeholders = str_repeat('?,', count($orderIds) - 1) . '?';
     $stmt = $conn->prepare("
-        SELECT oh.order_id, oh.total_amount, oh.pay_status, c.name as customer_name, c.phone as customer_phone, 
+        SELECT oh.order_id, oh.total_amount, oh.pay_status, oh.interface, c.name as customer_name, c.phone as customer_phone, 
                c.address_line1, c.address_line2, ct.city_id, dt.district_id
         FROM order_header oh
         LEFT JOIN customers c ON oh.customer_id = c.customer_id
@@ -157,6 +157,44 @@ try {
         $tracking = $trackingNumbers[(string)$orderId];
 
         try {
+            // Stock check and deduction for lead orders before dispatch
+            if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name 
+                                  FROM order_items oi 
+                                  JOIN products p ON oi.product_id = p.id 
+                                  WHERE oi.order_id = ?";
+                $stockStmt = $conn->prepare($stockCheckSql);
+                $stockStmt->bind_param("i", $orderId);
+                $stockStmt->execute();
+                $stockResult = $stockStmt->get_result();
+                
+                $insufficientStock = false;
+                $stockErrorProduct = '';
+                
+                while ($stockRow = $stockResult->fetch_assoc()) {
+                    if ($stockRow['stock_quantity'] < $stockRow['quantity']) {
+                        $insufficientStock = true;
+                        $stockErrorProduct = $stockRow['name'];
+                        break;
+                    }
+                }
+                $stockStmt->close();
+                
+                if ($insufficientStock) {
+                    throw new Exception("Insufficient stock for: $stockErrorProduct");
+                }
+                
+                // Deduct stock
+                $deductSql = "UPDATE products p 
+                              INNER JOIN order_items oi ON p.id = oi.product_id 
+                              SET p.stock_quantity = p.stock_quantity - oi.quantity 
+                              WHERE oi.order_id = ?";
+                $deductStmt = $conn->prepare($deductSql);
+                $deductStmt->bind_param("i", $orderId);
+                $deductStmt->execute();
+                $deductStmt->close();
+            }
+
             $stmtUpdate = $conn->prepare("UPDATE order_header SET status='dispatch', courier_id=?, tracking_number=?, dispatch_note=?, updated_at=NOW() WHERE order_id=?");
             $stmtUpdate->bind_param("issi", $carrierId, $tracking, $dispatchNotes, $orderId);
             $stmtUpdate->execute();

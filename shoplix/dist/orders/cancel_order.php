@@ -34,10 +34,10 @@ try {
     $conn->begin_transaction();
     
     try {
-       // Check if order exists and can be cancelled
-$check_sql = "SELECT order_id, status, customer_id, total_amount, interface 
-              FROM order_header 
-              WHERE order_id = ? AND interface IN ('individual', 'leads')";
+        // Check if order exists and can be cancelled
+        $check_sql = "SELECT order_id, status, customer_id, total_amount, interface 
+                      FROM order_header 
+                      WHERE order_id = ? AND interface IN ('individual', 'leads')";
 
         $stmt = $conn->prepare($check_sql);
         $stmt->bind_param("s", $order_id);
@@ -86,15 +86,15 @@ $check_sql = "SELECT order_id, status, customer_id, total_amount, interface
         if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
             $restore_stock = false;
             if ($order['interface'] == 'individual') {
+                // Individual orders deduct stock at creation
                 $restore_stock = true;
             } elseif ($order['interface'] == 'leads' && $previous_status == 'dispatch') {
+                // Lead orders now deduct stock only at dispatch
                 $restore_stock = true;
-            }else{
-                  $restore_stock = false;
             }
 
             if ($restore_stock) {
-                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status != 'canceled'";
+                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status != 'cancel'";
                 $items_stmt = $conn->prepare($getItemsSql);
                 $items_stmt->bind_param("s", $order_id);
                 $items_stmt->execute();
@@ -114,11 +114,12 @@ $check_sql = "SELECT order_id, status, customer_id, total_amount, interface
             }
         }
         
-        // Update order_items status to 'canceled'
+        // Update order_items status to 'cancel'
         $update_items_sql = "UPDATE order_items SET 
-                            status = 'canceled',
+                            status = 'cancel',
                             updated_at = CURRENT_TIMESTAMP
-                            WHERE order_id = ? AND status != 'canceled'";
+                            WHERE order_id = ? AND status != 'cancel'";
+
         $items_stmt = $conn->prepare($update_items_sql);
         $items_stmt->bind_param("s", $order_id);
         

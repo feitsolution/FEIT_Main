@@ -53,22 +53,24 @@ try {
         
         $stmt->close();
 
-        // if has tracking number, move back to dispatch
-        $restore_status = 'pending';
-        if (!empty($order['tracking_number'])) {
-            $restore_status = 'dispatch';
-        }
-
         // Fetch items and check/deduct stock
         if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+            $restore_status = 'pending';
+            if (!empty($order['tracking_number'])) {
+                $restore_status = 'dispatch';
+            }
+            
             $deduct_stock = false;
             if ($order['interface'] == 'individual') {
+                $deduct_stock = true;
+            } elseif ($order['interface'] == 'leads' && $restore_status == 'dispatch') {
                 $deduct_stock = true;
             }
 
             if ($deduct_stock) {
-                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status = 'canceled'";
+                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ? AND status = 'cancel'";
                 $items_stmt = $conn->prepare($getItemsSql);
+
                 $items_stmt->bind_param("s", $order_id);
                 $items_stmt->execute();
                 $items_result = $items_stmt->get_result();
@@ -76,6 +78,7 @@ try {
                 $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
                 $stockStmt = $conn->prepare($updateStockSql);
                 
+                $processed_items = [];
                 while ($item = $items_result->fetch_assoc()) {
                     $stockStmt->bind_param("iii", $item['quantity'], $item['product_id'], $item['quantity']);
                     if (!$stockStmt->execute()) {
@@ -85,10 +88,16 @@ try {
                     if ($stockStmt->affected_rows === 0) {
                         throw new Exception('Insufficient stock for product ID: ' . $item['product_id'] . '. Restoration aborted.');
                     }
+                    $processed_items[] = $item;
                 }
                 $items_stmt->close();
                 $stockStmt->close();
             }
+        }
+        
+        $restore_status = 'pending';
+        if (!empty($order['tracking_number'])) {
+            $restore_status = 'dispatch';
         }
         
         // Update order header to restore status
@@ -110,7 +119,8 @@ try {
         $update_items_sql = "UPDATE order_items SET 
                             status = ?,
                             updated_at = CURRENT_TIMESTAMP
-                            WHERE order_id = ? AND status = 'canceled'";
+                            WHERE order_id = ? AND status = 'cancel'";
+
         $items_stmt = $conn->prepare($update_items_sql);
         $items_stmt->bind_param("ss", $restore_status, $order_id);
         
