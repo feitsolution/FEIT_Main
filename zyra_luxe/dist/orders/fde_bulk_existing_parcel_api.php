@@ -213,6 +213,49 @@ try {
             // ==========================================
             error_log("DEBUG - Order $orderId API Data: Phone1={$recipientPhone1}, Phone2={$recipientPhone2}, Description={$parcelData['description']}");
             
+            // Stock check and deduction for lead orders before API call
+            if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name 
+                                  FROM order_items oi 
+                                  JOIN products p ON oi.product_id = p.id 
+                                  WHERE oi.order_id = ?";
+                $stockStmt = $conn->prepare($stockCheckSql);
+                $stockStmt->bind_param("i", $orderId);
+                $stockStmt->execute();
+                $stockResult = $stockStmt->get_result();
+                
+                $insufficientStock = false;
+                $stockErrorProduct = '';
+                
+                while ($stockRow = $stockResult->fetch_assoc()) {
+                    if ($stockRow['stock_quantity'] < $stockRow['quantity']) {
+                        $insufficientStock = true;
+                        $stockErrorProduct = $stockRow['name'];
+                        break;
+                    }
+                }
+                $stockStmt->close();
+                
+                if ($insufficientStock) {
+                    $failedOrders[] = [
+                        'order_id' => $orderId,
+                        'tracking_number' => $trackingNumber,
+                        'error' => "Insufficient stock for: $stockErrorProduct"
+                    ];
+                    continue;
+                }
+                
+                // Deduct stock
+                $deductSql = "UPDATE products p 
+                              INNER JOIN order_items oi ON p.id = oi.product_id 
+                              SET p.stock_quantity = p.stock_quantity - oi.quantity 
+                              WHERE oi.order_id = ?";
+                $deductStmt = $conn->prepare($deductSql);
+                $deductStmt->bind_param("i", $orderId);
+                $deductStmt->execute();
+                $deductStmt->close();
+            }
+
             $result = callFdeApi($apiData);
             
             if ($result['success']) {
