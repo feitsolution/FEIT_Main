@@ -167,7 +167,7 @@ try {
     $stockFailedDetails  = [];
 
     foreach ($orders as $order) {
-        if (in_array($order['order_id'], $invalidCityOrderIds)) continue;
+        if ($order['interface'] !== 'leads') continue;
 
         $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name
                           FROM order_items oi
@@ -255,7 +255,7 @@ try {
 
         try {
             // Stock deduction for dispatched orders
-            if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+            if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
                 $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name 
                                   FROM order_items oi 
                                   JOIN products p ON oi.product_id = p.id 
