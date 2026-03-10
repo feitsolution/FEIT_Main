@@ -128,7 +128,6 @@ $couriersResult = $conn->query("SELECT courier_id, courier_name FROM couriers OR
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
     <title>Payment Report</title>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     <link rel="stylesheet" href="../assets/css/style.css" />
@@ -222,12 +221,11 @@ $couriersResult = $conn->query("SELECT courier_id, courier_name FROM couriers OR
     </script>
 </head>
 
-<body>
-    <!-- Page Loader -->
+<body>    
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
     include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
-    
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
+    ?>
 <div class="pc-container">
     <div class="pc-content">
         <div class="page-header">
