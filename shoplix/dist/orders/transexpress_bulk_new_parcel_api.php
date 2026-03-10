@@ -89,11 +89,9 @@ try {
     $placeholders = str_repeat('?,', count($orderIds) - 1) . '?';
     $stmt = $conn->prepare("
         SELECT oh.order_id, oh.total_amount, oh.pay_status, oh.interface, c.name as customer_name, c.phone as customer_phone, 
-               c.address_line1, c.address_line2, ct.city_id, dt.district_id
-        FROM order_header oh
+               c.address_line1, c.address_line2, ct.city_name        FROM order_header oh
         LEFT JOIN customers c ON oh.customer_id = c.customer_id
-        LEFT JOIN city_table ct ON oh.city_id = ct.city_id
-        LEFT JOIN district_table dt ON oh.district_id = dt.district_id
+        LEFT JOIN city_table ct ON oh.city_id = ct.city_id AND ct.is_active = 1
         WHERE oh.order_id IN ($placeholders) AND oh.status='pending'
     ");
     $stmt->bind_param(str_repeat('i', count($orderIds)), ...$orderIds);
@@ -104,7 +102,30 @@ try {
 
     // Prepare API payload with correct field names
     $payload = [];
+    $invalidCityOrderIds = [];
     foreach ($orders as $order) {
+        if (empty($order['city_name'])) {
+            $invalidCityOrderIds[] = $order['order_id'];
+            error_log("TransExpress Bulk New - Skipping order {$order['order_id']}: missing city name");
+            continue;
+        }
+
+        // Map to TransExpress-specific city_id and district_id
+        $mapStmt = $conn->prepare("SELECT city_id, district_id FROM city_table_trans WHERE LOWER(city_name) = LOWER(?) AND is_active = 1 LIMIT 1");
+        $mapStmt->bind_param("s", $order['city_name']);
+        $mapStmt->execute();
+        $mapResult = $mapStmt->get_result()->fetch_assoc();
+        $mapStmt->close();
+
+        if (!$mapResult) {
+            $invalidCityOrderIds[] = $order['order_id'];
+            error_log("TransExpress Bulk New - Skipping order {$order['order_id']}: city '{$order['city_name']}' not found in city_table_trans");
+            continue;
+        }
+
+        $mappedCityId     = (int)$mapResult['city_id'];
+        $mappedDistrictId = (int)$mapResult['district_id'];
+        error_log("TransExpress Bulk New - Order {$order['order_id']}: City='{$order['city_name']}', Mapped city_id=$mappedCityId, district_id=$mappedDistrictId");
         $apiAmount = ($order['pay_status'] === 'paid') ? 0 : $order['total_amount'];
         $cleanPhone = preg_replace('/[^0-9]/', '', $order['customer_phone']);
         
@@ -121,14 +142,90 @@ try {
             'customer_phone' => $cleanPhone,
             'customer_phone2' => '', // Optional field
             'cod_amount' => (float)$apiAmount,
-            'district' => (int)($order['district_id'] ?? 1), // Add district field
-            'city' => (int)($order['city_id'] ?? 1),
-            'remarks' => $dispatchNotes // Changed from 'remark' to 'remarks'
+            'district'        => $mappedDistrictId, // Add district field
+            'city'            => $mappedCityId,
+            'remarks'         => $dispatchNotes // Changed from 'remark' to 'remarks'
         ];
+    }
+
+    if (empty($payload)) {
+        $msg = 'Invalid delivery city for selected orders';
+        if (!empty($invalidCityOrderIds)) {
+            $msg .= ' - Order IDs with invalid city: (' . implode(', ', $invalidCityOrderIds) . ')';
+        }
+        throw new Exception($msg);
     }
 
     // Log the payload for debugging
     error_log("Transexpress API Payload: " . json_encode($payload));
+
+    // ── Pre-API stock check (sequential reserve) ───────────────────────────────
+    // Check orders one by one. Track remaining stock per product as we go.
+    // Orders that fit are kept; orders that exceed are removed from the payload.
+    $remainingStock = []; // product_id => remaining qty
+    $stockFailedOrderIds = [];
+    $stockFailedDetails  = [];
+
+    foreach ($orders as $order) {
+        if (in_array($order['order_id'], $invalidCityOrderIds)) continue;
+
+        $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name
+                          FROM order_items oi
+                          JOIN products p ON oi.product_id = p.id
+                          WHERE oi.order_id = ?";
+        $preStockStmt = $conn->prepare($stockCheckSql);
+        $preStockStmt->bind_param("i", $order['order_id']);
+        $preStockStmt->execute();
+        $preStockResult = $preStockStmt->get_result();
+
+        $orderCanPass = true;
+        $orderProducts = [];
+
+        while ($row = $preStockResult->fetch_assoc()) {
+            $pid = $row['product_id'];
+            // Initialize remaining stock from DB on first encounter
+            if (!isset($remainingStock[$pid])) {
+                $remainingStock[$pid] = (int)$row['stock_quantity'];
+            }
+            $needed = (int)$row['quantity'];
+            $orderProducts[] = ['pid' => $pid, 'needed' => $needed, 'name' => $row['name']];
+
+            if ($remainingStock[$pid] < $needed) {
+                $orderCanPass = false;
+                $stockFailedDetails[] = "Order #{$order['order_id']}: \"{$row['name']}\" (available: {$remainingStock[$pid]}, required: $needed)";
+            }
+        }
+        $preStockStmt->close();
+
+        if ($orderCanPass) {
+            // Reserve stock for this order
+            foreach ($orderProducts as $op) {
+                $remainingStock[$op['pid']] -= $op['needed'];
+            }
+            error_log("TransExpress Stock Check - Order #{$order['order_id']} PASSED");
+        } else {
+            // Remove this order from the payload
+            $stockFailedOrderIds[] = $order['order_id'];
+            error_log("TransExpress Stock Check - Order #{$order['order_id']} FAILED (insufficient stock)");
+        }
+    }
+
+    // Remove failed orders from payload
+    if (!empty($stockFailedOrderIds)) {
+        $payload = array_values(array_filter($payload, function($item) use ($stockFailedOrderIds) {
+            return !in_array((int)$item['order_id'], $stockFailedOrderIds);
+        }));
+        // Also filter $orders so we don't process them after API call
+        $orders = array_values(array_filter($orders, function($o) use ($stockFailedOrderIds) {
+            return !in_array($o['order_id'], $stockFailedOrderIds);
+        }));
+    }
+
+    // If ALL orders failed stock check, block entirely
+    if (empty($payload)) {
+        throw new Exception("Insufficient stock for all selected orders: " . implode('. ', $stockFailedDetails));
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     $apiResult = callTransexpressBulkApi($payload, $courier['api_key']);
     if (!$apiResult['success']) {
@@ -157,8 +254,8 @@ try {
         $tracking = $trackingNumbers[(string)$orderId];
 
         try {
-            // Stock check and deduction for lead orders before dispatch
-            if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+            // Stock deduction for dispatched orders
+            if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
                 $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name 
                                   FROM order_items oi 
                                   JOIN products p ON oi.product_id = p.id 
