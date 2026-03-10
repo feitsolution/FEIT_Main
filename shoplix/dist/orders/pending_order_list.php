@@ -428,7 +428,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
                         <td>
                             <input type="checkbox" class="order-checkbox" 
                                    value="<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
-                                   onchange="updateBulkSelection()">
+                                   onchange="updateBulkSelection()"
+                                   <?php echo !empty($row['upload_error']) ? 'disabled' : ''; ?>>
                         </td>
                         
                         <!-- Order ID -->
@@ -1847,7 +1848,9 @@ function toggleSelectAll() {
     const orderCheckboxes = document.querySelectorAll('.order-checkbox');
     
     orderCheckboxes.forEach(checkbox => {
-        checkbox.checked = selectAllCheckbox.checked;
+        if (!checkbox.disabled) {
+            checkbox.checked = selectAllCheckbox.checked;
+        }
     });
     
     updateBulkSelection();
@@ -1860,11 +1863,13 @@ function updateBulkSelection() {
     const bulkActionsBar = document.getElementById('bulkActionsBar');
     const selectedCount = document.getElementById('selectedCount');
     
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
+    
     // Update select all checkbox state
     if (checkedBoxes.length === 0) {
         selectAllCheckbox.indeterminate = false;
         selectAllCheckbox.checked = false;
-    } else if (checkedBoxes.length === orderCheckboxes.length) {
+    } else if (checkedBoxes.length === totalSelectable && totalSelectable > 0) {
         selectAllCheckbox.indeterminate = false;
         selectAllCheckbox.checked = true;
     } else {
@@ -1914,7 +1919,9 @@ function toggleSelectAll() {
     const orderCheckboxes = document.querySelectorAll('.order-checkbox');
     
     orderCheckboxes.forEach(checkbox => {
-        checkbox.checked = selectAllCheckbox.checked;
+        if (!checkbox.disabled) {
+            checkbox.checked = selectAllCheckbox.checked;
+        }
     });
     
     updateBulkSelection();
@@ -1941,10 +1948,10 @@ function updateBulkSelection() {
     }
     
     // Update select all checkbox state
-    const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
     if (selectAllCheckbox) {
-        selectAllCheckbox.checked = selectedCount === totalCheckboxes && totalCheckboxes > 0;
-        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+        selectAllCheckbox.checked = selectedCount === totalSelectable && totalSelectable > 0;
+        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalSelectable;
     }
     
     // Store selected orders for bulk dispatch
@@ -2304,10 +2311,10 @@ function updateBulkSelection() {
     }
     
     // Update select all checkbox state
-    const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
     if (selectAllCheckbox) {
-        selectAllCheckbox.checked = selectedCount === totalCheckboxes && totalCheckboxes > 0;
-        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+        selectAllCheckbox.checked = selectedCount === totalSelectable && totalSelectable > 0;
+        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalSelectable;
     }
     
     // Store selected orders for bulk dispatch
