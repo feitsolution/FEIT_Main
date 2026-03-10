@@ -435,10 +435,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file']) && isset
         exit();
     }
 }
-
-// Include UI files after processing POST request to avoid header issues
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -456,7 +452,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); 
+    // Include UI files after processing POST request to avoid header issues
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

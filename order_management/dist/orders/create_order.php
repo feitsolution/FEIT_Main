@@ -116,9 +116,6 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
     $row = $deliveryFeeResult->fetch_assoc();
     $deliveryFee = floatval($row['delivery_fee']);
 }
-
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -240,7 +237,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <!-- LOADER -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
+    ?>
     <!-- END LOADER -->
 
     <!-- [ Main Content ] start -->

@@ -335,9 +335,6 @@ if ($result && $result->num_rows > 0) {
     $branding['delivery_fee'] = $branding['delivery_fee'] ?? '0.00';
 }
 
-// Include navbar and sidebar
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -398,6 +395,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 </head>
 
 <body>
+    <!-- Page Loader -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');?>
     <!-- [ Main Content ] start -->
     <div class="pc-container">
         <div class="pc-content">
