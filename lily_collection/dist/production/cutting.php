@@ -66,8 +66,6 @@ if ($countResult && $countResult->num_rows > 0) {
 $totalPages = ceil($totalRows / $limit);
 $cutting_batches = $conn->query($sql);
 
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -88,7 +86,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
     </style>
 </head>
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
     <div class="pc-container">
         <div class="pc-content">
             <div class="page-header">

@@ -638,8 +638,6 @@ if ($usersResult && $usersResult->num_rows > 0) {
 }
 $usersStmt->close();
 
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -720,7 +718,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 </style>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

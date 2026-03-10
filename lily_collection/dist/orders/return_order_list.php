@@ -202,10 +202,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
@@ -384,7 +380,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

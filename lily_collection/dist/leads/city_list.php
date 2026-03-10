@@ -144,10 +144,6 @@ if (!empty($params)) {
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
-
 ?>
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
@@ -164,7 +160,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

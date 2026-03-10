@@ -122,10 +122,6 @@ $totalRows = (int)$conn->query($countSql)->fetch_assoc()['total'];
 // Fetch couriers for filter
 $couriersResult = $conn->query("SELECT courier_id, courier_name FROM couriers ORDER BY courier_name ASC");
 
-
-// Include navbar & sidebar
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -227,6 +223,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php')
 </head>
 
 <body>
+    <!-- Page Loader -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
+    
 <div class="pc-container">
     <div class="pc-content">
         <div class="page-header">

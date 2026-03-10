@@ -188,9 +188,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
     exit();
 }
 
-// If we reach here, user is admin and NOT exporting - continue with page display
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');
 
 // ============================================
 // HANDLE SEARCH AND FILTER PARAMETERS
@@ -467,7 +464,9 @@ function getSuccessRateBadgeClass($rate) {
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
