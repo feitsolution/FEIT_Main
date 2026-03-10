@@ -200,30 +200,7 @@ try {
             // Secondary phone (optional) - use customer_phone_2 if available
             $recipientPhone2 = !empty($order['customer_phone_2']) ? $order['customer_phone_2'] : '';
             
-            // ==========================================
-            // ✅ CHANGE 3: Updated API data array with phone_2
-            // ==========================================
-            $apiData = [
-                'api_key' => $courier['api_key'],
-                'client_id' => $courier['client_id'],
-                'order_id' => $orderId,
-                'parcel_weight' => $parcelData['weight'],
-                'parcel_description' => $parcelData['description'],
-                'recipient_name' => $order['full_name'] ?: $order['customer_name'],
-                'recipient_contact_1' => $recipientPhone1,
-                'recipient_contact_2' => $recipientPhone2,  // ✅ Now includes phone_2
-                'recipient_address' => trim(($order['address_line1'] ?? $order['customer_address1'] ?? '') . ' ' . ($order['address_line2'] ?? $order['customer_address2'] ?? '')),
-                'recipient_city' => $order['city_name'] ?: '',
-                'amount' => $apiAmount,
-                'exchange' => '0'
-            ];
-            
-            // ==========================================
-            // ✅ CHANGE 4: Added debug logging for phone numbers
-            // ==========================================
-            error_log("DEBUG - Order $orderId API Data: Phone1={$recipientPhone1}, Phone2={$recipientPhone2}");
-            
-            // Stock check and deduction for lead orders before API call
+            // ── Pre-API stock check for 'leads' orders ─────────────────────────────
             if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
                 $stockCheckSql = "SELECT oi.product_id, oi.quantity, p.stock_quantity, p.name 
                                   FROM order_items oi 
@@ -254,17 +231,32 @@ try {
                     ];
                     continue;
                 }
-                
-                // Deduct stock
-                $deductSql = "UPDATE products p 
-                              INNER JOIN order_items oi ON p.id = oi.product_id 
-                              SET p.stock_quantity = p.stock_quantity - oi.quantity 
-                              WHERE oi.order_id = ?";
-                $deductStmt = $conn->prepare($deductSql);
-                $deductStmt->bind_param("i", $orderId);
-                $deductStmt->execute();
-                $deductStmt->close();
             }
+            // ─────────────────────────────────────────────────────────────────────────
+
+            // ==========================================
+            // ✅ CHANGE 3: Updated API data array with phone_2
+            // ==========================================
+            $apiData = [
+                'api_key' => $courier['api_key'],
+                'client_id' => $courier['client_id'],
+                'order_id' => $orderId,
+                'parcel_weight' => $parcelData['weight'],
+                'parcel_description' => $parcelData['description'],
+                'recipient_name' => $order['full_name'] ?: $order['customer_name'],
+                'recipient_contact_1' => $recipientPhone1,
+                'recipient_contact_2' => $recipientPhone2,  // ✅ Now includes phone_2
+                'recipient_address' => trim(($order['address_line1'] ?? $order['customer_address1'] ?? '') . ' ' . ($order['address_line2'] ?? $order['customer_address2'] ?? '')),
+                'recipient_city' => $order['city_name'] ?: '',
+                'amount' => $apiAmount,
+                'exchange' => '0'
+            ];
+            
+            // ==========================================
+            // ✅ CHANGE 4: Added debug logging for phone numbers
+            // ==========================================
+            error_log("DEBUG - Order $orderId API Data: Phone1={$recipientPhone1}, Phone2={$recipientPhone2}");
+            
 
             $result = callFdeApi($apiData);
             
@@ -293,6 +285,21 @@ try {
                 
                 if (!$stmt->execute()) {
                     throw new Exception("Order items update failed: " . $stmt->error);
+                }
+
+                // ==========================================
+                // ✅ STOCK DEDUCTION (Post-API, Leads Only)
+                // ==========================================
+                if ($order['interface'] === 'leads' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                    $deductSql = "UPDATE products p 
+                                   INNER JOIN order_items oi ON p.id = oi.product_id 
+                                   SET p.stock_quantity = p.stock_quantity - oi.quantity 
+                                   WHERE oi.order_id = ?";
+                    $deductStmt = $conn->prepare($deductSql);
+                    $deductStmt->bind_param("i", $orderId);
+                    $deductStmt->execute();
+                    $deductStmt->close();
+                    error_log("DEBUG - Stock deducted for lead order $orderId");
                 }
                 
                 // ==========================================
