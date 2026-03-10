@@ -205,11 +205,6 @@ if ($countResult && $countResult->num_rows > 0) {
 }
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
-
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
@@ -257,7 +252,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/sidebar.php');
 </head>
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/sidebar.php');
+    ?>
 
     <div class="pc-container">
         <div class="pc-content">
