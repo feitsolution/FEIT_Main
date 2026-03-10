@@ -197,6 +197,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         $stmt->close();
 
+        // Also update the customers table if this order is linked to an existing customer
+        if ($customer_id) {
+            $updateCustomerSql = "UPDATE customers SET 
+                                    name = ?, email = ?, phone = ?, phone_2 = ?,
+                                    address_line1 = ?, address_line2 = ?, city_id = ?
+                                  WHERE customer_id = ?";
+            $customerStmt = $conn->prepare($updateCustomerSql);
+            $customerStmt->bind_param("ssssssii",
+                $customer_name, $customer_email, $customer_phone, $customer_phone_2,
+                $address_line1, $address_line2, $city_id, $customer_id
+            );
+            $customerStmt->execute();
+            $customerStmt->close();
+        }
+
         // Fetch current order items to track what exists
         $currentItemsSql = "SELECT item_id, product_id, quantity FROM order_items WHERE order_id = ?";
         $currentItemsStmt = $conn->prepare($currentItemsSql);

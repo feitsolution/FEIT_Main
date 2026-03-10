@@ -14,8 +14,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 
 // Handle search and filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -167,7 +165,9 @@ $result = $conn->query($sql);
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -577,7 +577,7 @@ $result = $conn->query($sql);
             </div>
         </div>
     </div>
-
+    
     <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
     <!-- Stock Update Modal -->
     <div id="stockUpdateModal" class="modal">
@@ -729,6 +729,7 @@ $result = $conn->query($sql);
                 if (event.target === statusModal) {
                     closeConfirmationModal();
                 }
+
                 const stockModal = document.getElementById('stockUpdateModal');
                 if (event.target === stockModal) {
                     closeStockUpdateModal();

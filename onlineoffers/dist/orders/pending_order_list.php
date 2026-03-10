@@ -205,11 +205,6 @@ if ($countResult && $countResult->num_rows > 0) {
 }
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
-
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
@@ -257,7 +252,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 </head>
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
+    ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -675,7 +673,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
         let currentPaymentSlip = null; // Store payment slip filename
         let currentPayStatus = null; // Store payment status
 
-        // Clear all filter inputs
+// Clear all filter inputs
         function clearFilters() {
             document.getElementById('order_id_filter').value = '';
             document.getElementById('customer_name_filter').value = '';
@@ -1732,6 +1730,7 @@ function confirmCancelOrder() {
         alert('No order selected for cancellation.');
         return;
     }
+
     
     // Final confirmation
     if (!confirm(`Are you sure you want to cancel Order ID: ${currentCancelOrderId}? This action cannot be undone.`)) {

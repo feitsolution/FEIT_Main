@@ -30,6 +30,7 @@ try {
     if (empty($order_id)) {
         throw new Exception('Order ID is required');
     }
+    
     // Start database transaction
     $conn->begin_transaction();
     

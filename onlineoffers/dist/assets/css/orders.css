@@ -1835,10 +1835,10 @@ MODAL STYLES for view button - FIXED VERSION
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease;
+  /* max-width: none;
+  max-height: none; */
   width: 90%;
   max-width: 500px;
-  /* max-width: none; */
-  /* max-height: none; */
 }
 
 /* ====================================

@@ -668,9 +668,6 @@ if ($productsResult && $productsResult->num_rows > 0) {
         $products[] = $row;
     }
 }
-
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -779,7 +776,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 </style>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

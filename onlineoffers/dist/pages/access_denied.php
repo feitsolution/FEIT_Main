@@ -2,8 +2,6 @@
 // Start session at the very beginning
 session_start();
 
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -26,6 +24,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
     <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
     ?>
     <!-- END LOADER -->
 

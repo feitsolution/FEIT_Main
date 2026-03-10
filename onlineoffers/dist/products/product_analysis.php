@@ -10,8 +10,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
@@ -159,7 +157,9 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
 </head>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/onlineoffers/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
