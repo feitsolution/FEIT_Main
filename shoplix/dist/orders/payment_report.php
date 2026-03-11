@@ -123,16 +123,12 @@ $totalRows = (int)$conn->query($countSql)->fetch_assoc()['total'];
 $couriersResult = $conn->query("SELECT courier_id, courier_name FROM couriers ORDER BY courier_name ASC");
 
 
-// Include navbar & sidebar
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php'); ?>
     <title>Payment Report</title>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/head.php'); ?>
     <link rel="stylesheet" href="../assets/css/style.css" />
@@ -227,6 +223,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 </head>
 
 <body>
+    <!-- Page Loader -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php'); 
+    ?>
+
 <div class="pc-container">
     <div class="pc-content">
         <div class="page-header">

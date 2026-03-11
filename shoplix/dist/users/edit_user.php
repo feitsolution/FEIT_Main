@@ -78,9 +78,6 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     header("Location: users.php?error=No user ID specified");
     exit();
 }
-
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -217,6 +214,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
     <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php'); 
     ?>
     <!-- END LOADER -->
 

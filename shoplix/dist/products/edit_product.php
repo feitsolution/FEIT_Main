@@ -52,9 +52,6 @@ try {
     exit();
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
-
 // Fetch all active categories + current category and its parent (in case they are inactive)
 $mainCategories = [];
 $subCategories = [];
@@ -276,6 +273,8 @@ if ($prodCatId > 0) {
     <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php'); 
     ?>
     <!-- END LOADER -->
 

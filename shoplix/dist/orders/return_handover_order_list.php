@@ -202,10 +202,6 @@ $result = $conn->query($sql);
 $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
@@ -224,7 +220,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php'); 
+    ?>
 
     <div class="pc-container">
         <div class="pc-content">

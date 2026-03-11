@@ -55,9 +55,6 @@ if ($customerResult->num_rows === 0) {
 
 $customer = $customerResult->fetch_assoc();
 $customerStmt->close();
-
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -259,7 +256,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 </head>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php'); ?>
 
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">

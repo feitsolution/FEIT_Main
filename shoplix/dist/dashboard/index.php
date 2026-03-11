@@ -193,8 +193,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $stats['return_handover_orders'] = safeQuery($conn, $return_handover_orders_query);
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -382,6 +380,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
   <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/shoplix/dist/include/sidebar.php');
     ?>
     <!-- END LOADER -->
 
