@@ -277,7 +277,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
     </div>
 
-    <<!-- FOOTER -->
+    <!-- FOOTER -->
           <!-- <div class="footer-wrapper container-fluid mx-10">
         <div class="grid grid-cols-12 gap-1.5">
           <div class="col-span-12 sm:col-span-6 my-1">

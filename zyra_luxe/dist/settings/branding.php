@@ -334,10 +334,6 @@ if ($result && $result->num_rows > 0) {
     $branding['font_family'] = $branding['font_family'] ?? 'Inter';
     $branding['delivery_fee'] = $branding['delivery_fee'] ?? '0.00';
 }
-
-// Include navbar and sidebar
-include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -398,6 +394,13 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
 </head>
 
 <body>
+    <!-- LOADER -->
+    <?php
+        include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php'); 
+    ?>
+    <!-- END LOADER -->
     <!-- [ Main Content ] start -->
     <div class="pc-container">
         <div class="pc-content">
