@@ -355,7 +355,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                 <th>Total Amount</th>
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
-                                <th>Processed By</th>
+                                <th>Paid by</th>
                                  <?php if ($current_user_role == 1): ?>
                                     <th>User</th>
                                 <?php endif; ?>
@@ -418,7 +418,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/zyra_luxe/dist/include/sidebar.php');
                                             ?>
                                         </td>
                                         
-                                        <!-- Processed By User -->
+                                        <!-- Paid by User -->
                                         <td>
                                             <?php
                                             echo isset($row['paid_by_name']) ? htmlspecialchars($row['paid_by_name']) : 'N/A';
