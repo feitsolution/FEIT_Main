@@ -38,10 +38,21 @@ if ($branding_result && $branding_result->num_rows > 0) {
     // ✅ ALWAYS USE LOGO FROM DATABASE
     // ==========================================
     if (!empty($branding['logo_url'])) {
+        // Check if it's a full URL (starts with http/https)
+        if (strpos($branding['logo_url'], 'http') === 0) {
             $logo_url = $branding['logo_url'];
+        } 
+        // Check if it already has the full path
+        else if (strpos($branding['logo_url'], '/quick_start/') === 0) {
+            $logo_url = $branding['logo_url']; // Already has full path
+        }
+        // Otherwise, it's a relative path from dist folder
+        else {
+            $logo_url = '/quick_start/dist/' . ltrim($branding['logo_url'], '/');
+        }
     } else {
         // If logo_url is empty in DB, use fallback and log error
-        $logo_url = ' ';
+        $logo_url = '../assets/images/logo-white.svg';
         error_log("WARNING: No logo_url found in branding table for active branding record");
     }
     
@@ -54,8 +65,8 @@ if ($branding_result && $branding_result->num_rows > 0) {
     ];
 } else {
     // If no active branding record found
-    $logo_url = '';
-
+    $logo_url = '../assets/images/logo-white.svg';
+    error_log("ERROR: No active branding record found in database");
     
     // Fallback company info
     $company = [
@@ -97,6 +108,7 @@ $order_query = "SELECT
                 LEFT JOIN users u2 ON i.created_by = u2.id
                 WHERE i.order_id = ? 
                 AND i.interface = 'leads'";
+
 
 $stmt = $conn->prepare($order_query);
 
@@ -290,7 +302,8 @@ $column_count = $has_any_discount ? 6 : 5;
         <div class="order-header">
             <div class="company-logo">
                 <img src="<?php echo htmlspecialchars($logo_url); ?>" 
-                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo">
+                     alt="<?php echo htmlspecialchars($company['name']); ?> Logo"
+                     onerror="this.onerror=null; this.src='../assets/images/logo-white.svg';">
             </div>
             <div class="order-info">
                 <div class="order-title">

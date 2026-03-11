@@ -10,8 +10,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
@@ -47,12 +45,20 @@ $is_admin = ($current_user_role == 1);
 
 $date_from = isset($_GET['date_from']) && !empty($_GET['date_from']) ? $_GET['date_from'] : date('Y-m-01');
 $date_to = isset($_GET['date_to']) && !empty($_GET['date_to']) ? $_GET['date_to'] : date('Y-m-d');
+$category_filter = isset($_GET['category_filter']) ? trim($_GET['category_filter']) : '';
 $product_search = isset($_GET['product_search']) ? trim($_GET['product_search']) : '';
 
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
+$categories = [];
+$catRes = $conn->query("SELECT c1.id, c1.name, c1.parent_id, c2.name as parent_name FROM categories c1 LEFT JOIN categories c2 ON c1.parent_id = c2.id ORDER BY COALESCE(c2.name, c1.name), c1.name ASC");
+if ($catRes) {
+    while ($crow = $catRes->fetch_assoc()) {
+        $categories[] = $crow;
+    }
+}
 
 $roleCondition = "";
 if (!$is_admin) {
@@ -60,6 +66,11 @@ if (!$is_admin) {
 }
 
 $searchConditions = ["oh.interface IN ('individual', 'leads')", "DATE(oh.created_at) BETWEEN '$date_from' AND '$date_to'"];
+
+if (!empty($category_filter)) {
+    $catTerm = $conn->real_escape_string($category_filter);
+    $searchConditions[] = "(p.category_id = '$catTerm' OR c.parent_id = '$catTerm')";
+}
 
 if (!empty($product_search)) {
     $searchTerm = $conn->real_escape_string($product_search);
@@ -71,13 +82,16 @@ $whereClause = " WHERE " . implode(' AND ', $searchConditions) . $roleCondition;
 $countSql = "SELECT COUNT(DISTINCT oi.product_id) as total 
              FROM order_items oi 
              JOIN order_header oh ON oi.order_id = oh.order_id 
-             LEFT JOIN products p ON oi.product_id = p.id" . $whereClause;
+             LEFT JOIN products p ON oi.product_id = p.id 
+             LEFT JOIN categories c ON p.category_id = c.id" . $whereClause;
 
 $sql = "SELECT 
             p.id as product_id,
             p.name as product_name,
             p.product_code,
             p.lkr_price,
+            c.name as category_name,
+            pc.name as parent_category_name,
             SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.quantity ELSE 0 END) as total_quantity,
             SUM(CASE WHEN oh.status IN ('done', 'delivered') THEN oi.total_amount ELSE 0 END) as total_earn,
             COUNT(DISTINCT oi.order_id) as order_count,
@@ -89,8 +103,10 @@ $sql = "SELECT
             (COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oh.order_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered', 'cancel') THEN oh.order_id END), 0)) as success_rate
         FROM order_items oi 
         JOIN order_header oh ON oi.order_id = oh.order_id 
-        LEFT JOIN products p ON oi.product_id = p.id" . $whereClause . "
-        GROUP BY p.id, p.name, p.product_code, p.lkr_price
+        LEFT JOIN products p ON oi.product_id = p.id 
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN categories pc ON c.parent_id = pc.id" . $whereClause . "
+        GROUP BY p.id, p.name, p.product_code, p.lkr_price, c.name, pc.name
         ORDER BY total_earn DESC, total_quantity DESC
         LIMIT $limit OFFSET $offset";
 
@@ -112,7 +128,8 @@ $summarySql = "SELECT
                 (COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered') THEN oh.order_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN oh.status IN ('done', 'delivered', 'cancel') THEN oh.order_id END), 0)) as avg_success_rate
             FROM order_items oi 
             JOIN order_header oh ON oi.order_id = oh.order_id 
-            LEFT JOIN products p ON oi.product_id = p.id" . $whereClause;
+            LEFT JOIN products p ON oi.product_id = p.id 
+            LEFT JOIN categories c ON p.category_id = c.id" . $whereClause;
 
 $summaryResult = $conn->query($summarySql);
 $summary = [
@@ -140,7 +157,9 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
 </head>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -288,6 +307,7 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                             <tr>
                                 <th>ID</th>
                                 <th>Product Name</th>
+                                <th>Category</th>
                                 <th>Code</th>
                                 <th>Unit Price</th>
                                 <th>Qty Sold</th>
@@ -309,6 +329,17 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                                             <div class="product-info">
                                                 <h6 style="margin: 0; font-size: 14px; font-weight: 600;"><?php echo htmlspecialchars($row['product_name'] ?? 'Unknown Product'); ?></h6>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="product-category">
+                                                <?php 
+                                                if ($row['parent_category_name']) {
+                                                    echo htmlspecialchars($row['parent_category_name'] . ' ( ' . $row['category_name'] . ' )');
+                                                } else {
+                                                    echo htmlspecialchars($row['category_name'] ?? 'Uncategorized');
+                                                }
+                                                ?>
+                                            </span>
                                         </td>
                                         <td>
                                             <div class="product-code" style="font-family: monospace; font-size: 13px; color: #495057; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; display: inline-block;">

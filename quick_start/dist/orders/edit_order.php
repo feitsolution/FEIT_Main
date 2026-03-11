@@ -136,13 +136,16 @@ $stmt->bind_param("s", $order_id);
 $stmt->execute();
 $itemsResult = $stmt->get_result();
 $order_items = [];
+$original_quantities = []; 
 while ($item = $itemsResult->fetch_assoc()) {
     $order_items[] = $item;
+    $pid = $item['product_id'];
+    $original_quantities[$pid] = ($original_quantities[$pid] ?? 0) + (int)$item['quantity'];
 }
 $stmt->close();
 
 // Fetch necessary data for the form (same as create_order.php)
-$productSql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+$productSql = "SELECT id, name, description, lkr_price, stock_quantity, low_stock_threshold FROM products WHERE status = 'active' ORDER BY name ASC";
 $productsResult = $conn->query($productSql);
 
 $customerSql = "SELECT c.*, ct.city_name 
@@ -275,6 +278,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         <h5 class="mb-0 font-medium">Edit Order #<?= htmlspecialchars($order_id) ?></h5>
                         <div style="max-width: 400px;">
                             <div class="alert-container">
+                                <div class="alert-container">
                                 <?php if (!empty($order['upload_error'])): ?>
                                     <div class="alert alert-warning" id="upload-error-alert">
                                         <div>
@@ -527,12 +531,36 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                                             <option value="">-- Select Product --</option>
                                                             <?php
                                                             $productsResult->data_seek(0);
-                                                            while ($p = $productsResult->fetch_assoc()): ?>
+                                                            while ($p = $productsResult->fetch_assoc()): 
+                                                                $stock = (int)$p['stock_quantity'];
+                                                                $orig_qty = $original_quantities[$p['id']] ?? 0;
+                                                                $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
+                                                                
+                                                                // Show REAL stock count
+                                                                $real_stock = $stock; // This is the actual stock in database
+                                                                $is_out_of_stock = $allow_inventory && ($real_stock <= 0);
+                                                                
+                                                                $stock_label = "";
+                                                                if ($allow_inventory) {
+                                                                    if ($is_out_of_stock) {
+                                                                        $stock_label = " (OUT OF STOCK)";
+                                                                    } else {
+                                                                        $stock_label = " (Stock: $real_stock";
+                                                                        if ($orig_qty > 0) {
+                                                                            $stock_label .= " | In Order: $orig_qty";
+                                                                        }
+                                                                        $stock_label .= ")";
+                                                                    }
+                                                                }
+                                                            ?>
                                                                 <option value="<?= $p['id'] ?>"
                                                                     data-lkr-price="<?= $p['lkr_price'] ?>"
                                                                     data-description="<?= htmlspecialchars($p['description']) ?>"
+                                                                    data-stock="<?= $allow_inventory ? $real_stock : 999999 ?>"
+                                                                    data-base-name="<?= htmlspecialchars($p['name']) ?>"
+                                                                    <?= ($is_out_of_stock && $p['id'] != $item['product_id']) ? 'disabled' : '' ?>
                                                                     <?= $p['id'] == $item['product_id'] ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($p['name']) ?>
+                                                                    <?= htmlspecialchars($p['name']) . $stock_label ?>
                                                                 </option>
                                                             <?php endwhile; ?>
                                                         </select>
@@ -570,11 +598,35 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                                         <option value="">-- Select Product --</option>
                                                         <?php
                                                         $productsResult->data_seek(0);
-                                                        while ($p = $productsResult->fetch_assoc()): ?>
+                                                        while ($p = $productsResult->fetch_assoc()): 
+                                                            $stock = (int)$p['stock_quantity'];
+                                                            $orig_qty = $original_quantities[$p['id']] ?? 0;
+                                                            $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
+                                                            
+                                                            // Show REAL stock count
+                                                            $real_stock = $stock; // This is the actual stock in database
+                                                            $is_out_of_stock = $allow_inventory && ($real_stock <= 0);
+                                                            
+                                                            $stock_label = "";
+                                                            if ($allow_inventory) {
+                                                                if ($is_out_of_stock) {
+                                                                    $stock_label = " (OUT OF STOCK)";
+                                                                } else {
+                                                                    $stock_label = " (Stock: $real_stock";
+                                                                    if ($orig_qty > 0) {
+                                                                        $stock_label .= " | In Order: $orig_qty";
+                                                                    }
+                                                                    $stock_label .= ")";
+                                                                }
+                                                            }
+                                                        ?>
                                                             <option value="<?= $p['id'] ?>"
                                                                 data-lkr-price="<?= $p['lkr_price'] ?>"
-                                                                data-description="<?= htmlspecialchars($p['description']) ?>">
-                                                                <?= htmlspecialchars($p['name']) ?>
+                                                                data-description="<?= htmlspecialchars($p['description']) ?>"
+                                                                data-stock="<?= $allow_inventory ? $real_stock : 999999 ?>"
+                                                                data-base-name="<?= htmlspecialchars($p['name']) ?>"
+                                                                <?= $is_out_of_stock ? 'disabled' : '' ?>>
+                                                                <?= htmlspecialchars($p['name']) . $stock_label ?>
                                                             </option>
                                                         <?php endwhile; ?>
                                                     </select>
@@ -736,8 +788,33 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // ========== GLOBAL VARIABLES ==========
+            const allowInventory = <?= (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) ? 'true' : 'false' ?>;
             let deliveryFee = <?php echo $defaultDeliveryFee; ?>;
             let isExistingCustomer = <?= $order['customer_id'] ? 'true' : 'false' ?>;
+
+            const productBaseStocks = {
+                <?php
+                $productsResult->data_seek(0);
+                while ($p = $productsResult->fetch_assoc()) {
+                    echo "'" . $p['id'] . "': " . (int)$p['stock_quantity'] . ",";
+                }
+                ?>
+            };
+
+            const orderOriginalQuantities = {
+                <?php
+                foreach ($original_quantities as $pid => $qty) {
+                    echo "'" . $pid . "': " . $qty . ",";
+                }
+                ?>
+            };
+            
+            // Initial label refresh
+            setTimeout(() => {
+                if (typeof ProductManager !== 'undefined' && ProductManager.refreshStockLabels) {
+                    ProductManager.refreshStockLabels();
+                }
+            }, 100);
 
     // ========== VALIDATION UTILITIES ==========
     const ValidationUtils = {
@@ -1143,12 +1220,15 @@ const ProductManager = {
 
         // Check for duplicates
         let existingRow = null;
-        document.querySelectorAll('#order_table tbody tr').forEach(tr => {
+        const allRows = document.querySelectorAll('#order_table tbody tr');
+        
+        for (let tr of allRows) {
             const select = tr.querySelector('.product-select');
-            if (tr !== row && select && select.value === selectedValue) {
+            if (tr !== row && select && select.value && select.value === selectedValue) {
                 existingRow = tr;
+                break;
             }
-        });
+        }
 
         if (existingRow) {
             ProductManager.showDuplicateAlert(productName, existingRow);
@@ -1170,12 +1250,28 @@ const ProductManager = {
         const quantityInput = row.querySelector('.quantity');
         const description = selectedOption.getAttribute('data-description') || '';
         const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
+        const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
 
         priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
         descriptionField.value = description;
 
         // Enable fields
-        quantityInput.disabled = false;
+        if (!allowInventory || stock > 0) {
+            quantityInput.disabled = false;
+            if (allowInventory) {
+                quantityInput.max = stock;
+                if (parseInt(quantityInput.value) > stock) {
+                    quantityInput.value = stock;
+                }
+            } else {
+                quantityInput.removeAttribute('max');
+            }
+        } else {
+            // Only disable if it's not the existing product in the order
+            quantityInput.disabled = (stock <= 0);
+            if (stock <= 0) quantityInput.value = 0;
+        }
+
         priceField.disabled = false;
         row.querySelector('.discount').disabled = false;
         descriptionField.disabled = false;
@@ -1229,11 +1325,38 @@ const ProductManager = {
         let price = parseFloat(row.querySelector('.price').value) || 0;
         let discount = parseFloat(row.querySelector('.discount').value) || 0;
 
+        // Handle Quantity - ensure it is at least 1
         const qtyInput = row.querySelector('.quantity');
+        const productSelect = row.querySelector('.product-select');
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        
         if (qtyInput.value !== "" && parseInt(qtyInput.value) < 1) {
             qtyInput.value = 1;
         }
+        
         let quantity = parseInt(qtyInput.value) || 1;
+
+            // Stock validation
+            if (allowInventory && selectedOption && selectedOption.value !== "") {
+                const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
+                const baseStock = productBaseStocks[selectedOption.value] || 0;
+                
+                // Clear any previous error
+                ValidationUtils.clearErrors('product-validation-error');
+                
+                if (quantity > stock) {
+                    ValidationUtils.showError(
+                        qtyInput, 
+                        `Max ${stock} can be added (Real Stock: ${baseStock})`, 
+                        'product-validation-error'
+                    );
+                    qtyInput.value = stock;
+                    quantity = stock;
+                }
+                qtyInput.max = stock;
+            } else if (!allowInventory) {
+                qtyInput.removeAttribute('max');
+            }
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
@@ -1295,8 +1418,8 @@ const ProductManager = {
         let subtotalAfterDiscount = subtotalGross - totalDiscount;
 
         if (hasProducts) {
-            finalDeliveryFee = deliveryFee;
-            document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
+                finalDeliveryFee = deliveryFee;
+                document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
         }
@@ -1380,6 +1503,7 @@ const ProductManager = {
 
         newRow.querySelector('.product-select').value = '';
         document.querySelector('#order_table tbody').appendChild(newRow);
+        ProductManager.refreshStockLabels();
     },
 
     removeRow: (button) => {
@@ -1388,6 +1512,7 @@ const ProductManager = {
             button.closest('tr').remove();
             ProductManager.checkForProducts();
             ProductManager.updateTotals();
+            ProductManager.refreshStockLabels();
         } else {
             let row = button.closest('tr');
             row.querySelector('.product-select').value = '';
@@ -1401,8 +1526,92 @@ const ProductManager = {
             row.querySelector('.discount').disabled = true;
             ProductManager.checkForProducts();
             ProductManager.updateTotals();
+            ProductManager.refreshStockLabels();
         }
         FormValidator.validateAndToggleSubmit();
+    },
+
+    refreshStockLabels: () => {
+        const consumed = {};
+        document.querySelectorAll('#order_table tbody tr').forEach(row => {
+            const pid = row.querySelector('.product-select').value;
+            const qty = parseInt(row.querySelector('.quantity').value) || 0;
+            if (pid) {
+                consumed[pid] = (consumed[pid] || 0) + qty;
+            }
+        });
+
+        document.querySelectorAll('.product-select').forEach(select => {
+            const currentPid = select.value;
+            Array.from(select.options).forEach(option => {
+                const pid = option.value;
+                if (!pid) return;
+
+                const baseStock = productBaseStocks[pid] || 0; // REAL stock from database
+                const originalQty = orderOriginalQuantities[pid] || 0;
+                const totalInForm = consumed[pid] || 0;
+                
+                // Calculate how many are available for this specific row
+                const otherRowsTotal = (pid === currentPid) ? 
+                    (totalInForm - (parseInt(select.closest('tr').querySelector('.quantity').value) || 0)) : 
+                    totalInForm;
+                    
+                // Available for this row = Real stock + (if editing this same product, include original quantity)
+                let availForThisRow;
+                if (pid === currentPid) {
+                    // For the product currently selected in this row, we can use:
+                    // Real stock + original quantity from this order - quantities in other rows
+                    availForThisRow = baseStock + originalQty - otherRowsTotal;
+                } else {
+                    // For other products, just real stock minus all quantities in form
+                    availForThisRow = baseStock - totalInForm;
+                }
+                
+                // Create label showing REAL stock
+                let label = "";
+                if (allowInventory) {
+                    if (baseStock <= 0) {
+                        label = " (OUT OF STOCK)";
+                    } else {
+                        label = ` (Stock: ${baseStock}`;
+                        if (originalQty > 0) {
+                            label += ` | In Order: ${originalQty}`;
+                        }
+                        if (availForThisRow < baseStock) {
+                            label += ` | Can add: ${Math.max(0, availForThisRow)}`;
+                        }
+                        label += ")";
+                    }
+                }
+                
+                const baseName = option.getAttribute('data-base-name');
+                option.text = baseName + label;
+                option.setAttribute('data-stock', Math.max(0, availForThisRow));
+                
+                // Update max attribute on quantity input if this is the current selected product
+                if (pid === currentPid) {
+                    const rowQtyInput = select.closest('tr').querySelector('.quantity');
+                    if (rowQtyInput) {
+                        if (allowInventory) {
+                            rowQtyInput.max = Math.max(0, availForThisRow);
+                            if (parseInt(rowQtyInput.value) > availForThisRow) {
+                                rowQtyInput.value = Math.max(0, availForThisRow);
+                                ProductManager.updateRowTotal(select.closest('tr'));
+                            }
+                        } else {
+                            rowQtyInput.removeAttribute('max');
+                        }
+                    }
+                }
+
+                // Disable option if not enough stock available
+                if (allowInventory && pid !== currentPid) {
+                    option.disabled = (availForThisRow <= 0);
+                } else if (!allowInventory) {
+                    option.disabled = false;
+                }
+            });
+        });
     }
 };
 
@@ -1641,6 +1850,7 @@ const FormValidator = {
             document.addEventListener('change', (e) => {
                 if (e.target.classList.contains('product-select')) {
                     ProductManager.updatePrice(e.target.closest('tr'));
+                    ProductManager.refreshStockLabels();
                     FormValidator.validateAndToggleSubmit();
                 }
             });
@@ -1654,6 +1864,7 @@ const FormValidator = {
                 if (e.target.classList.contains('price') || e.target.classList.contains('discount') || e.target.classList.contains('quantity')) {
                     if (e.target.classList.contains('quantity') && e.target.value !== "" && parseInt(e.target.value) < 1) e.target.value = 1;
                     ProductManager.updateRowTotal(e.target.closest('tr'));
+                    ProductManager.refreshStockLabels();
                     FormValidator.validateAndToggleSubmit();
                 }
                 

@@ -29,7 +29,18 @@ $company_hotline = !empty($branding['hotline']) ? $branding['hotline'] : "";
 
 //  GET LOGO FROM DATABASE (NOT HARDCODED)
 if (!empty($branding['logo_url'])) {
-    $company_logo = $branding['logo_url'];
+    // Check if it's a full URL (starts with http/https)
+    if (strpos($branding['logo_url'], 'http') === 0) {
+        $company_logo = $branding['logo_url'];
+    } 
+    // Check if it already has the full path
+    else if (strpos($branding['logo_url'], '/quick_start/') === 0) {
+        $company_logo = $branding['logo_url'];
+    }
+    // Otherwise, it's a relative path from dist folder
+    else {
+        $company_logo = '/quick_start/dist/' . ltrim($branding['logo_url'], '/');
+    }
 } else {
     // Fallback if no logo in database
     $company_logo = '';

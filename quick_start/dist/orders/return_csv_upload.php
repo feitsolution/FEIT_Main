@@ -334,8 +334,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                         if ($updateOrderStmt->affected_rows > 0) {
                             $successCount++;
                             
+                            // INVENTORY
+                            $inventoryUpdatedCount = 0;
+                            if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                                // Get order items to update inventory
+                                $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
+                                $itemsStmt = $conn->prepare($getItemsSql);
+                                $itemsStmt->bind_param("i", $trackingData['order_id']);
+                                $itemsStmt->execute();
+                                $itemsResult = $itemsStmt->get_result();
+                                
+                                while ($item = $itemsResult->fetch_assoc()) {
+                                    $productId = $item['product_id'];
+                                    $quantity = $item['quantity'];
+    
+                                    // Update stock - Increment stock for returned items
+                                    $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
+                                    $stockStmt = $conn->prepare($updateStockSql);
+                                    $stockStmt->bind_param("ii", $quantity, $productId);
+                                    if ($stockStmt->execute()) {
+                                        $inventoryUpdatedCount++;
+                                    }
+                                    $stockStmt->close();
+                                }
+                                $itemsStmt->close();
+                            }
+                            
                             // Log the successful status update with the requested format
-                            $logDetails = "Return CSV bulk handover order updated with tracking: {$trackingData['tracking_number']}, Order ID: {$trackingData['order_id']}";
+                            $logDetails = "Return CSV bulk handover order updated with tracking: {$trackingData['tracking_number']}, Order ID: {$trackingData['order_id']}, Inventory Restored Items: $inventoryUpdatedCount";
                             
                             if (!logUserAction($conn, $currentUserId, 'return_csv', $trackingData['order_id'], $logDetails)) {
                                 // Log the error but don't stop processing
@@ -408,10 +434,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         exit();
     }
 }
-
-// Include UI files after processing POST request to avoid header issues
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -429,7 +451,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

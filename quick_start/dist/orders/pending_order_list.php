@@ -205,11 +205,6 @@ if ($countResult && $countResult->num_rows > 0) {
 }
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
-
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
@@ -257,7 +252,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 </head>
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
+    ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -410,7 +408,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 <th>
                     <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                 </th>
-<th>Order ID</th>
+                <th>Order ID</th>
                 <th>Customer Name</th>
                 <th>Issue Date</th>
                 <th>Total Amount</th>
@@ -428,7 +426,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                         <td>
                             <input type="checkbox" class="order-checkbox" 
                                    value="<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
-                                   onchange="updateBulkSelection()">
+                                   onchange="updateBulkSelection()"
+                                   <?php echo !empty($row['upload_error']) ? 'disabled' : ''; ?>>
                         </td>
                         
                         <!-- Order ID -->
@@ -675,7 +674,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
         let currentPaymentSlip = null; // Store payment slip filename
         let currentPayStatus = null; // Store payment status
 
-// Clear all filter inputs
+        // Clear all filter inputs
         function clearFilters() {
             document.getElementById('order_id_filter').value = '';
             document.getElementById('customer_name_filter').value = '';
@@ -1732,6 +1731,7 @@ function confirmCancelOrder() {
         alert('No order selected for cancellation.');
         return;
     }
+
     
     // Final confirmation
     if (!confirm(`Are you sure you want to cancel Order ID: ${currentCancelOrderId}? This action cannot be undone.`)) {
@@ -1847,7 +1847,9 @@ function toggleSelectAll() {
     const orderCheckboxes = document.querySelectorAll('.order-checkbox');
     
     orderCheckboxes.forEach(checkbox => {
-        checkbox.checked = selectAllCheckbox.checked;
+        if (!checkbox.disabled) {
+            checkbox.checked = selectAllCheckbox.checked;
+        }
     });
     
     updateBulkSelection();
@@ -1860,11 +1862,13 @@ function updateBulkSelection() {
     const bulkActionsBar = document.getElementById('bulkActionsBar');
     const selectedCount = document.getElementById('selectedCount');
     
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
+    
     // Update select all checkbox state
     if (checkedBoxes.length === 0) {
         selectAllCheckbox.indeterminate = false;
         selectAllCheckbox.checked = false;
-    } else if (checkedBoxes.length === orderCheckboxes.length) {
+    } else if (checkedBoxes.length === totalSelectable && totalSelectable > 0) {
         selectAllCheckbox.indeterminate = false;
         selectAllCheckbox.checked = true;
     } else {
@@ -1914,7 +1918,9 @@ function toggleSelectAll() {
     const orderCheckboxes = document.querySelectorAll('.order-checkbox');
     
     orderCheckboxes.forEach(checkbox => {
-        checkbox.checked = selectAllCheckbox.checked;
+        if (!checkbox.disabled) {
+            checkbox.checked = selectAllCheckbox.checked;
+        }
     });
     
     updateBulkSelection();
@@ -1941,10 +1947,10 @@ function updateBulkSelection() {
     }
     
     // Update select all checkbox state
-    const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
     if (selectAllCheckbox) {
-        selectAllCheckbox.checked = selectedCount === totalCheckboxes && totalCheckboxes > 0;
-        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+        selectAllCheckbox.checked = selectedCount === totalSelectable && totalSelectable > 0;
+        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalSelectable;
     }
     
     // Store selected orders for bulk dispatch
@@ -2304,10 +2310,10 @@ function updateBulkSelection() {
     }
     
     // Update select all checkbox state
-    const totalCheckboxes = document.querySelectorAll('.order-checkbox').length;
+    const totalSelectable = document.querySelectorAll('.order-checkbox:not(:disabled)').length;
     if (selectAllCheckbox) {
-        selectAllCheckbox.checked = selectedCount === totalCheckboxes && totalCheckboxes > 0;
-        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+        selectAllCheckbox.checked = selectedCount === totalSelectable && totalSelectable > 0;
+        selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalSelectable;
     }
     
     // Store selected orders for bulk dispatch

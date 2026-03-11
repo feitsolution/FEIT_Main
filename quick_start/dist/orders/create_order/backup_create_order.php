@@ -337,7 +337,7 @@ foreach ($orders as $order) {
                         <div class="header-section">
                             <div class="company-left">
                                 <div class="company-logo">
-                                    <img src="../assets/images/order_management.png" alt="Company Logo">
+                                    <img src="../assets/images/quick_start.png" alt="Company Logo">
                                 </div>
                                 <div class="company-name"><?php echo htmlspecialchars($company['name']); ?></div>
                             </div>

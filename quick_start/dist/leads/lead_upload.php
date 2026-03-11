@@ -382,6 +382,36 @@ if ($cityError || $addressError) {
                 $subtotal = $unitPrice;
                 $productStmt->close();
 
+                // Check and deduct stock
+                if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                    $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
+                    $stockUpdateStmt = $conn->prepare($updateStockSql);
+                    if (!$stockUpdateStmt) {
+                        throw new Exception("Failed to prepare stock update query: " . $conn->error);
+                    }
+                    $stockUpdateStmt->bind_param("iii", $quantity, $productId, $quantity);
+                    
+                    if (!$stockUpdateStmt->execute()) {
+                        throw new Exception("Failed to update stock for product code: " . $productCode);
+                    }
+                    
+                    if ($stockUpdateStmt->affected_rows === 0) {
+                        // Fetch product name
+                        $getNameSql = "SELECT name FROM products WHERE id = ?";
+                        $nameStmt = $conn->prepare($getNameSql);
+                        $nameStmt->bind_param("i", $productId);
+                        $nameStmt->execute();
+                        $productResult = $nameStmt->get_result();
+                        $productName = $productCode; // Fallback
+                        if ($productResult && $productRow = $productResult->fetch_assoc()) {
+                            $productName = $productRow['name'];
+                        }
+                        $nameStmt->close();
+                        throw new Exception("Insufficient stock for product: " . $productName . " (Code: " . $productCode . ")");
+                    }
+                    $stockUpdateStmt->close();
+                }
+
                 // Check if customer exists by phone1, phone_2, or email
                 $customerId = null;
                 $customerFound = false;
@@ -630,7 +660,7 @@ if ($usersResult && $usersResult->num_rows > 0) {
 $usersStmt->close();
 
 // Fetch active products for dropdown
-$productsSql = "SELECT id, name, product_code, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+$productsSql = "SELECT id, name, product_code, lkr_price, stock_quantity FROM products WHERE status = 'active' ORDER BY name ASC";
 $productsResult = $conn->query($productsSql);
 $products = [];
 if ($productsResult && $productsResult->num_rows > 0) {
@@ -638,9 +668,6 @@ if ($productsResult && $productsResult->num_rows > 0) {
         $products[] = $row;
     }
 }
-
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -749,7 +776,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 </style>
 
 <body>
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -820,6 +849,9 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                         <?php foreach ($products as $prod): ?>
                                             <div class="product-option" data-id="<?php echo $prod['id']; ?>" data-name="<?php echo htmlspecialchars($prod['name']); ?>" data-code="<?php echo htmlspecialchars($prod['product_code']); ?>" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
                                                 <strong><?php echo htmlspecialchars($prod['name']); ?></strong> (<?php echo htmlspecialchars($prod['product_code']); ?>)
+                                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                    <span style="color: #6c757d; font-size: 0.9em;"> - Stock: <?php echo $prod['stock_quantity']; ?></span>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endforeach; ?>
                                         <div id="no_products_found" style="display: none; padding: 10px; color: #999; text-align: center;">No products found</div>

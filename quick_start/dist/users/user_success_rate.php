@@ -188,10 +188,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
     exit();
 }
 
-// If we reach here, user is admin and NOT exporting - continue with page display
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
-
 // ============================================
 // HANDLE SEARCH AND FILTER PARAMETERS
 // ============================================
@@ -296,7 +292,7 @@ $role_sql = "SELECT DISTINCT r.name as role FROM roles r WHERE r.name IS NOT NUL
 $role_result = $conn->query($role_sql);
 $roles = [];
 if ($role_result && $role_result->num_rows > 0) {
-    $roles = $role_result->fetch_all(MYSQLI_ASSOC);  // ← FIXED: Changed from order_managementSQLI_ASSOC
+    $roles = $role_result->fetch_all(MYSQLI_ASSOC);  // ← FIXED: Changed from quick_startSQLI_ASSOC
 }
 
 /**
@@ -467,7 +463,9 @@ function getSuccessRateBadgeClass($rate) {
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">

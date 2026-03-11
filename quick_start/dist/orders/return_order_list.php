@@ -98,6 +98,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if (!$updateItemsStmt->execute()) {
                     throw new Exception("Failed to update order_items: " . $conn->error);
                 }
+
+                // Get updated counts (Header update)
+                // INVENTORY IMPLEMENTATION
+                $inventoryUpdatedCount = 0;
+                if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                    // Get order items to update inventory
+                    $getItemsSql = "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
+                    $itemsStmt = $conn->prepare($getItemsSql);
+                    $itemsStmt->bind_param("i", $order['order_id']);
+                    $itemsStmt->execute();
+                    $itemsResult = $itemsStmt->get_result();
+
+                    while ($item = $itemsResult->fetch_assoc()) {
+                        $productId = $item['product_id'];
+                        $quantity = $item['quantity'];
+
+                        // Update stock - Increment stock for returned items
+                        $updateStockSql = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
+                        $stockStmt = $conn->prepare($updateStockSql);
+                        $stockStmt->bind_param("ii", $quantity, $productId);
+                        
+                        if (!$stockStmt->execute()) {
+                             throw new Exception("Failed to update stock for product ID: " . $productId);
+                        }
+                        $inventoryUpdatedCount++;
+                        $stockStmt->close();
+                    }
+                    $itemsStmt->close();
+                }
                 
                 // Get updated counts
                 $itemsUpdated = $updateItemsStmt->affected_rows;
@@ -111,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     'previous_status' => 'return complete',
                     'new_status' => 'return_handover',
                     'items_updated' => $itemsUpdated,
+                    'inventory_updated_count' => $inventoryUpdatedCount,
                     'scan_method' => 'bulk_scanner',
                     'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
                     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
@@ -149,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $orderDetails['customer_name'] ?: 'N/A',
                         number_format($orderDetails['total_amount'], 2),
                         $itemsUpdated
-                    ),
+                    ) . ' - Inventory Restored',
                     'tracking_number' => $tracking_number,
                     'items_updated' => $itemsUpdated,
                     'action_logged' => true
@@ -182,7 +212,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Scanner - Quick Start Admin Portal</title>
+    <title>Return Scanner - Admin Portal</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/head.php'); ?>
     

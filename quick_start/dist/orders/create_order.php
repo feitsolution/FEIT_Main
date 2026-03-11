@@ -93,7 +93,7 @@ function checkCourierStatus($conn) {
 $courierStatus = checkCourierStatus($conn);
 
 // Fetch necessary data for the form
-$sql = "SELECT id, name, description, lkr_price FROM products WHERE status = 'active' ORDER BY name ASC";
+$sql = "SELECT id, name, description, lkr_price, stock_quantity, low_stock_threshold FROM products WHERE status = 'active' ORDER BY name ASC";
 $result = $conn->query($sql);
 
 // Updated customer query with proper JOIN to get city_name
@@ -116,9 +116,6 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
     $row = $deliveryFeeResult->fetch_assoc();
     $deliveryFee = floatval($row['delivery_fee']);
 }
-
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -240,7 +237,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 <body>
     <!-- LOADER -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
+    ?>
     <!-- END LOADER -->
 
     <!-- [ Main Content ] start -->
@@ -512,11 +512,22 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                                     <?php
                                                     // Reset the pointer for $result
                                                     $result->data_seek(0);
-                                                    while ($row = $result->fetch_assoc()): ?>
+                                                    while ($row = $result->fetch_assoc()): 
+                                                        $stock = (int)$row['stock_quantity'];
+                                                        $allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
+                                                        $is_out_of_stock = $allow_inventory && ($stock <= 0);
+                                                        
+                                                        $stock_label = "";
+                                                        if ($allow_inventory) {
+                                                            $stock_label = $is_out_of_stock ? " (OUT OF STOCK)" : " (Stock: $stock)";
+                                                        }
+                                                    ?>
                                                         <option value="<?= $row['id'] ?>"
                                                             data-lkr-price="<?= $row['lkr_price'] ?>"
-                                                            data-description="<?= htmlspecialchars($row['description']) ?>">
-                                                            <?= htmlspecialchars($row['name']) ?>
+                                                            data-description="<?= htmlspecialchars($row['description']) ?>"
+                                                            data-stock="<?= $allow_inventory ? $stock : 999999 ?>"
+                                                            <?= $is_out_of_stock ? 'disabled' : '' ?>>
+                                                            <?= htmlspecialchars($row['name']) . $stock_label ?>
                                                         </option>
                                                     <?php endwhile; ?>
                                                 </select>
@@ -539,7 +550,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                             <td class="subtotal-col">
                                                 <div class="input-group">
                                                     <span class="input-group-text">Rs.</span>
-                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" disabled>
+                                                    <input type="text" name="order_product_sub[]" class="form-control subtotal" value="0.00" readonly>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1257,12 +1268,23 @@ const ProductManager = {
         const quantityInput = row.querySelector('.quantity');
         const description = selectedOption.getAttribute('data-description') || '';
         const price = parseFloat(selectedOption.getAttribute('data-lkr-price') || 0);
+        const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
 
         priceField.value = isNaN(price) ? '0.00' : price.toFixed(2);
         descriptionField.value = description;
 
         // Enable fields
-        quantityInput.disabled = false;
+        if (stock > 0) {
+            quantityInput.disabled = false;
+            quantityInput.max = stock;
+            if (parseInt(quantityInput.value) > stock) {
+                quantityInput.value = stock;
+            }
+        } else {
+            quantityInput.disabled = true;
+            quantityInput.value = 0;
+        }
+
         priceField.disabled = false;
         row.querySelector('.discount').disabled = false;
 
@@ -1323,10 +1345,25 @@ const ProductManager = {
 
         // Handle Quantity - ensure it is at least 1
         const qtyInput = row.querySelector('.quantity');
+        const productSelect = row.querySelector('.product-select');
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        
         if (qtyInput.value !== "" && parseInt(qtyInput.value) < 1) {
             qtyInput.value = 1;
         }
+        
         let quantity = parseInt(qtyInput.value) || 1;
+
+        // Stock validation
+        if (selectedOption && selectedOption.value !== "") {
+            const stock = parseInt(selectedOption.getAttribute('data-stock') || 0);
+            if (quantity > stock) {
+                ValidationUtils.showError(qtyInput, `Only ${stock} items available in stock`, 'product-validation-error');
+                qtyInput.value = stock;
+                quantity = stock;
+            }
+            qtyInput.max = stock;
+        }
 
         if (discount > (price * quantity)) {
             discount = price * quantity;
@@ -1392,7 +1429,7 @@ const ProductManager = {
         let subtotalAfterDiscount = subtotalGross - totalDiscount;
 
         if (hasProducts) {
-                finalDeliveryFee = deliveryFee;
+                finalDeliveryFee = deliveryFee; // Normal delivery fee
                 document.getElementById('delivery_fee_display').textContent = deliveryFee.toFixed(2);
         } else {
             document.getElementById('delivery_fee_display').textContent = '0.00';
@@ -1486,6 +1523,7 @@ const ProductManager = {
         newRow.querySelector('.quantity').disabled = true;
         newRow.querySelector('.price').disabled = true;
         newRow.querySelector('.discount').disabled = true;
+        newRow.querySelector('.subtotal').readOnly = true;
 
         document.querySelector('#order_table tbody').appendChild(newRow);
     },

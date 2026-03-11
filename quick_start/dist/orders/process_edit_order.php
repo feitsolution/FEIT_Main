@@ -220,16 +220,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $currentItemsResult = $currentItemsStmt->get_result();
         
         $current_items_map = [];
-        while ($row = $currentItemsResult->fetch_assoc()) {
-            $current_items_map[$row['item_id']] = $row;
+        while ($cItem = $currentItemsResult->fetch_assoc()) {
+            $current_items_map[$cItem['item_id']] = [
+                'product_id' => $cItem['product_id'],
+                'quantity' => $cItem['quantity']
+            ];
         }
         $currentItemsStmt->close();
 
         // Prepare statements for item operations
         $updateItemSql = "UPDATE order_items SET 
-                            product_id = ?, unit_price = ?, quantity = ?, 
-                            discount = ?, total_amount = ?, pay_status = ?, description = ?
-                          WHERE item_id = ? AND order_id = ?";
+            product_id = ?, unit_price = ?, quantity = ?, discount = ?, 
+            total_amount = ?, pay_status = ?, description = ?
+            WHERE item_id = ? AND order_id = ?";
         $updateStmt = $conn->prepare($updateItemSql);
 
         $insertItemSql = "INSERT INTO order_items (
@@ -237,20 +240,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             total_amount, pay_status, status, description
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)";
         $insertStmt = $conn->prepare($insertItemSql);
+        
+        $deductStockSql = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?";
+        $deductStockStmt = $conn->prepare($deductStockSql);
+        
+        $restoreStockSql = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
+        $restoreStockStmt = $conn->prepare($restoreStockSql);
 
         // Process each item
         foreach ($order_items as $item) {
-            if ($item['item_id'] && isset($current_items_map[$item['item_id']])) {
+            if ($item['item_id']) {
                 // EXISTING ITEM - UPDATE IT
-                $updateStmt->bind_param("ididdssis", 
-                    $item['product_id'], $item['price'], $item['qty'], 
-                    $item['discount'], $item['total'], $pay_status, $item['desc'],
-                    $item['item_id'], $order_id
-                );
-                $updateStmt->execute();
+                $old_item = $current_items_map[$item['item_id']] ?? null;
+                
+                if ($old_item) {
+                    // Stock management - only if enabled
+                    if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                        // Restore old stock
+                        $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
+                        $restoreStockStmt->execute();
+                        
+                        // Deduct new stock
+                        $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
+                        $deductStockStmt->execute();
+                        
+                        if ($deductStockStmt->affected_rows === 0) {
+                            throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                        }
+                    }
+                    
+                    // Update the item
+                    $updateStmt->bind_param("ididdssss", 
+                        $item['product_id'], $item['price'], $item['qty'], 
+                        $item['discount'], $item['total'], $pay_status, $item['desc'],
+                        $item['item_id'], $order_id
+                    );
+                    $updateStmt->execute();
+                }
             } else {
                 // NEW ITEM - INSERT IT
-                $insertStmt->bind_param("sididsss", 
+                if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                    // Deduct stock for the new item
+                    $deductStockStmt->bind_param("iii", $item['qty'], $item['product_id'], $item['qty']);
+                    $deductStockStmt->execute();
+                    
+                    if ($deductStockStmt->affected_rows === 0) {
+                        throw new Exception("Insufficient stock for product ID: " . $item['product_id']);
+                    }
+                }
+
+                $insertStmt->bind_param("iididsss", 
                     $order_id, $item['product_id'], $item['price'], $item['qty'], 
                     $item['discount'], $item['total'], $pay_status, $item['desc']
                 );
@@ -261,6 +300,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Delete items that were removed from the order
         foreach ($current_items_map as $item_id => $old_item) {
             if (!in_array($item_id, $processed_item_ids)) {
+                // This item was removed - restore its stock and delete it
+                if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+                    $restoreStockStmt->bind_param("ii", $old_item['quantity'], $old_item['product_id']);
+                    $restoreStockStmt->execute();
+                }
+                
                 $deleteStmt = $conn->prepare("DELETE FROM order_items WHERE item_id = ? AND order_id = ?");
                 $deleteStmt->bind_param("is", $item_id, $order_id);
                 $deleteStmt->execute();
@@ -269,6 +314,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         
         $updateStmt->close();
+        $deductStockStmt->close();
+        $restoreStockStmt->close();
         $insertStmt->close();
 
         // Create detailed log message

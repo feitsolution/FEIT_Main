@@ -79,8 +79,6 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     exit();
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -217,6 +215,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     ?>
     <!-- END LOADER -->
 

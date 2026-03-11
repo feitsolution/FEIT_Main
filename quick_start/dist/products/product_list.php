@@ -14,8 +14,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // Include the database connection file
 include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/connection/db_connection.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 // Handle search and filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -28,6 +26,16 @@ $price_to = isset($_GET['price_to']) ? trim($_GET['price_to']) : '';
 $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : '';
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+$category_filter = isset($_GET['category_filter']) ? trim($_GET['category_filter']) : '';
+
+// Fetch all categories for filter with parent name
+$categories = [];
+$catRes = $conn->query("SELECT c1.id, c1.name, c1.parent_id, c2.name as parent_name FROM categories c1 LEFT JOIN categories c2 ON c1.parent_id = c2.id ORDER BY COALESCE(c2.name, c1.name), c1.name ASC");
+if ($catRes) {
+    while ($crow = $catRes->fetch_assoc()) {
+        $categories[] = $crow;
+    }
+}
 
 // Pagination settings
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
@@ -35,10 +43,13 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 // Base SQL for counting total records
-$countSql = "SELECT COUNT(*) as total FROM products";
+$countSql = "SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id";
 
-// Main query - Updated to include product_code
-$sql = "SELECT id, name, product_code, description, lkr_price, created_at, status FROM products";
+// Main query - Updated to include product_code and hierarchical category name
+$sql = "SELECT p.*, c.name as category_name, pc.name as parent_category_name
+        FROM products p 
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN categories pc ON c.parent_id = pc.id";
 
 // Build search conditions
 $searchConditions = [];
@@ -48,56 +59,64 @@ if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchConditions[] = "(
                         id LIKE '%$searchTerm%' OR
-                        name LIKE '%$searchTerm%' OR 
-                        product_code LIKE '%$searchTerm%' OR 
-                        description LIKE '%$searchTerm%' OR 
-                        lkr_price LIKE '%$searchTerm%')";
+                        p.name LIKE '%$searchTerm%' OR 
+                        p.product_code LIKE '%$searchTerm%' OR 
+                        p.description LIKE '%$searchTerm%' OR 
+                        p.lkr_price LIKE '%$searchTerm%' OR
+                        c.name LIKE '%$searchTerm%')";
 }
 
 // Specific Product ID filter
 if (!empty($product_id_filter)) {
     $productIdTerm = $conn->real_escape_string($product_id_filter);
-    $searchConditions[] = "id = '$productIdTerm'";
+    $searchConditions[] = "p.id = '$productIdTerm'";
 }
 
 // Specific Product Name filter
 if (!empty($product_name_filter)) {
     $productNameTerm = $conn->real_escape_string($product_name_filter);
-    $searchConditions[] = "name LIKE '%$productNameTerm%'";
+    $searchConditions[] = "p.name LIKE '%$productNameTerm%'";
 }
 
 // Specific Product Code filter
 if (!empty($product_code_filter)) {
     $productCodeTerm = $conn->real_escape_string($product_code_filter);
-    $searchConditions[] = "product_code LIKE '%$productCodeTerm%'";
+    $searchConditions[] = "p.product_code LIKE '%$productCodeTerm%'";
 }
 
 // Price range filter
 if (!empty($price_from)) {
     $priceFromTerm = $conn->real_escape_string($price_from);
-    $searchConditions[] = "lkr_price >= '$priceFromTerm'";
+    $searchConditions[] = "p.lkr_price >= '$priceFromTerm'";
 }
 
 if (!empty($price_to)) {
     $priceToTerm = $conn->real_escape_string($price_to);
-    $searchConditions[] = "lkr_price <= '$priceToTerm'";
+    $searchConditions[] = "p.lkr_price <= '$priceToTerm'";
 }
 
 // Status filter
 if (!empty($status_filter)) {
     $statusTerm = $conn->real_escape_string($status_filter);
-    $searchConditions[] = "status = '$statusTerm'";
+    $searchConditions[] = "p.status = '$statusTerm'";
 }
 
 // Date range filter
 if (!empty($date_from)) {
     $dateFromTerm = $conn->real_escape_string($date_from);
-    $searchConditions[] = "DATE(created_at) >= '$dateFromTerm'";
+    $searchConditions[] = "DATE(p.created_at) >= '$dateFromTerm'";
 }
 
 if (!empty($date_to)) {
     $dateToTerm = $conn->real_escape_string($date_to);
-    $searchConditions[] = "DATE(created_at) <= '$dateToTerm'";
+    $searchConditions[] = "DATE(p.created_at) <= '$dateToTerm'";
+}
+
+// Category filter
+if (!empty($category_filter)) {
+    $catTerm = $conn->real_escape_string($category_filter);
+    // Show products in selected category OR any subcategory of this category
+    $searchConditions[] = "(p.category_id = '$catTerm' OR c.parent_id = '$catTerm')";
 }
 
 // Apply all search conditions
@@ -108,7 +127,7 @@ if (!empty($searchConditions)) {
 }
 
 // Add ordering and pagination
-$sql .= " ORDER BY id DESC LIMIT $limit OFFSET $offset";
+$sql .= " ORDER BY p.id DESC LIMIT $limit OFFSET $offset";
 
 // Execute queries
 $countResult = $conn->query($countSql);
@@ -132,11 +151,23 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
+
+    <style>
+        .product-category {
+            font-family: monospace; 
+            font-size: 13px; 
+            color: #495057; 
+            background: #f8f9fa; 
+            display: inline-block;
+        }
+    </style>
 </head>
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -207,6 +238,22 @@ $result = $conn->query($sql);
                         </div>
                         
                         <div class="form-group">
+                            <label for="category_filter">Category</label>
+                            <select id="category_filter" name="category_filter">
+                                <option value="">All Categories</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?php echo $cat['id']; ?>" <?php echo ($category_filter == $cat['id']) ? 'selected' : ''; ?>>
+                                        <?php 
+                                        echo $cat['parent_name'] 
+                                            ? htmlspecialchars($cat['parent_name'] . ' > ' . $cat['name']) 
+                                            : htmlspecialchars($cat['name']); 
+                                        ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
                             <label for="date_from">Date From</label>
                             <input type="date" id="date_from" name="date_from" 
                                    value="<?php echo htmlspecialchars($date_from); ?>">
@@ -247,9 +294,13 @@ $result = $conn->query($sql);
                             <tr>
                                 <th>ID</th>
                                 <th>Product Name</th>
+                                <th>Category</th>
                                 <th>Product Code</th>
-                                <th>Description</th>
+                                <!-- <th>Description</th> -->
                                 <th>Price (LKR)</th>
+                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                <th>Stock</th>
+                                <?php endif; ?>
                                 <th>Created Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -269,6 +320,19 @@ $result = $conn->query($sql);
                                             </div>
                                         </td>
                                         
+                                        <!-- Category -->
+                                        <td>
+                                            <span class="product-category">
+                                                <?php 
+                                                if ($row['parent_category_name']) {
+                                                    echo htmlspecialchars($row['parent_category_name'] . ' ( ' . $row['category_name'] . ' )');
+                                                } else {
+                                                    echo htmlspecialchars($row['category_name'] ?? 'Uncategorized');
+                                                }
+                                                ?>
+                                            </span>
+                                        </td>
+                                        
                                         <!-- Product Code -->
                                         <td>
                                             <div class="product-code" style="font-family: monospace; font-size: 13px; color: #495057; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; display: inline-block;">
@@ -277,14 +341,14 @@ $result = $conn->query($sql);
                                         </td>
                                         
                                         <!-- Description -->
-                                        <td>
+                                        <!-- <td>
                                             <div class="description-truncate" title="<?php echo htmlspecialchars($row['description'] ?? ''); ?>">
                                                 <?php 
                                                 $description = $row['description'] ?? '';
                                                 echo htmlspecialchars(strlen($description) > 50 ? substr($description, 0, 50) . '...' : $description); 
                                                 ?>
                                             </div>
-                                        </td>
+                                        </td> -->
                                         
                                         <!-- Price -->
                                         <td>
@@ -294,6 +358,25 @@ $result = $conn->query($sql);
                                                 </span>
                                             </div>
                                         </td>
+                                        
+                                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                        <!-- Stock -->
+                                        <td>
+                                            <div class="stock-display">
+                                                <?php 
+                                                $stock = (int)$row['stock_quantity'];
+                                                $threshold = (int)$row['low_stock_threshold'];
+                                                $is_low = $stock <= $threshold;
+                                                ?>
+                                                <span style="font-weight: 600; color: <?php echo $is_low ? '#dc3545' : '#28a745'; ?>;">
+                                                    <?php echo $stock; ?>
+                                                </span>
+                                                <?php if ($is_low): ?>
+                                                    <i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 12px;" title="Low Stock"></i>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <?php endif; ?>
                                         
                                         <!-- Created Date -->
                                         <td>
@@ -319,14 +402,31 @@ $result = $conn->query($sql);
                                                 <button type="button" class="action-btn view-btn view-product-btn"
                                                         data-product-id="<?= $row['id'] ?>"
                                                         data-product-name="<?= htmlspecialchars($row['name']) ?>"
+                                                        data-product-category="<?= htmlspecialchars($row['parent_category_name'] ? $row['parent_category_name'] . ' > ' . $row['category_name'] : ($row['category_name'] ?? 'Uncategorized')) ?>"
                                                         data-product-code="<?= htmlspecialchars($row['product_code'] ?? '') ?>"
                                                         data-product-description="<?= htmlspecialchars($row['description'] ?? '') ?>"
                                                         data-product-price="<?= htmlspecialchars($row['lkr_price']) ?>"
+                                                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                        data-product-stock="<?= htmlspecialchars($row['stock_quantity']) ?>"
+                                                        data-product-threshold="<?= htmlspecialchars($row['low_stock_threshold']) ?>"
+                                                        <?php endif; ?>
                                                         data-product-status="<?= htmlspecialchars($row['status']) ?>"
                                                         data-product-created="<?= htmlspecialchars($row['created_at']) ?>"
                                                         title="View Product Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+
+                                                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                                                <button type="button" class="action-btn stock-update-btn" 
+                                                        style="background: #17a2b8; color: white;"
+                                                        title="Update Stock"
+                                                        data-product-id="<?= $row['id'] ?>"
+                                                        data-product-name="<?= htmlspecialchars($row['name']) ?>"
+                                                        data-product-stock="<?= htmlspecialchars($row['stock_quantity']) ?>"
+                                                        onclick="openStockUpdateModal(this)">
+                                                    <i class="fas fa-boxes"></i>
+                                                </button>
+                                                <?php endif; ?>
                                                 
                                                 <button class="action-btn dispatch-btn" title="Edit Product" 
                                                         onclick="editProduct(<?php echo $row['id']; ?>)">
@@ -364,21 +464,28 @@ $result = $conn->query($sql);
                         Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?> entries
                     </div>
                     <div class="pagination-controls">
+                        <?php 
+                        $queryParams = $_GET;
+                        unset($queryParams['page']);
+                        $queryString = http_build_query($queryParams);
+                        $baseLink = '?' . ($queryString ? $queryString . '&' : '');
+                        ?>
+
                         <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='<?php echo $baseLink; ?>page=<?php echo $page - 1; ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='<?php echo $baseLink; ?>page=<?php echo $i; ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='<?php echo $baseLink; ?>page=<?php echo $page + 1; ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
@@ -405,6 +512,10 @@ $result = $conn->query($sql);
                     <span class="detail-value" id="modal-product-name"></span>
                 </div>
                 <div class="customer-detail-row">
+                    <span class="detail-label">Category:</span>
+                    <span class="detail-value" id="modal-product-category"></span>
+                </div>
+                <div class="customer-detail-row">
                     <span class="detail-label">Product Code:</span>
                     <span class="detail-value" id="modal-product-code" style="font-family: monospace; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; display: inline-block;"></span>
                 </div>
@@ -416,6 +527,16 @@ $result = $conn->query($sql);
                     <span class="detail-label">Price (LKR):</span>
                     <span class="detail-value" id="modal-product-price"></span>
                 </div>
+                <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Stock Quantity:</span>
+                    <span class="detail-value" id="modal-product-stock"></span>
+                </div>
+                <div class="customer-detail-row">
+                    <span class="detail-label">Low Stock Threshold:</span>
+                    <span class="detail-value" id="modal-product-threshold"></span>
+                </div>
+                <?php endif; ?>
                 <div class="customer-detail-row">
                     <span class="detail-label">Status:</span>
                     <span class="detail-value">
@@ -456,6 +577,44 @@ $result = $conn->query($sql);
             </div>
         </div>
     </div>
+    
+    <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+    <!-- Stock Update Modal -->
+    <div id="stockUpdateModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h4>Quick Stock Update</h4>
+                <span class="close" onclick="closeStockUpdateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px;">Updating stock for: <strong id="stock-modal-product-name"></strong></p>
+                <p style="margin-bottom: 15px;">Current Stock: <strong id="stock-modal-current-stock"></strong></p>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Action Type</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="stock_operation" value="increase" checked> Increase
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="stock_operation" value="decrease"> Decrease
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="adjustment_value" style="display: block; margin-bottom: 8px; font-weight: 500;">Quantity</label>
+                    <input type="number" id="adjustment_value" class="form-control" min="1" step="1" value="1" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+
+                <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeStockUpdateModal()" style="padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #6c757d; color: white;">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmStockUpdateBtn" style="padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #17a2b8; color: white;">Update Stock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Footer -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/footer.php'); ?>
@@ -475,18 +634,27 @@ $result = $conn->query($sql);
             // Extract data from button attributes
             const productId = button.getAttribute('data-product-id');
             const productName = button.getAttribute('data-product-name');
+            const productCategory = button.getAttribute('data-product-category');
             const productCode = button.getAttribute('data-product-code');
             const productDescription = button.getAttribute('data-product-description');
             const productPrice = button.getAttribute('data-product-price');
+            const productStock = button.getAttribute('data-product-stock');
+            const productThreshold = button.getAttribute('data-product-threshold');
             const productStatus = button.getAttribute('data-product-status');
             const productCreated = button.getAttribute('data-product-created');
 
             // Populate modal fields
             document.getElementById('modal-product-id').textContent = productId;
             document.getElementById('modal-product-name').textContent = productName;
+            document.getElementById('modal-product-category').textContent = productCategory;
             document.getElementById('modal-product-code').textContent = productCode || 'N/A';
             document.getElementById('modal-product-description').textContent = productDescription || 'N/A';
             document.getElementById('modal-product-price').textContent = 'LKR ' + parseFloat(productPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            if (document.getElementById('modal-product-stock')) {
+                document.getElementById('modal-product-stock').textContent = productStock;
+                document.getElementById('modal-product-threshold').textContent = productThreshold;
+            }
             
             // Set status badge
             const statusElement = document.getElementById('modal-product-status');
@@ -561,8 +729,141 @@ $result = $conn->query($sql);
                 if (event.target === statusModal) {
                     closeConfirmationModal();
                 }
+
+                const stockModal = document.getElementById('stockUpdateModal');
+                if (event.target === stockModal) {
+                    closeStockUpdateModal();
+                }
             }
         });
+
+        // Stock Update Functionality
+        let currentStockValue = 0;
+
+        function openStockUpdateModal(button) {
+            const productId = button.getAttribute('data-product-id');
+            const productName = button.getAttribute('data-product-name');
+            const productStock = button.getAttribute('data-product-stock');
+            
+            currentStockValue = parseInt(productStock) || 0;
+            
+            document.getElementById('stock-modal-product-name').textContent = productName;
+            document.getElementById('stock-modal-current-stock').textContent = productStock;
+            
+            const adjustmentInput = document.getElementById('adjustment_value');
+            adjustmentInput.value = 1;
+            
+            // Explicitly set default operation to increase
+            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+
+            const confirmBtn = document.getElementById('confirmStockUpdateBtn');
+            confirmBtn.onclick = function() {
+                const operation = document.querySelector('input[name="stock_operation"]:checked').value;
+                updateProductStock(productId, operation, adjustmentInput.value);
+            };
+            
+            document.getElementById('stockUpdateModal').style.display = 'block';
+            adjustmentInput.focus();
+            adjustmentInput.select();
+        }
+
+        // Validate adjustment value when decreasing stock
+        document.addEventListener('DOMContentLoaded', function() {
+            const adjustmentInput = document.getElementById('adjustment_value');
+            const stockOperationRadios = document.querySelectorAll('input[name="stock_operation"]');
+            
+            if (adjustmentInput) {
+                adjustmentInput.addEventListener('input', function() {
+                    const selectedOperation = document.querySelector('input[name="stock_operation"]:checked');
+                    if (selectedOperation && selectedOperation.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            this.value = 1;
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const enteredValue = parseInt(this.value) || 0;
+                        if (enteredValue > currentStockValue) {
+                            this.value = currentStockValue;
+                        }
+                    }
+                });
+            }
+            
+            // Re-validate when switching to decrease operation
+            stockOperationRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'decrease') {
+                        // Check if stock is 0 - can't decrease from 0
+                        if (currentStockValue <= 0) {
+                            alert('Cannot decrease stock. Current stock is already 0.');
+                            // Switch back to increase
+                            document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
+                            return;
+                        }
+                        const currentValue = parseInt(adjustmentInput.value) || 0;
+                        if (currentValue > currentStockValue) {
+                            adjustmentInput.value = currentStockValue;
+                        }
+                    }
+                });
+            });
+        });
+
+        function closeStockUpdateModal() {
+            const stockModal = document.getElementById('stockUpdateModal');
+            if (stockModal) stockModal.style.display = 'none';
+        }
+
+        function updateProductStock(productId, operation, adjustmentValue) {
+            if (adjustmentValue === '' || isNaN(adjustmentValue) || parseInt(adjustmentValue) <= 0) {
+                alert('Please enter a valid quantity greater than 0.');
+                return;
+            }
+
+            // Check if trying to decrease when stock is 0
+            if (operation === 'decrease' && currentStockValue <= 0) {
+                alert('Cannot decrease stock. Current stock is already 0.');
+                return;
+            }
+
+            const btn = document.getElementById('confirmStockUpdateBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Updating...';
+            btn.disabled = true;
+
+            fetch('update_stock_action.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    operation: operation,
+                    adjustment_value: adjustmentValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeStockUpdateModal();
+                    alert('Stock updated successfully!');
+                    location.reload(); // Simplest way to reflect all changes including threshold icons
+                } else {
+                    alert('Error updating stock: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the stock.');
+            })
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
 
         function openStatusConfirmationModal(button) {
             const productId = button.getAttribute('data-product-id');

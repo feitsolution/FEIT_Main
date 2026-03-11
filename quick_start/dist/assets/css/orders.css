@@ -45,7 +45,6 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  
 }
 
 .form-group label {
@@ -67,7 +66,6 @@
   background: white;
   color: #1e293b;
 }
-
 
 .button-group {
   display: flex;
@@ -175,7 +173,7 @@
 }
 
 .orders-table thead th:after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -214,7 +212,7 @@
 .order-id {
   font-weight: 600;
   color: #3b82f6;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: "Monaco", "Menlo", monospace;
 }
 
 .customer-name {
@@ -231,12 +229,9 @@
 }
 
 .tracking-number {
-
   font-size: 0.85rem;
   color: #6b7280;
 }
-
-
 
 /* ====================================
    STATUS BADGES
@@ -703,7 +698,7 @@ MODAL STYLES for view button - FIXED VERSION
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   /* FIXED: Prevent content overflow */
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -756,7 +751,7 @@ MODAL STYLES for view button - FIXED VERSION
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Items table styling */
@@ -897,8 +892,12 @@ MODAL STYLES for view button - FIXED VERSION
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -921,7 +920,7 @@ MODAL STYLES for view button - FIXED VERSION
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .control-buttons {
@@ -1289,7 +1288,7 @@ MODAL STYLES for view button - FIXED VERSION
   }
 
   body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.4;
     color: #000;
     background: white;
@@ -1562,8 +1561,7 @@ MODAL STYLES for view button - FIXED VERSION
   background: #ffc107;
   color: #212529;
 }
-#cbf9db
-.dispatch-btn:hover {
+#cbf9db .dispatch-btn:hover {
   background: #e0a800;
 }
 
@@ -1606,7 +1604,6 @@ MODAL STYLES for view button - FIXED VERSION
 .modal-body {
   padding: 30px;
 }
-
 
 .modal.show {
   display: flex;
@@ -1668,7 +1665,6 @@ MODAL STYLES for view button - FIXED VERSION
   width: 36px;
   height: 36px;
 }
-
 
 .btn-close:hover {
   opacity: 1;
@@ -1790,9 +1786,10 @@ MODAL STYLES for view button - FIXED VERSION
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
 
 /* New button style for "No Answer" state */
 .action-btn.no-answer-btn {
@@ -1838,10 +1835,10 @@ MODAL STYLES for view button - FIXED VERSION
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease;
+  /* max-width: none;
+  max-height: none; */
   width: 90%;
   max-width: 500px;
-  /* max-width: none; */
-  /* max-height: none; */
 }
 
 /* ====================================
@@ -1962,7 +1959,6 @@ MODAL STYLES for view button - FIXED VERSION
     transition: all 0.3s ease;
     background: #fafafa;
 } */
-
 
 #cancelModal .form-control::placeholder {
   color: #9ca3af;
@@ -2124,9 +2120,6 @@ MODAL STYLES for view button - FIXED VERSION
   }
 }
 
-
-
-
 /* Status badges */
 .status-active {
   background-color: #28a745 !important;
@@ -2166,7 +2159,7 @@ MODAL STYLES for view button - FIXED VERSION
 
 .btn-action:hover {
   transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Modal styling to match your existing UI */
@@ -2228,7 +2221,7 @@ MODAL STYLES for view button - FIXED VERSION
   width: 100%;
   background: white;
   border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -2305,8 +2298,6 @@ MODAL STYLES for view button - FIXED VERSION
   }
 }
 
-
-
 /* ====================================
    CUSTOMER DETAILS MODAL STYLES
    ==================================== */
@@ -2362,7 +2353,7 @@ MODAL STYLES for view button - FIXED VERSION
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-    color:#ffffff
+  color: #ffffff;
 }
 
 .close {
@@ -2447,7 +2438,6 @@ MODAL STYLES for view button - FIXED VERSION
   color: #166534 !important;
   border: 1px solid #86efac;
 }
-
 
 .status-inactive {
   background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
@@ -2588,11 +2578,6 @@ MODAL STYLES for view button - FIXED VERSION
   box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
 }
 
-
-
-
-
-
 /* Bulk Actions Bar Styles */
 .bulk-actions-bar {
   background: #f8f9fa;
@@ -2603,7 +2588,7 @@ MODAL STYLES for view button - FIXED VERSION
   display: flex;
   justify-content: space-between;
   align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .bulk-actions-left {
@@ -2677,7 +2662,8 @@ MODAL STYLES for view button - FIXED VERSION
 }
 
 /* Checkbox Styles */
-.order-checkbox, #selectAll {
+.order-checkbox,
+#selectAll {
   transform: scale(1.2);
   cursor: pointer;
 }

@@ -188,17 +188,13 @@ $result = $conn->query($sql);
 $usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
-// Include navigation components
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
-
 ?>
 
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Return Complete Orders - Quick Start Admin Portal</title>
+    <title>Return Complete Orders - Admin Portal</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/head.php'); ?>
     
@@ -210,7 +206,11 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
 <body>
     <!-- Page Loader -->
-    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php'); 
+    // Include navigation components
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+    include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
+    ?>
 
     <div class="pc-container">
         <div class="pc-content">
@@ -458,8 +458,10 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     </div>
 
        <!-- Order View Modal -->
-      <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/order_view_modal.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/order_view_modal.php'); ?>
    
+    <!-- Footer -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/footer.php'); ?>
 
     <!-- Include JavaScript files -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/scripts.php'); ?>

@@ -51,9 +51,57 @@ try {
     header("Location: products.php");
     exit();
 }
+// Fetch all active categories + current category and its parent (in case they are inactive)
+$mainCategories = [];
+$subCategories = [];
+$prodCatId = intval($product['category_id']);
 
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
+try {
+    $catQuery = "SELECT id, name, parent_id FROM categories 
+                 WHERE status = 'active' 
+                 OR id = ? 
+                 OR id = (SELECT parent_id FROM categories WHERE id = ?)";
+    $catStmt = $conn->prepare($catQuery);
+    $catStmt->bind_param("ii", $prodCatId, $prodCatId);
+    $catStmt->execute();
+    $catRes = $catStmt->get_result();
+    
+    if ($catRes) {
+        while ($row = $catRes->fetch_assoc()) {
+            if (empty($row['parent_id']) || $row['parent_id'] == 0) {
+                $mainCategories[] = $row;
+            } else {
+                $subCategories[] = $row;
+            }
+        }
+    }
+    $catStmt->close();
+} catch (Exception $e) {
+    error_log("Error fetching categories: " . $e->getMessage());
+}
+
+// Determine current Main and Sub Category IDs
+$currentMainId = 0;
+$currentSubId = 0;
+$prodCatId = intval($product['category_id']);
+
+if ($prodCatId > 0) {
+    // Check if this category has a parent
+    $catCheck = $conn->prepare("SELECT id, parent_id FROM categories WHERE id = ? LIMIT 1");
+    $catCheck->bind_param("i", $prodCatId);
+    $catCheck->execute();
+    $catData = $catCheck->get_result()->fetch_assoc();
+    
+    if ($catData) {
+        if (!empty($catData['parent_id']) && $catData['parent_id'] != 0) {
+            $currentMainId = $catData['parent_id'];
+            $currentSubId = $catData['id'];
+        } else {
+            $currentMainId = $catData['id'];
+            $currentSubId = 0;
+        }
+    }
+}
 ?>
 
 <!doctype html>
@@ -70,6 +118,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/products.css" id="main-style-link" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
  
     <!-- Custom CSS for AJAX notifications -->
     <style>
@@ -120,6 +169,39 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             right: 0;
         }
 
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
@@ -130,15 +212,58 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 opacity: 1;
             }
         }
-        
-        .product-info-badge {
-            background: #e3f2fd;
-            color: #1565c0;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            margin-bottom: 1rem;
-            border-left: 4px solid #2196f3;
+
+        .select2-container--default .select2-selection--single {
+            height: 45px !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            display: flex;
+            align-items: center;
+            background-color: #fff !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: inherit !important;
+            color: #495057 !important;
+            padding-left: 0 !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 43px !important;
+            top: 1px !important;
+            right: 10px !important;
+        }
+        .select2-dropdown {
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+            z-index: 10001;
+        }
+
+        /* Integrated In-Field Search Styling */
+        .select2-container--open .select2-selection__rendered {
+            visibility: hidden;
+        }
+        .select2-container--open .select2-dropdown--below {
+            margin-top: -45px !important;
+            border-top: 1px solid #ced4da !important;
+        }
+        .select2-container--open .select2-dropdown--above {
+            margin-top: 45px !important;
+            border-bottom: 1px solid #ced4da !important;
+        }
+        .select2-search--dropdown {
+            padding: 0 !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            height: 44px !important;
+            padding: 8px 12px !important;
+            border: none !important;
+            border-bottom: 1px solid #ced4da !important;
+            border-radius: 8px 8px 0 0 !important;
+            outline: none !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #1565c0 !important;
         }
     </style>
 </head>
@@ -147,6 +272,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     ?>
     <!-- END LOADER -->
 
@@ -207,6 +334,38 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                 </div>
                             </div>
 
+                            <!-- Second Row: Main Category and Sub Category -->
+                            <div class="form-row">
+                                <div class="product-form-group">
+                                    <label for="main_category_id" class="form-label">
+                                        <i class="fas fa-tags"></i> Main Category<span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" id="main_category_id" name="main_category_id" data-placeholder="Search main category..." required>
+                                        <option value=""></option>
+                                        <?php foreach ($mainCategories as $cat): ?>
+                                            <option value="<?php echo $cat['id']; ?>" <?php echo $currentMainId == $cat['id'] ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($cat['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="error-feedback" id="main_category_id-error"></div>
+                                </div>
+
+                                <div class="product-form-group">
+                                    <label for="sub_category_id" class="form-label">
+                                        <i class="fas fa-level-down-alt"></i> Sub Category (Optional)
+                                    </label>
+                                    <select class="form-select" id="sub_category_id" name="sub_category_id" data-placeholder="Search sub category (optional)...">
+                                        <option value=""></option>
+                                        <!-- Will be populated by JS -->
+                                    </select>
+                                    <div class="error-feedback" id="sub_category_id-error"></div>
+                                </div>
+
+                                <!-- Actual category_id that will be submitted -->
+                                <input type="hidden" id="category_id" name="category_id" value="<?php echo $product['category_id']; ?>">
+                            </div>
+
                             <!-- Second Row: Price and Product Code -->
                             <div class="form-row">
                                 <div class="product-form-group">
@@ -232,6 +391,36 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                 </div>
                             </div>
 
+                            <!-- Stock Quantity and Low Stock Threshold - only if enabled -->
+                            <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                            <div class="form-row">
+                                <div class="product-form-group">
+                                    <label for="stock_quantity" class="form-label">
+                                        <i class="fas fa-cubes"></i> Stock Quantity<span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" id="stock_quantity" name="stock_quantity"
+                                        placeholder="0" required min="0" step="1"
+                                        value="<?php echo (int)($product['stock_quantity'] ?? 0); ?>">
+                                    <div class="error-feedback" id="stock_quantity-error"></div>
+                                    <div class="code-hint">Current stock level</div>
+                                </div>
+
+                                <div class="product-form-group">
+                                    <label for="low_stock_threshold" class="form-label">
+                                        <i class="fas fa-exclamation-circle"></i> Low Stock Threshold<span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" id="low_stock_threshold" name="low_stock_threshold"
+                                        placeholder="10" required min="0" step="1"
+                                        value="<?php echo (int)($product['low_stock_threshold'] ?? 10); ?>">
+                                    <div class="error-feedback" id="low_stock_threshold-error"></div>
+                                    <div class="code-hint">Minimum Stock Alert Level</div>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <input type="hidden" name="stock_quantity" value="<?php echo (int)($product['stock_quantity'] ?? 0); ?>">
+                            <input type="hidden" name="low_stock_threshold" value="<?php echo (int)($product['low_stock_threshold'] ?? 0); ?>">
+                            <?php endif; ?>
+
                           
                           <!-- Third Row: Description -->
                             <div class="form-row">
@@ -241,8 +430,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                                     </label>
 
                                     <textarea class="form-control" id="description" name="description" rows="4"
-                                        placeholder="Enter product description" required><?php echo
-                                        trim(preg_replace('/\s+/', ' ', $product['description'])); ?> </textarea>
+                                        placeholder="Enter product description" required><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
 
                                     <div class="error-feedback" id="description-error"></div>
 
@@ -284,6 +472,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 
     <!-- jQuery (make sure this is loaded before your custom script) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         // Store original values for reset functionality
@@ -292,10 +481,39 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             status: '<?php echo $product['status']; ?>',
             lkr_price: '<?php echo number_format($product['lkr_price'], 2, '.', ''); ?>',
             product_code: '<?php echo addslashes($product['product_code']); ?>',
-            description: '<?php echo preg_replace('/\s+/', ' ', $product['description'] ?? '') ?>'
+            description: '<?php echo addslashes($product['description'] ?? ''); ?>',
+            category_id: '<?php echo $product['category_id']; ?>',
+            main_category_id: '<?php echo $currentMainId; ?>',
+            sub_category_id: '<?php echo $currentSubId; ?>'
         };
 
+        // Categories data for JS logic
+        const subCategories = <?php echo json_encode($subCategories); ?>;
+        const initialMainId = <?php echo $currentMainId; ?>;
+        const initialSubId = <?php echo $currentSubId; ?>;
+
         $(document).ready(function() {
+            // Initialize Select2 for categories with placeholder refinement
+            $('#main_category_id, #sub_category_id').select2({
+                placeholder: function() {
+                    return $(this).data('placeholder');
+                },
+                allowClear: true,
+                width: '100%'
+            }).on('select2:open', function(e) {
+                // Focus the search field immediately and set its placeholder
+                const placeholder = $(this).data('placeholder') || 'Search...';
+                const searchField = document.querySelector('.select2-search__field');
+                if (searchField) {
+                    searchField.placeholder = placeholder;
+                    searchField.focus();
+                }
+            });
+
+            // Initialize Sub Category dropdown if Main is selected
+            if (initialMainId) {
+                populateSubCategories(initialMainId, initialSubId);
+            }
             // Initialize form
             initializeForm();
             
@@ -401,12 +619,20 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             originalValues.lkr_price = $('#lkr_price').val();
             originalValues.product_code = $('#product_code').val();
             originalValues.description = $('#description').val();
+            originalValues.category_id = $('#category_id').val();
+            originalValues.main_category_id = $('#main_category_id').val();
+            originalValues.sub_category_id = $('#sub_category_id').val();
         }
         
         // Show field-specific errors from server
         function showFieldErrors(errors) {
             $.each(errors, function(field, message) {
-                showError(field, message);
+                // Map category_id error to main_category_id field
+                if (field === 'category_id') {
+                    showError('main_category_id', message);
+                } else {
+                    showError(field, message);
+                }
             });
         }
         
@@ -481,6 +707,12 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             $('#lkr_price').val(originalValues.lkr_price);
             $('#product_code').val(originalValues.product_code);
             $('#description').val(originalValues.description);
+            $('#main_category_id').val(originalValues.main_category_id);
+            populateSubCategories(originalValues.main_category_id, originalValues.sub_category_id);
+            $('#category_id').val(originalValues.category_id);
+            
+            // Refresh Select2
+            $('#main_category_id, #sub_category_id, #status').trigger('change');
             
             clearAllValidations();
             updateCharCount();
@@ -549,6 +781,48 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                     clearValidation('description');
                 }
             });
+
+            $('#main_category_id').on('change', function() {
+                const mainId = $(this).val();
+                populateSubCategories(mainId);
+                
+                if (mainId) {
+                    showSuccess('main_category_id');
+                } else {
+                    showError('main_category_id', 'Please select a main category');
+                }
+            });
+
+            $('#sub_category_id').on('change', function() {
+                updateFinalCategoryId();
+            });
+        }
+
+        function populateSubCategories(mainId, selectedSubId = 0) {
+            const $subSelect = $('#sub_category_id');
+            $subSelect.html('<option value=""></option>');
+            
+            if (mainId) {
+                const filteredSubs = subCategories.filter(sub => sub.parent_id == mainId);
+                filteredSubs.forEach(sub => {
+                    const selected = (sub.id == selectedSubId) ? 'selected' : '';
+                    $subSelect.append(`<option value="${sub.id}" ${selected}>${sub.name}</option>`);
+                });
+            }
+            
+            // Refresh Select2 for sub category
+            $subSelect.trigger('change');
+            
+            updateFinalCategoryId();
+        }
+
+        function updateFinalCategoryId() {
+            const mainId = $('#main_category_id').val();
+            const subId = $('#sub_category_id').val();
+            
+            // Final value is sub_id if selected, else main_id
+            const finalId = subId ? subId : mainId;
+            $('#category_id').val(finalId);
         }
         
         // Setup other event listeners
@@ -593,6 +867,14 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
             }
             if (name.length > 255) {
                 return { valid: false, message: 'Product name is too long (maximum 255 characters)' };
+            }
+            return { valid: true, message: '' };
+        }
+
+        function validateCategory(categoryId) {
+            const mainId = $('#main_category_id').val();
+            if (!mainId) {
+                return { valid: false, message: 'Please select a main category' };
             }
             return { valid: true, message: '' };
         }
@@ -697,7 +979,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
                 { field: 'name', validator: validateName, value: name },
                 { field: 'lkr_price', validator: validatePrice, value: price },
                 { field: 'product_code', validator: validateProductCode, value: productCode },
-                { field: 'description', validator: validateDescription, value: description }
+                { field: 'description', validator: validateDescription, value: description },
+                { field: 'main_category_id', validator: validateCategory, value: $('#category_id').val() }
             ];
             
             validations.forEach(function(validation) {

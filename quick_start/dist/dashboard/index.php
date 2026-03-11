@@ -193,8 +193,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $stats['return_handover_orders'] = safeQuery($conn, $return_handover_orders_query);
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -382,6 +380,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
   <!-- LOADER -->
     <?php
         include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/loader.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/navbar.php');
+        include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     ?>
     <!-- END LOADER -->
 
@@ -609,7 +609,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/quick_start/dist/include/sidebar.php');
     </a>
 </div>
 
-                <!-- Inventory & User Management Section - Admin Only -->
+                <!-- Inventory & User Management Section -->
                 <?php if ($rbac->isAdmin()) { ?>
                 <div class="col-span-12 mt-6">
                     <h2 class="section-title">Inventory & User Management</h2>
