@@ -44,7 +44,7 @@ $response = [
 
 // Function to sanitize input
 function sanitizeInput($input) {
-    return trim(htmlspecialchars($input, ENT_QUOTES, 'UTF-8'));
+    return trim($input);
 }
 
 try {
