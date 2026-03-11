@@ -20,7 +20,7 @@ if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || $_POST['c
 }
 
 $category_id = intval($_POST['category_id'] ?? 0);
-$name = trim(htmlspecialchars($_POST['name'] ?? '', ENT_QUOTES, 'UTF-8'));
+$name = trim($_POST['name'] ?? '');
 $parent_id = isset($_POST['parent_id']) ? intval($_POST['parent_id']) : 0;
 $parent_id_val = ($parent_id > 0) ? $parent_id : null;
 
