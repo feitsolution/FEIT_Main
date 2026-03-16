@@ -111,6 +111,106 @@ if (isset($_POST['cancel_invoice']) && isset($_POST['invoice_id'])) {
     exit();
 }
 
+// Process invoice deletion
+if (isset($_POST['delete_invoice']) && isset($_POST['invoice_id'])) {
+    $invoice_id = $_POST['invoice_id'];
+    $user_id = $_SESSION['user_id']; // Current logged-in user ID
+    
+    // Get invoice details for logging
+    $invoice_sql = "SELECT c.name FROM invoices i 
+                   LEFT JOIN customers c ON i.customer_id = c.customer_id
+                   WHERE i.invoice_id = ?";
+    $stmt = $conn->prepare($invoice_sql);
+    $stmt->bind_param("s", $invoice_id);
+    $stmt->execute();
+    $invoice_result = $stmt->get_result();
+    $invoice_data = $invoice_result->fetch_assoc();
+    $customer_name = isset($invoice_data['name']) ? $invoice_data['name'] : 'Unknown Customer';
+    
+    // Start transaction
+    $conn->begin_transaction();
+    
+    try {
+        // 1. Delete all related invoice items
+        $delete_items_sql = "DELETE FROM invoice_items WHERE invoice_id = ?";
+        $stmt_items = $conn->prepare($delete_items_sql);
+        $stmt_items->bind_param("s", $invoice_id);
+        $stmt_items->execute();
+
+        // 2. Delete all related payments
+        $delete_payments_sql = "DELETE FROM payments WHERE invoice_id = ?";
+        $stmt_payments = $conn->prepare($delete_payments_sql);
+        $stmt_payments->bind_param("s", $invoice_id);
+        $stmt_payments->execute();
+        
+        // 3. Delete the invoice itself
+        $delete_invoice_sql = "DELETE FROM invoices WHERE invoice_id = ?";
+        $stmt_invoice = $conn->prepare($delete_invoice_sql);
+        $stmt_invoice->bind_param("s", $invoice_id);
+        $stmt_invoice->execute();
+        
+        // 4. Log the action in user_logs table
+        $action_type = "delete_invoice";
+        $details = "Invoice ID #$invoice_id for customer ($customer_name) was permanently deleted by user ID #$user_id";
+        
+        $log_sql = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) 
+                   VALUES (?, ?, ?, ?, NOW())";
+        $log_stmt = $conn->prepare($log_sql);
+        $log_stmt->bind_param("isss", $user_id, $action_type, $invoice_id, $details);
+        $log_stmt->execute();
+        
+        // Commit the transaction
+        $conn->commit();
+        
+        // Set success message
+        $_SESSION['message'] = "Invoice #$invoice_id has been deleted successfully.";
+        $_SESSION['message_type'] = "success";
+    } catch (Exception $e) {
+        // Rollback the transaction if something fails
+        $conn->rollback();
+        
+        // Set error message
+        $_SESSION['message'] = "Failed to delete invoice. Error: " . $e->getMessage();
+        $_SESSION['message_type'] = "danger";
+    }
+    
+    // Build the redirect URL
+    $redirect_url = "invoice_list.php";
+    
+    // Add search parameter if it exists
+    if (isset($_POST['search']) && !empty($_POST['search'])) {
+        $redirect_url .= "?search=" . urlencode($_POST['search']);
+        
+        // Add limit and page if they exist
+        if (isset($_POST['limit']) && !empty($_POST['limit'])) {
+            $redirect_url .= "&limit=" . (int)$_POST['limit'];
+        }
+        if (isset($_POST['page']) && !empty($_POST['page'])) {
+            $redirect_url .= "&page=" . (int)$_POST['page'];
+        }
+    } 
+    // If no search but we have limit or page
+    else if ((isset($_POST['limit']) && !empty($_POST['limit'])) || 
+             (isset($_POST['page']) && !empty($_POST['page']))) {
+        $redirect_url .= "?";
+        if (isset($_POST['limit']) && !empty($_POST['limit'])) {
+            $redirect_url .= "limit=" . (int)$_POST['limit'];
+        }
+        if (isset($_POST['page']) && !empty($_POST['page'])) {
+            $redirect_url .= (isset($_POST['limit']) && !empty($_POST['limit']) ? "&" : "") . "page=" . (int)$_POST['page'];
+        }
+    }
+    
+    // Make sure we're enforcing the redirect properly
+    if (headers_sent()) {
+        echo "<script>window.location.href='$redirect_url';</script>";
+        echo "<noscript><meta http-equiv='refresh' content='0;url=$redirect_url'></noscript>";
+    } else {
+        header("Location: $redirect_url");
+    }
+    exit();
+}
+
 // Initialize search parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
@@ -357,6 +457,13 @@ $result = $conn->query($sql);
                                                                     <i class="fas fa-times-circle"></i>
                                                                 </button>
                                                             <?php endif; ?>
+                                                            
+                                                            <button type="button" class="btn btn-sm btn-outline-danger delete-invoice" title="Delete Invoice"
+                                                                data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"
+                                                                data-customer="<?php echo htmlspecialchars($customerName); ?>"
+                                                                data-bs-toggle="modal" data-bs-target="#deleteInvoiceModal">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -522,6 +629,38 @@ $result = $conn->query($sql);
         </div>
     </div>
 
+    <!-- Modal for Delete Invoice Confirmation -->
+    <div class="modal fade" id="deleteInvoiceModal" tabindex="-1" aria-labelledby="deleteInvoiceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="deleteInvoiceModalLabel">Delete Invoice Permanently</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i> <strong>Warning!</strong> This action is permanent and will delete all associated items and payment records.
+                    </div>
+                    <p>Are you sure you want to <strong>PERMANENTLY DELETE</strong> this invoice?</p>
+                    <p><strong>Invoice ID: </strong><span id="delete_invoice_id_display"></span></p>
+                    <p><strong>Customer: </strong><span id="delete_customer_name_display"></span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <form method="post" id="deleteInvoiceForm">
+                        <input type="hidden" name="invoice_id" id="confirm_delete_invoice_id">
+                        <input type="hidden" name="delete_invoice" value="1">
+                        <!-- Add hidden fields to preserve current page state -->
+                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                        <input type="hidden" name="page" value="<?php echo $page; ?>">
+                        <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
    
@@ -666,8 +805,19 @@ $result = $conn->query($sql);
             // Handle Cancel Invoice button click
             $('.cancel-invoice').click(function() {
                 var invoiceId = $(this).data('id');
+                var customerName = $(this).data('customer');
                 $('#cancel_invoice_id').text(invoiceId);
+                $('#cancel_customer_name').text(customerName);
                 $('#confirm_cancel_invoice_id').val(invoiceId);
+            });
+
+            // Handle Delete Invoice button click
+            $('.delete-invoice').click(function() {
+                var invoiceId = $(this).data('id');
+                var customerName = $(this).data('customer');
+                $('#delete_invoice_id_display').text(invoiceId);
+                $('#delete_customer_name_display').text(customerName);
+                $('#confirm_delete_invoice_id').val(invoiceId);
             });
             
             // Fade out alert messages after 5 seconds
