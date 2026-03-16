@@ -24,23 +24,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Check if file was uploaded
-    if (!isset($_FILES['payment_slip']) || $_FILES['payment_slip']['error'] !== UPLOAD_ERR_OK) {
-        header('HTTP/1.1 400 Bad Request');
-        echo json_encode(['error' => 'Payment slip is required']);
-        exit();
+    $filename = null;
+    $uploadPath = null;
+    
+    if (isset($_FILES['payment_slip']) && $_FILES['payment_slip']['error'] === UPLOAD_ERR_OK) {
+        // Process the uploaded file
+        $file = $_FILES['payment_slip'];
+        $filename = 'payment_slip_' . $invoice_id . '_' . time() . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+        $uploadDir = 'uploads/payments/';
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $uploadPath = $uploadDir . $filename;
     }
-    
-    // Process the uploaded file
-    $file = $_FILES['payment_slip'];
-    $filename = 'payment_slip_' . $invoice_id . '_' . time() . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
-    $uploadDir = 'uploads/payments/';
-    
-    // Create directory if it doesn't exist
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
-    
-    $uploadPath = $uploadDir . $filename;
     
     // Get current user ID from session
     $pay_by = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
@@ -49,9 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
     
     try {
-        // Move uploaded file
-        if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            throw new Exception('Failed to upload payment slip');
+        // Move uploaded file if one was provided
+        if ($filename && $uploadPath) {
+            if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+                throw new Exception('Failed to upload payment slip');
+            }
         }
         
         // Get the invoice amount from the invoices table

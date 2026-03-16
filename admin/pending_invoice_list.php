@@ -338,10 +338,10 @@ $result = $conn->query($sql);
 
                         <div class="mb-4">
                             <label for="payment_slip" class="form-label fw-bold">
-                                <i class="fas fa-upload me-2"></i>Upload Payment Slip
+                                <i class="fas fa-upload me-2"></i>Upload Payment Slip (Optional)
                             </label>
                             <input type="file" class="form-control" id="payment_slip" name="payment_slip"
-                                accept=".jpg,.jpeg,.png,.pdf" required>
+                                accept=".jpg,.jpeg,.png,.pdf">
                             <div class="form-text mt-2">
                                 <i class="fas fa-file-alt me-1"></i>Supported formats: JPG, JPEG, PNG, PDF
                             </div>
@@ -429,15 +429,12 @@ $result = $conn->query($sql);
                 // Simple validation
                 var fileInput = $('#payment_slip')[0];
 
-                if (fileInput.files.length === 0) {
-                    alert('Please select a file to upload.');
-                    return false;
-                }
-
-                var fileSize = fileInput.files[0].size / 1024 / 1024; // in MB
-                if (fileSize > 2) {
-                    alert('File size exceeds 2MB. Please choose a smaller file.');
-                    return false;
+                if (fileInput.files.length > 0) {
+                    var fileSize = fileInput.files[0].size / 1024 / 1024; // in MB
+                    if (fileSize > 2) {
+                        alert('File size exceeds 2MB. Please choose a smaller file.');
+                        return false;
+                    }
                 }
 
                 // Show loading state
