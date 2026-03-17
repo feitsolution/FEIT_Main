@@ -14,7 +14,6 @@ $success_message = "";
 // Check if form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize and validate inputs
-    $name = trim($_POST['name']);
     $business_name = trim($_POST['business_name']);
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     $phone = trim($_POST['phone']);
@@ -27,8 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $full_address .= ", " . $address_line2;
     }
     
-    // Validate email (if provided)
-    if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    // Validate email
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = "Invalid email format.";
     }
     // Validate phone number (Sri Lankan format)
@@ -37,9 +36,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     // Check if email already exists with active status
     else {
-        $check_phone_sql = "SELECT phone, status FROM customers WHERE phone = ?";
-        $check_stmt = $conn->prepare($check_phone_sql);
-        $check_stmt->bind_param("s", $phone);
+        $check_email_sql = "SELECT email, status FROM customers WHERE email = ?";
+        $check_stmt = $conn->prepare($check_email_sql);
+        $check_stmt->bind_param("s", $email);
         $check_stmt->execute();
         $result = $check_stmt->get_result();
         
@@ -47,17 +46,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $row = $result->fetch_assoc();
             // Only show error if account exists and is active
             if ($row['status'] === 'Active') {
-                $error_message = "An active account with this phone number already exists.";
+                $error_message = "An active account with this email already exists.";
             } else {
-            // If account exists but is inactive, update it instead of creating new
-            $update_sql = "UPDATE customers SET name = ?, email = ?, address = ?, business_name = ?, status = 'Inactive' WHERE phone = ?";
-            $update_stmt = $conn->prepare($update_sql);
-            $update_stmt->bind_param("sssss", $name, $email, $full_address, $business_name, $phone);
+                // If account exists but is inactive, update it instead of creating new
+                $update_sql = "UPDATE customers SET name = ?, phone = ?, address = ?, status = 'Inactive' WHERE email = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("ssss", $business_name, $phone, $full_address, $email);
                 
                 if ($update_stmt->execute()) {
                     $success_message = "Account registration submitted successfully! Your account is pending approval. Please contact the administrator to activate your account.";
-                    // Clear POST data to "reset" the form visually
-                    $_POST = array();
                 } else {
                     $error_message = "Error updating account: " . $conn->error;
                 }
@@ -65,14 +62,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         } else {
             // Insert new customer with Inactive status
-            $insert_sql = "INSERT INTO customers (name, email, phone, address, business_name, status) VALUES (?, ?, ?, ?, ?, 'Inactive')";
+            $insert_sql = "INSERT INTO customers (name, email, phone, address, status) VALUES (?, ?, ?, ?, 'Inactive')";
             $insert_stmt = $conn->prepare($insert_sql);
-            $insert_stmt->bind_param("sssss", $name, $email, $phone, $full_address, $business_name);
+            $insert_stmt->bind_param("ssss", $business_name, $email, $phone, $full_address);
             
             if ($insert_stmt->execute()) {
                 $success_message = "Account registration submitted successfully! Your account is pending approval. Please contact the administrator to activate your account.";
-                // Clear POST data to "reset" the form visually
-                $_POST = array();
+                
+                // Don't auto-login inactive users
+                // Remove or comment out these session variables
+                /*
+                $_SESSION['customer_id'] = $conn->insert_id;
+                $_SESSION['customer_name'] = $business_name;
+                $_SESSION['customer_email'] = $email;
+                $_SESSION['logged_in'] = true;
+                */
+                
+                // Optional: Redirect to signin page with message after success
+                // header("Location: signin.php?message=registration_pending");
+                // exit();
             } else {
                 $error_message = "Error creating account: " . $conn->error;
             }
@@ -89,7 +97,7 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up for FEIT</title>
+    <title>Sign Up for OMS</title>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
     <style>
@@ -152,9 +160,18 @@ $conn->close();
         }
 
         .logo-section {
+            position: absolute;
+            top: 40px;
+            left: 82px;
             z-index: 1;
             text-align: center;
         }
+        /* .logo-section {
+    position: absolute;
+    top: 13px;
+    left: 45px;
+    z-index: 1;
+} */
 
         .logo-section .logo {
             width:200px;
@@ -429,10 +446,13 @@ $conn->close();
                 gap: 0;
             }
 
-        .logo-section {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+            .logo-section {
+                position: relative;
+                top: auto;
+                left: auto;
+                text-align: center;
+                margin-bottom: 20px;
+            }
 
             .logo-section .logo-container {
                 justify-content: center;
@@ -454,20 +474,41 @@ $conn->close();
         <div class="left-section">
             <div class="logo-section">
                 <div class="logo-container">
-                    <img src="..\admin\img\system\FEIT.png" alt="FEIT Logo" class="logo">
-                    <h1>Create your FEIT account</h1>
+                    <img src="..\admin\img\system\FEIT.png" alt="OMS Logo" class="logo">
+                    <h1>Create your OMS account</h1>
                 </div>
-                <p class="description-text">Streamline your business operations with FEIT</p>
+                <p class="description-text">Streamline your business operations with our comprehensive Order Management System</p>
                 
+                <button class="show-features-btn" onclick="toggleFeatures()">
+                    <i class="fas fa-arrow-down" id="toggleIcon"></i> Show Features
+                </button>
 
+                <div class="features" id="featuresList">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Advanced order tracking</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Inventory management</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Real-time analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Multi-channel integration</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="right-section">
             <div class="form-header">
              
-                <h2>Welcome to FEIT</h2>
-                <p>Please fill in the form below to create your account</p>
+                <h2>Sign up </h2>
+                <p>Start managing your orders efficiently today</p>
             </div>
 
             <?php if (!empty($error_message)): ?>
@@ -483,23 +524,16 @@ $conn->close();
             <?php endif; ?>
 
             <form id="signupForm" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST" onsubmit="return validateForm()">
-             <div class="form-row">
-                     <div class="form-group">
-                         <label for="name">Name</label>
-                         <input type="text" id="name" name="name" placeholder="Enter your full name" value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>" required>
-                         <div id="nameError" class="error-feedback">Please enter your name.</div>
-                     </div>
-                     <div class="form-group">
-                         <label for="business_name">Business Name (optional)</label>
-                         <input type="text" id="business_name" name="business_name" placeholder="Enter your business name" value="<?php echo isset($_POST['business_name']) ? htmlspecialchars($_POST['business_name']) : ''; ?>">
-                         <div id="businessNameError" class="error-feedback"></div>
-                     </div>
-                 </div>
+                <div class="form-group">
+                    <label for="business_name">Customer Name / Business Name</label>
+                    <input type="text" id="business_name" name="business_name" placeholder="Enter your name or business name" value="<?php echo isset($_POST['business_name']) ? htmlspecialchars($_POST['business_name']) : ''; ?>" required>
+                    <div id="businessNameError" class="error-feedback">Please enter your name or business name.</div>
+                </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="email">Email (optional)</label>
-                        <input type="email" id="email" name="email" placeholder="name@company.com" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="name@company.com" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
                         <div id="emailError" class="error-feedback">Please enter a valid email address.</div>
                     </div>
                     <div class="form-group">
@@ -528,51 +562,79 @@ $conn->close();
 
                 <button type="submit" class="submit-btn">Create account</button>
             </form>
+
+            <div class="signin-link">
+                Already have an account? <a href="/order_management/dist/pages/login.php">Sign in</a>
+            </div>
         </div>
     </div>
 
     <script>
+        function toggleFeatures() {
+            const featuresList = document.getElementById('featuresList');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const button = document.querySelector('.show-features-btn');
+            
+            featuresList.classList.toggle('show');
+            
+            if (featuresList.classList.contains('show')) {
+                toggleIcon.classList.remove('fa-arrow-down');
+                toggleIcon.classList.add('fa-arrow-up');
+                button.innerHTML = '<i class="fas fa-arrow-up" id="toggleIcon"></i> Hide Features';
+            } else {
+                toggleIcon.classList.remove('fa-arrow-up');
+                toggleIcon.classList.add('fa-arrow-down');
+                button.innerHTML = '<i class="fas fa-arrow-down" id="toggleIcon"></i> Show Features';
+            }
+        }
 
+        function clearForm() {
+            // Clear all form fields
+            document.getElementById('signupForm').reset();
+            
+            // Clear all error states
+            const errorInputs = document.querySelectorAll('.input-error');
+            errorInputs.forEach(input => {
+                input.classList.remove('input-error');
+            });
+            
+            // Hide all error messages
+            const errorMessages = document.querySelectorAll('.error-feedback');
+            errorMessages.forEach(error => {
+                error.style.display = 'none';
+            });
+            
+            // Hide features if shown
+            const featuresList = document.getElementById('featuresList');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const button = document.querySelector('.show-features-btn');
+            
+            if (featuresList.classList.contains('show')) {
+                featuresList.classList.remove('show');
+                toggleIcon.classList.remove('fa-arrow-up');
+                toggleIcon.classList.add('fa-arrow-down');
+                button.innerHTML = '<i class="fas fa-arrow-down" id="toggleIcon"></i> Show Features';
+            }
+        }
 
         // Real-time validation
         document.getElementById('email').addEventListener('input', validateEmailField);
         document.getElementById('phone').addEventListener('input', validatePhoneField);
 
-        // Auto-hide success message after 10 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const successMessage = document.querySelector('.success-message');
-            if (successMessage) {
-                setTimeout(function() {
-                    successMessage.style.transition = 'opacity 1s ease';
-                    successMessage.style.opacity = '0';
-                    setTimeout(function() {
-                        successMessage.style.display = 'none';
-                    }, 1000);
-                }, 10000); // 10 seconds
+        function validateEmailField() {
+            const email = document.getElementById('email');
+            const emailError = document.getElementById('emailError');
+            
+            if (isValidEmail(email.value)) {
+                email.classList.remove('input-error');
+                emailError.style.display = 'none';
+                return true;
+            } else {
+                email.classList.add('input-error');
+                emailError.style.display = 'block';
+                return false;
             }
-        });
-
-function validateEmailField() {
-    const email = document.getElementById('email');
-    const emailError = document.getElementById('emailError');
-    
-    // If email is empty (optional field), consider it valid
-    if (email.value.trim() === '') {
-        email.classList.remove('input-error');
-        emailError.style.display = 'none';
-        return true;
-    }
-    
-    if (isValidEmail(email.value)) {
-        email.classList.remove('input-error');
-        emailError.style.display = 'none';
-        return true;
-    } else {
-        email.classList.add('input-error');
-        emailError.style.display = 'block';
-        return false;
-    }
-}
+        }
 
         function validatePhoneField() {
             const phone = document.getElementById('phone');
@@ -598,28 +660,17 @@ function validateEmailField() {
         function validateForm() {
             let isValid = true;
 
-        // Validate name
-        const name = document.getElementById('name');
-        const nameError = document.getElementById('nameError');
-        if (name.value.trim() === '') {
-            name.classList.add('input-error');
-            nameError.style.display = 'block';
-            isValid = false;
-        } else {
-            name.classList.remove('input-error');
-            nameError.style.display = 'none';
-        }
-        
-        // Validate business name (optional)
-        const businessName = document.getElementById('business_name');
-        const businessNameError = document.getElementById('businessNameError');
-        if (businessName.value.trim() === '') {
-            businessName.classList.remove('input-error');
-            businessNameError.style.display = 'none';
-        } else {
-            businessName.classList.remove('input-error');
-            businessNameError.style.display = 'none';
-        }
+            // Validate business name
+            const businessName = document.getElementById('business_name');
+            const businessNameError = document.getElementById('businessNameError');
+            if (businessName.value.trim() === '') {
+                businessName.classList.add('input-error');
+                businessNameError.style.display = 'block';
+                isValid = false;
+            } else {
+                businessName.classList.remove('input-error');
+                businessNameError.style.display = 'none';
+            }
 
             // Validate address line 1
             const address1 = document.getElementById('address_line1');
