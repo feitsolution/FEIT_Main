@@ -183,64 +183,66 @@ $result = $conn->query($sql);
                             </div>
 
                     <div class="table-container">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Customer ID<br><small class="text-muted">Created At</small></th>
-                                        <th>Contact Info</th>
-                                        <th>Phone</th>
-                                        <th>Address</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-                                        <tr id="customer-row-<?= $row['customer_id'] ?>">
-                                            <td>
-                                                <?= htmlspecialchars($row['customer_id']) ?>
-                                                <br>
-                                                <small class="text-muted"><?= htmlspecialchars($row['created_at']) ?></small>
-                                            </td>
-                                            <td>
-                                                <?= htmlspecialchars($row['name']) ?>
-                                                <br>
-                                                <small class="text-muted"><?= htmlspecialchars($row['email']) ?></small>
-                                            </td>
-                                            <td><?= htmlspecialchars($row['phone']) ?></td>
-                                            <td><?= htmlspecialchars($row['address']) ?></td>
-                                            <td>
-                                                <span class="customer-status-badge badge <?= $row['status'] == 'Active' ? 'bg-success' : 'bg-secondary' ?>">
-                                                    <?= htmlspecialchars($row['status']) ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group-compact">
-                                                    <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>" class="btn btn-info btn-sm">Edit</a>
-                                                    <button class="btn btn-primary btn-sm view-customer-btn" 
-                                                            data-customer-id="<?= $row['customer_id'] ?>" 
-                                                            data-customer-name="<?= htmlspecialchars($row['name']) ?>"
-                                                            data-customer-email="<?= htmlspecialchars($row['email']) ?>"
-                                                            data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
-                                                            data-customer-address="<?= htmlspecialchars($row['address']) ?>"
-                                                            data-customer-status="<?= htmlspecialchars($row['status']) ?>"
-                                                            data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
-                                                            data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
-                                                        View
-                                                    </button>
-                                                    <button class="btn btn-<?= $row['status'] == 'Active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
-                                                            data-customer-id="<?= $row['customer_id'] ?>"
-                                                            data-current-status="<?= $row['status'] ?>"
-                                                            data-customer-name="<?= htmlspecialchars($row['name']) ?>">
-                                                        <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                     <div class="table-responsive">
+                             <table class="table table-striped table-hover">
+                                 <thead class="table-dark">
+                                     <tr>
+                                         <th>Customer ID<br><small class="text-muted">Created At</small></th>
+                                         <th>Business Name</th>
+                                         <th>Contact Info</th>
+                                         <th>Phone</th>
+                                         <th>Address</th>
+                                         <th>Status</th>
+                                         <th>Actions</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody>
+                                     <?php while ($row = $result->fetch_assoc()): ?>
+                                         <tr id="customer-row-<?= $row['customer_id'] ?>">
+                                             <td>
+                                                 <?= htmlspecialchars($row['customer_id']) ?>
+                                                 <br>
+                                                 <small class="text-muted"><?= htmlspecialchars($row['created_at']) ?></small>
+                                             </td>
+                                             <td><?= htmlspecialchars($row['business_name']) ?></td>
+                                             <td>
+                                                 <?= htmlspecialchars($row['name']) ?>
+                                                 <br>
+                                                 <small class="text-muted"><?= htmlspecialchars($row['email']) ?></small>
+                                             </td>
+                                             <td><?= htmlspecialchars($row['phone']) ?></td>
+                                             <td><?= htmlspecialchars($row['address']) ?></td>
+                                             <td>
+                                                 <span class="customer-status-badge badge <?= $row['status'] == 'Active' ? 'bg-success' : 'bg-secondary' ?>">
+                                                     <?= htmlspecialchars($row['status']) ?>
+                                                 </span>
+                                             </td>
+                                             <td>
+                                                 <div class="btn-group-compact">
+                                                     <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>" class="btn btn-info btn-sm">Edit</a>
+                                                     <button class="btn btn-primary btn-sm view-customer-btn" 
+                                                             data-customer-id="<?= $row['customer_id'] ?>" 
+                                                             data-customer-name="<?= htmlspecialchars($row['name']) ?>"
+                                                             data-customer-email="<?= htmlspecialchars($row['email']) ?>"
+                                                             data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
+                                                             data-customer-address="<?= htmlspecialchars($row['address']) ?>"
+                                                             data-customer-status="<?= htmlspecialchars($row['status']) ?>"
+                                                             data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
+                                                             data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
+                                                         View
+                                                     </button>
+                                                     <button class="btn btn-<?= $row['status'] == 'Active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
+                                                             data-customer-id="<?= $row['customer_id'] ?>"
+                                                             data-current-status="<?= $row['status'] ?>"
+                                                             data-customer-name="<?= htmlspecialchars($row['name']) ?>">
+                                                         <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
+                                                     </button>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     <?php endwhile; ?>
+                                 </tbody>
+                             </table>
                         </div>
                     </div>
 

@@ -229,16 +229,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $errorMsg = "Invalid request. Please try again.";
     } else {
-        // Sanitize and validate inputs
-        $name = trim($_POST['name']);
-        $email = trim($_POST['email']); // Keep original case for validation
-        $phone = trim($_POST['phone']);
-        $address = trim($_POST['address']);
-        $status = $_POST['status'];
-        $billing_date = !empty($_POST['billing_date']) ? intval($_POST['billing_date']) : null;
-        $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
-        $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
-        $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
+         // Sanitize and validate inputs
+         $name = trim($_POST['name']);
+         $email = trim($_POST['email']); // Keep original case for validation
+         $phone = trim($_POST['phone']);
+         $address = trim($_POST['address']);
+         $business_name = trim($_POST['business_name']);
+         $status = $_POST['status'];
+         $billing_date = !empty($_POST['billing_date']) ? intval($_POST['billing_date']) : null;
+         $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
+         $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
+         $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
 
         // Enhanced validation checks
         if (empty($name)) {
@@ -253,15 +254,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        // If no email errors continue with other validations
-        if (empty($errorMsg)) {
-            if (empty($phone)) {
-                $errorMsg = "Phone number cannot be empty.";
-            } elseif (empty($address)) {
-                $errorMsg = "Address cannot be empty.";
-            } elseif (strlen($address) > 255) {
-                $errorMsg = "Address is too long (maximum 255 characters allowed).";
-            }
+         // If no email errors continue with other validations
+         if (empty($errorMsg)) {
+             if (empty($phone)) {
+                 $errorMsg = "Phone number cannot be empty.";
+             } elseif (empty($address)) {
+                 $errorMsg = "Address cannot be empty.";
+             } elseif (strlen($address) > 255) {
+                 $errorMsg = "Address is too long (maximum 255 characters allowed).";
+             } elseif (!empty($business_name) && strlen($business_name) > 100) {
+                 $errorMsg = "Business name is too long (maximum 100 characters allowed).";
+             }
 
             // Updated phone validation - exactly 10 digits
             // Remove all non-digit characters
@@ -295,18 +298,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($emailCount > 0) {
                     $errorMsg = "This email address is already registered to another customer. Please use a different email.";
                 } else {
-                    // Store only clean 10-digit phone number in database
-                    $phone = $cleanPhone;
-                    
-                    // Store original values to check for changes
-                    $originalName = $customer['name'];
-                    $originalEmail = $customer['email'];
-                    $originalPhone = $customer['phone'];
-                    $originalAddress = $customer['address'];
-                    $originalStatus = $customer['status'];
-                    $originalBillingDate = $customer['billing_date'];
-                    $originalProductId = $customer['product_id'];
-                    $originalPackageId = $customer['package_id'];
+                     // Store only clean 10-digit phone number in database
+                     $phone = $cleanPhone;
+                     
+                     // Store original values to check for changes
+                     $originalName = $customer['name'];
+                     $originalEmail = $customer['email'];
+                     $originalPhone = $customer['phone'];
+                     $originalAddress = $customer['address'];
+                     $originalBusinessName = $customer['business_name'];
+                     $originalStatus = $customer['status'];
+                     $originalBillingDate = $customer['billing_date'];
+                     $originalProductId = $customer['product_id'];
+                     $originalPackageId = $customer['package_id'];
                     
                     // Track changes in a structured format for the database
                     $changeDetails = array();
@@ -317,10 +321,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $changeDetails['name'] = array('old' => $originalName, 'new' => $name);
                     }
                     
-                    if ($email !== $originalEmail) {
-                        $changedFields[] = "email: '$originalEmail' → '$email'";
-                        $changeDetails['email'] = array('old' => $originalEmail, 'new' => $email);
-                    }
+                     if ($email !== $originalEmail) {
+                         $changedFields[] = "email: '$originalEmail' → '$email'";
+                         $changeDetails['email'] = array('old' => $originalEmail, 'new' => $email);
+                     }
+                     
+                     if ($business_name !== $originalBusinessName) {
+                         $changedFields[] = "business_name: '$originalBusinessName' → '$business_name'";
+                         $changeDetails['business_name'] = array('old' => $originalBusinessName, 'new' => $business_name);
+                     }
                     
                     if ($phone !== $originalPhone) {
                         $changedFields[] = "phone: '$originalPhone' → '$phone'";
@@ -407,13 +416,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $changes = !empty($changedFields) ? " Changes: " . implode(", ", $changedFields) : "";
                     $activityDetails = "Customer ID #$customer_id ($name) was updated by user ID #{$_SESSION['user_id']}.{$changes}";
                     
-                    // Prepare SQL statement to prevent SQL injection
-                    $stmt = $conn->prepare("UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, status = ?, billing_date = ?, product_id = ?, package_id = ? WHERE customer_id = ?");
-                    if (!$stmt) {
-                        throw new Exception("Database prepare error: " . $conn->error);
-                    }
-
-                    $stmt->bind_param("sssssiiii", $name, $email, $phone, $address, $status, $billing_date, $product_id, $package_id, $customer_id);
+                      // Prepare SQL statement to prevent SQL injection
+                      $stmt = $conn->prepare("UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, business_name = ?, status = ?, billing_date = ?, product_id = ?, package_id = ? WHERE customer_id = ?");
+                      $stmt->bind_param("ssssssiiii", $name, $email, $phone, $address, $business_name, $status, $billing_date, $product_id, $package_id, $customer_id);
 
                     // Execute the statement
                     if ($stmt->execute()) {
@@ -523,6 +528,7 @@ $name = isset($_POST['name']) ? htmlspecialchars($_POST['name']) : htmlspecialch
 $email = isset($_POST['email']) ? htmlspecialchars($_POST['email']) : htmlspecialchars($customer['email']);
 $phone = isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : htmlspecialchars($customer['phone']);
 $address = isset($_POST['address']) ? htmlspecialchars($_POST['address']) : htmlspecialchars($customer['address']);
+$business_name = isset($_POST['business_name']) ? htmlspecialchars($_POST['business_name']) : htmlspecialchars($customer['business_name']);
 $status = isset($_POST['status']) ? $_POST['status'] : $customer['status'];
 $billing_date = isset($_POST['billing_date']) ? intval($_POST['billing_date']) : $customer['billing_date'];
 $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : $customer['product_id'];
@@ -764,6 +770,14 @@ $productsResult = $pStmt->get_result();
                                     <!-- Customer Details Section -->
                                     <div class="col-md-6">
                                         <div class="section-header">Customer Details</div>
+
+                                        <!-- Business Name Field -->
+                                        <div class="mb-3">
+                                            <label for="business_name" class="form-label"><i class="fas fa-building"></i> Business Name</label>
+                                            <input type="text" class="form-control" id="business_name" name="business_name"
+                                                 placeholder="Business Name" value="<?php echo $business_name; ?>">
+                                            <div class="error-feedback" id="business_name-error"></div>
+                                        </div>
                                         
                                         <!-- Name Field -->
                                         <div class="mb-3">
@@ -786,7 +800,7 @@ $productsResult = $pStmt->get_result();
                                         <div class="mb-3">
                                             <label for="phone" class="form-label"><i class="fas fa-phone"></i> Phone Number</label>
                                             <input type="tel" class="form-control" id="phone" name="phone"
-                                                placeholder="Enter 10-digit phone number" value="<?php echo $phone; ?>" required>
+                                                 placeholder="Enter 10-digit phone number" value="<?php echo $phone; ?>" required>
                                             <div class="error-feedback" id="phone-error"></div>
                                         </div>
                                     </div>

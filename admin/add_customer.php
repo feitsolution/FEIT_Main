@@ -103,16 +103,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $errorMsg = "Invalid request. Please try again.";
     } else {
-        // Sanitize and validate inputs
-        $name = trim($_POST['name']);
-        $email = trim($_POST['email']); // Keep original case for validation
-        $phone = trim($_POST['phone']);
-        $address = trim($_POST['address']);
-        $status = $_POST['status'];
-        $billing_date = !empty($_POST['billing_date']) ? intval($_POST['billing_date']) : null;
-        $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
-        $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
-        $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
+         // Sanitize and validate inputs
+         $name = trim($_POST['name']);
+         $email = trim($_POST['email']); // Keep original case for validation
+         $phone = trim($_POST['phone']);
+         $address = trim($_POST['address']);
+         $business_name = trim($_POST['business_name']);
+         $status = $_POST['status'];
+         $billing_date = !empty($_POST['billing_date']) ? intval($_POST['billing_date']) : null;
+         $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
+         $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
+         $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
 
         // Enhanced validation checks
         if (empty($name)) {
@@ -127,15 +128,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        // If no email errors continue with other validations
-        if (empty($errorMsg)) {
-            if (empty($phone)) {
-                $errorMsg = "Phone number cannot be empty.";
-            } elseif (empty($address)) {
-                $errorMsg = "Address cannot be empty.";
-            } elseif (strlen($address) > 255) {
-                $errorMsg = "Address is too long (maximum 255 characters allowed).";
-            }
+         // If no email errors continue with other validations
+         if (empty($errorMsg)) {
+             if (empty($phone)) {
+                 $errorMsg = "Phone number cannot be empty.";
+             } elseif (empty($address)) {
+                 $errorMsg = "Address cannot be empty.";
+             } elseif (strlen($address) > 255) {
+                 $errorMsg = "Address is too long (maximum 255 characters allowed).";
+             } elseif (!empty($business_name) && strlen($business_name) > 100) {
+                 $errorMsg = "Business name is too long (maximum 100 characters allowed).";
+             }
 
             // Updated phone validation - exactly 10 digits
             // Remove all non-digit characters
@@ -164,9 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Store only clean 10-digit phone number in database
                 $phone = $cleanPhone;
                 
-                // Prepare SQL statement to prevent SQL injection
-                $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, product_id, package_id, billing_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("ssssiiis", $name, $email, $phone, $address, $product_id, $package_id, $billing_date, $status);
+                 // Prepare SQL statement to prevent SQL injection
+                 $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, business_name, product_id, package_id, billing_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("ssssssiis", $name, $email, $phone, $address, $business_name, $product_id, $package_id, $billing_date, $status);
 
                 // Execute the statement
                 if ($stmt->execute()) {
@@ -331,6 +334,14 @@ $productsResult = $conn->query($productQuery);
                                     <!-- Customer Details Section -->
                                     <div class="col-md-6">
                                         <div class="section-header">Customer Details</div>
+
+                                        <!-- Business Name Field -->
+                                        <div class="mb-3">
+                                            <label for="business_name" class="form-label"><i class="fas fa-building"></i> Business Name</label>
+                                            <input type="text" class="form-control" id="business_name" name="business_name"
+                                                 placeholder="Business Name" value="<?php echo isset($business_name) ? htmlspecialchars($business_name) : ''; ?>">
+                                            <div class="error-feedback" id="business_name-error"></div>
+                                        </div>
                                         
                                         <!-- Name Field -->
                                         <div class="mb-3">
@@ -353,7 +364,7 @@ $productsResult = $conn->query($productQuery);
                                         <div class="mb-3">
                                             <label for="phone" class="form-label"><i class="fas fa-phone"></i> Phone Number</label>
                                             <input type="tel" class="form-control" id="phone" name="phone"
-                                                placeholder="Enter 10-digit phone number" value="<?php echo isset($phone) ? htmlspecialchars($phone) : ''; ?>" required>
+                                                 placeholder="Enter 10-digit phone number" value="<?php echo isset($phone) ? htmlspecialchars($phone) : ''; ?>" required>
                                             <div class="error-feedback" id="phone-error"></div>
                                         </div>
 
@@ -361,7 +372,7 @@ $productsResult = $conn->query($productQuery);
                                         <div class="mb-3">
                                             <label for="address" class="form-label"><i class="fas fa-map-marker-alt"></i> Address</label>
                                             <textarea class="form-control" id="address" name="address"
-                                                placeholder="Address" required rows="3"><?php echo isset($address) ? htmlspecialchars($address) : ''; ?></textarea>
+                                                 placeholder="Address" required rows="3"><?php echo isset($address) ? htmlspecialchars($address) : ''; ?></textarea>
                                             <div class="error-feedback" id="address-error"></div>
                                         </div>
                                     </div>
