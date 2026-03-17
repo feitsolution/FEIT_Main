@@ -23,14 +23,45 @@ $error_message = isset($_SESSION['error_message']) ? $_SESSION['error_message'] 
 unset($_SESSION['success_message']);
 unset($_SESSION['error_message']);
 
-// Fetch customers
-$sql = "SELECT * FROM customers ORDER BY customer_id ASC";
-$result = $conn->query($sql);
+// Initialize search parameters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
 
-// Count total Customers
-$countQuery = "SELECT COUNT(*) as total FROM customers";
-$countResult = $conn->query($countQuery);
-$totalcustomers = $countResult->fetch_assoc()['total'];
+// Build basic SQL query for counting total rows
+$countSql = "SELECT COUNT(*) as total FROM customers";
+
+// Build basic SQL query for fetching customers
+$sql = "SELECT * FROM customers";
+
+// Add search condition if search term is provided
+if (!empty($search)) {
+    $searchTerm = $conn->real_escape_string($search);
+    $searchCondition = " WHERE (
+                        customer_id LIKE '%$searchTerm%' OR 
+                        name LIKE '%$searchTerm%' OR 
+                        email LIKE '%$searchTerm%' OR 
+                        phone LIKE '%$searchTerm%' OR 
+                        address LIKE '%$searchTerm%' OR
+                        status LIKE '%$searchTerm%')";
+    $countSql .= $searchCondition;
+    $sql .= $searchCondition;
+}
+
+// Add order by and pagination
+$sql .= " ORDER BY customer_id ASC LIMIT $limit OFFSET $offset";
+
+// Execute the count query
+$countResult = $conn->query($countSql);
+$totalRows = 0;
+if ($countResult && $countResult->num_rows > 0) {
+    $totalRows = $countResult->fetch_assoc()['total'];
+}
+$totalPages = ceil($totalRows / $limit);
+
+// Execute the main fetch query
+$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -99,12 +130,57 @@ $totalcustomers = $countResult->fetch_assoc()['total'];
                 </div>
 
                 <div class="container-fluid px-4">
-                    <h1 class="mt-3">Customers</h1>
-                    <ol class="breadcrumb mb-4">
-                        <div class="alert alert-info">
-                            <strong>Total Customers:</strong> <?= $totalcustomers ?>
-                        </div>
-                    </ol>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+                        <h1>Customers</h1>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <form method="get" class="d-flex">
+                                        <input type="text" name="search" class="form-control me-2"
+                                            placeholder="Search customers..."
+                                            value="<?php echo htmlspecialchars($search); ?>">
+                                        <button type="submit" class="btn btn-outline-primary">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                        <?php if (!empty($search)): ?>
+                                            <a href="customer_list.php" class="btn btn-outline-secondary ms-2">
+                                                <i class="fas fa-times"></i> Clear
+                                            </a>
+                                        <?php endif; ?>
+                                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                        <input type="hidden" name="page" value="1">
+                                    </form>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <form method="get" id="limitForm">
+                                        <?php if (!empty($search)): ?>
+                                            <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                        <?php endif; ?>
+                                        <input type="hidden" name="page" value="1">
+                                        <div class="d-inline-block">
+                                            <label>Show</label>
+                                            <select name="limit" class="form-select d-inline-block w-auto ms-1"
+                                                onchange="document.getElementById('limitForm').submit()">
+                                                <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                                <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                                <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                                <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                            </select>
+                                            <label>entries</label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info py-2 mb-3">
+                                <strong>Total Customers:</strong> <?= $totalRows ?>
+                                <?php if (!empty($search)): ?>
+                                    <span class="ms-2">(Search results for: "<?= htmlspecialchars($search) ?>")</span>
+                                <?php endif; ?>
+                            </div>
 
                     <div class="table-container">
                         <div class="table-responsive">
@@ -149,6 +225,7 @@ $totalcustomers = $countResult->fetch_assoc()['total'];
                                                             data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
                                                             data-customer-address="<?= htmlspecialchars($row['address']) ?>"
                                                             data-customer-status="<?= htmlspecialchars($row['status']) ?>"
+                                                            data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
                                                             data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
                                                         View
                                                     </button>
@@ -166,8 +243,63 @@ $totalcustomers = $countResult->fetch_assoc()['total'];
                             </table>
                         </div>
                     </div>
-                </div>
-            </main>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                Showing <?php echo ($totalRows > 0) ? ($offset + 1) : 0; ?> to
+                                <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?>
+                                entries
+                            </div>
+                            <div class="col-md-6">
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination justify-content-end mb-0">
+                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                                        </li>
+
+                                        <?php
+                                        $maxPagesToShow = 5;
+                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                        if ($startPage > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
+                                            </li>
+                                            <?php if ($startPage > 2): ?>
+                                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+
+                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
+                                                <a class="page-link"
+                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                                            </li>
+                                        <?php endfor; ?>
+
+                                        <?php if ($endPage < $totalPages): ?>
+                                            <?php if ($endPage < $totalPages - 1): ?>
+                                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                            <?php endif; ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+
+                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div> <!-- card-body close -->
+                </div> <!-- card close -->
+            </div> <!-- container-fluid close -->
+        </main>
         </div>
     </div>
 
@@ -248,6 +380,7 @@ $totalcustomers = $countResult->fetch_assoc()['total'];
                     phone: this.getAttribute('data-customer-phone'),
                     address: this.getAttribute('data-customer-address'),
                     status: this.getAttribute('data-customer-status'),
+                    billing: this.getAttribute('data-customer-billing'),
                     created: this.getAttribute('data-customer-created')
                 };
 
@@ -258,6 +391,7 @@ $totalcustomers = $countResult->fetch_assoc()['total'];
                     <p><strong>Phone:</strong> ${customerData.phone}</p>
                     <p><strong>Address:</strong> ${customerData.address}</p>
                     <p><strong>Status:</strong> ${customerData.status}</p>
+                    <p><strong>Billing Date:</strong> ${customerData.billing !== 'Not Set' && customerData.billing ? customerData.billing + ' of the month' : 'Not Set'}</p>
                     <p><strong>Created At:</strong> ${customerData.created}</p>
                 `;
 

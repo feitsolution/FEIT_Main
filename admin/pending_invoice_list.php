@@ -485,6 +485,7 @@ $result = $conn->query($sql);
             });
         });
     </script>
+    <script src="js/scripts.js"></script>
 </body>
 
 </html>

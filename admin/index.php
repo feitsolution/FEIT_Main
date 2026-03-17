@@ -31,7 +31,8 @@ $stats = [
     'total_products' => 0,
     'total_invoices' => 0,
     'complete_invoices' => 0,
-    'pending_invoices' => 0
+    'pending_invoices' => 0,
+    'cancel_invoices' => 0
 ];
 
 // Helper function to safely query the database

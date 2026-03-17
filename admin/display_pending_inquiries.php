@@ -257,6 +257,7 @@ $totalPendingInquiries = $pendingCountResult->fetch_assoc()['total_pending'];
         </script>
     </div>
 </div>
+    <script src="js/scripts.js"></script>
 </body>
 
 </html>

@@ -59,6 +59,7 @@ if (!in_array($status, ['Active', 'Inactive'])) {
 
 // Store original status for comparison
 $original_status = isset($_POST['original_status']) ? $_POST['original_status'] : '';
+$product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
 
 // If there are validation errors, redirect back to edit page
 if (!empty($errors)) {
@@ -88,11 +89,14 @@ try {
         email = ?, 
         phone = ?, 
         address = ?, 
-        status = ? 
+        status = ?,
+        product_id = ?,
+        package_id = ?,
+        initial_package_id = ? 
         WHERE customer_id = ?");
     
-    $stmt->bind_param("sssssi", 
-        $name, $email, $phone, $address, $status, $customer_id);
+    $stmt->bind_param("sssssiiii", 
+        $name, $email, $phone, $address, $status, $product_id, $package_id, $package_id, $customer_id);
     
     // Execute the update
     $stmt->execute();

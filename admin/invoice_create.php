@@ -692,6 +692,7 @@ $customerResult = $conn->query($customerSql);
             updateCurrencySymbols();
         });
     </script>
+    <script src="js/scripts.js"></script>
 </body>
 
 </html>

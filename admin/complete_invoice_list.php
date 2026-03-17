@@ -353,8 +353,8 @@ $result = $conn->query($sql);
                         <div class="mb-3">
                             <label for="payment_slip" class="form-label">Please Select Your Payment Slip</label>
                             <input type="file" class="form-control" id="payment_slip" name="payment_slip"
-                                accept=".jpg,.png,.pdf" required>
-                            <small class="form-text text-muted">Supported File formats: .JPG / .PNG / .PDF</small>
+                                accept=".jpg,.png,.pdf">
+                            <small class="form-text text-muted">Supported File formats: .JPG / .PNG / .PDF (Optional)</small>
                         </div>
 
                         <div class="text-center mt-4">
@@ -507,6 +507,7 @@ $result = $conn->query($sql);
             });
         });
     </script>
+    <script src="js/scripts.js"></script>
 </body>
 
 </html>

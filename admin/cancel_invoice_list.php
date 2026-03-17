@@ -351,9 +351,9 @@ $result = $conn->query($sql);
                         <input type="hidden" name="invoice_id" id="invoice_id">
 
                         <div class="mb-3">
-                            <label for="payment_slip" class="form-label">Please Select Your Payment Slip</label>
+                            <label for="payment_slip" class="form-label">Please Select Your Payment Slip (Optional)</label>
                             <input type="file" class="form-control" id="payment_slip" name="payment_slip"
-                                accept=".jpg,.png,.pdf" required>
+                                accept=".jpg,.png,.pdf">
                             <small class="form-text text-muted">Supported File formats: .JPG / .PNG / .PDF</small>
                         </div>
 
@@ -507,6 +507,7 @@ $result = $conn->query($sql);
             });
         });
     </script>
+    <script src="js/scripts.js"></script>
 </body>
 
 </html>

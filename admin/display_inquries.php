@@ -106,6 +106,7 @@ $totalInquiries = $countResult->fetch_assoc()['total'];
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             
         </div>
+        <script src="js/scripts.js"></script>
     </div>
 </body>
 

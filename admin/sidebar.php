@@ -1,15 +1,131 @@
+<!-- Separate CSS Styling -->
+<style>
+/* Main Sidebar Styles */
+#sidenavAccordion {
+    background-color: #212529; /* Dark sidebar background */
+    min-height: 100vh;
+}
+
+/* Sidebar brand/logo section */
+.sb-sidenav-brand {
+    background-color: #1b1e23; /* Slightly darker for brand section */
+    display: flex;
+    align-items: center;
+    padding: 1rem 1rem;
+}
+
+.sb-sidenav-brand img {
+    max-height: 40px;
+    margin-right: 0.5rem;
+}
+
+.sb-sidenav-brand span {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Menu headings */
+.sb-sidenav-menu-heading {
+    color: #a7c7d9;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem;
+    letter-spacing: 0.05em;
+}
+
+/* Links */
+.nav-link {
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    align-items: center;
+}
+
+.nav-link .sb-nav-link-icon {
+    margin-right: 0.5rem;
+    color: #a7c7d9;
+    display: flex;
+    align-items: center;
+}
+
+/* Hover effect */
+.nav-link:hover {
+    background-color: #2c3136;
+    color: #ffffff;
+}
+
+/* Active link */
+.nav-link.active {
+    background-color: #414244;
+    color: #ffffff;
+}
+
+/* Parent link when child menu is expanded */
+.nav-link.parent-active {
+    background-color: #2c3136;
+}
+
+/* Collapse arrows */
+.sb-sidenav-collapse-arrow i {
+    color: #a7c7d9;
+    transition: transform 0.3s;
+}
+
+.nav-link.collapsed .sb-sidenav-collapse-arrow i {
+    transform: rotate(0deg);
+}
+
+.nav-link:not(.collapsed) .sb-sidenav-collapse-arrow i {
+    transform: rotate(180deg);
+}
+
+/* Nested menu links */
+.sb-sidenav-menu-nested.nav {
+    background-color: #2a2e34; /* Slightly lighter than sidebar */
+    padding-left: 1rem;
+}
+
+.sb-sidenav-menu-nested.nav .nav-link {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* Footer section */
+.sb-sidenav-footer {
+    background-color: #0a3e57;
+    color: #ffffff;
+    padding: 1rem;
+    font-size: 0.85rem;
+}
+
+.sb-sidenav-footer .small {
+    color: #a7c7d9;
+}
+
+/* Optional: Scrollbar styling */
+#sidenavAccordion::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidenavAccordion::-webkit-scrollbar-thumb {
+    background-color: #2c3136;
+    border-radius: 3px;
+}
+</style>
 <!-- HTML Structure -->
 <div id="layoutSidenav_nav">
     <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
         <div class="sb-sidenav-menu">
             <div class="nav">
-                <div class="sb-sidenav-menu-heading">Core</div>
+                <div class="sb-sidenav-menu-heading">Navigation</div>
                 <a class="nav-link" href="index.php" id="dashboard-link">
                     <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
                     Dashboard
                 </a>
                 
-                <div class="sb-sidenav-menu-heading">Interface</div>
+                <div class="sb-sidenav-menu-heading">Operations</div>
 
                  <!-- Invoices Section -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseInvoices"
@@ -30,11 +146,14 @@
                         <a class="nav-link" href="unpaid_invoice.php" id="unpaid-invoices-link">
                             Unpaid Invoices 
                         </a> -->
-                        <a class="nav-link" href="pending_invoice_list.php" id="unpaid-invoices-link">
+                        <a class="nav-link" href="pending_invoice_list.php" id="pending-invoices-link">
                             Pending Invoices 
                         </a>
-                        <a class="nav-link" href="complete_invoice_list.php" id="unpaid-invoices-link">
+                        <a class="nav-link" href="complete_invoice_list.php" id="complete-invoices-link">
                             Complete Invoices 
+                        </a>
+                        <a class="nav-link" href="cancel_invoice_list.php" id="cancel-invoices-link">
+                            Cancel Invoices 
                         </a>
                     </nav>
                 </div>
@@ -110,21 +229,12 @@
                         <a class="nav-link" href="product_list.php" id="all-products-link">
                             All Products
                         </a>
+                        <a class="nav-link" href="package_list.php" id="all-packages-link">
+                            Package List
+                        </a>
                         <a class="nav-link" href="add_product.php" id="add-product-link">Add New Product</a>
                     </nav>
                 </div>
-                
-               
-                
-                <div class="sb-sidenav-menu-heading">Settings</div>
-                <!--<a class="nav-link" href="profile.php" id="profile-link">-->
-                <!--    <div class="sb-nav-link-icon"><i class="fas fa-user"></i></div>-->
-                <!--    Profile-->
-                <!--</a>-->
-                <a class="nav-link" href="logout.php" id="logout-link">
-                    <div class="sb-nav-link-icon"><i class="fas fa-sign-out-alt"></i></div>
-                    Logout
-                </a>
             </div>
         </div>
         <!-- <div class="sb-sidenav-footer">
@@ -133,57 +243,6 @@
         </div> -->
     </nav>
 </div>
-
-<!-- Separate CSS Styling -->
-<style>
-    /* Main sidebar styling */
-    #sidenavAccordion {
-        background-color: #212529;
-    }
-    
-    /* Headings */
-    .sb-sidenav-menu-heading {
-        color: #212529;
-    }
-    
-    /* Links */
-    .nav-link {
-        color: #ffffff;
-        transition: background-color 0.3s;
-    }
-    
-    /* Active link styling */
-    .nav-link.active {
-        background-color: #414244;
-        color: white;
-    }
-    
-    /* Active dropdown parent */
-    .nav-link.parent-active {
-        background-color: #2c3136;
-    }
-    
-    /* Dropdown arrows */
-    .sb-sidenav-collapse-arrow i {
-        color: #212529;
-    }
-    
-    /* Nested menu background */
-    .sb-sidenav-menu-nested.nav {
-        background-color: #212529;
-    }
-    
-    /* Footer section */
-    .sb-sidenav-footer {
-        background-color: #0a3e57;
-        color: #ffffff;
-    }
-    
-    /* Footer text */
-    .sb-sidenav-footer .small {
-        color: #a7c7d9;
-    }
-</style>
 
 <!-- Add JavaScript to handle active states -->
 <script>

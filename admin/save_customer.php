@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
     $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
     $address = isset($_POST['address']) ? trim($_POST['address']) : '';
+    $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : null;
+    $package_id = isset($_POST['package_id']) ? intval($_POST['package_id']) : null;
 
     // Basic validation
     if (empty($name)) {
@@ -41,9 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $row = $result->fetch_assoc();
                 $customerId = $row['id'];
 
-                $updateSql = "UPDATE customers SET name = ?, phone = ?, address = ?, status = 'Active' WHERE id = ?";
+                $updateSql = "UPDATE customers SET name = ?, phone = ?, address = ?, product_id = ?, package_id = ?, initial_package_id = ?, status = 'Active' WHERE id = ?";
                 $updateStmt = $conn->prepare($updateSql);
-                $updateStmt->bind_param("sssi", $name, $phone, $address, $customerId);
+                $updateStmt->bind_param("sssiiii", $name, $phone, $address, $product_id, $package_id, $package_id, $customerId);
 
                 if ($updateStmt->execute()) {
                     $response['success'] = true;
@@ -55,12 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $updateStmt->close();
             } else {
                 // Insert new customer
-                insertNewCustomer($conn, $name, $email, $phone, $address, $response);
+                insertNewCustomer($conn, $name, $email, $phone, $address, $product_id, $package_id, $response);
             }
             $checkStmt->close();
         } else {
             // Insert new customer without email check
-            insertNewCustomer($conn, $name, $email, $phone, $address, $response);
+            insertNewCustomer($conn, $name, $email, $phone, $address, $product_id, $package_id, $response);
         }
     }
 } else {
@@ -68,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Function to insert new customer
-function insertNewCustomer($conn, $name, $email, $phone, $address, &$response) {
-    $insertSql = "INSERT INTO customers (name, email, phone, address, status, created_at) VALUES (?, ?, ?, ?, 'Active', NOW())";
+function insertNewCustomer($conn, $name, $email, $phone, $address, $product_id, $package_id, &$response) {
+    $insertSql = "INSERT INTO customers (name, email, phone, address, product_id, package_id, initial_package_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', NOW())";
     $insertStmt = $conn->prepare($insertSql);
-    $insertStmt->bind_param("ssss", $name, $email, $phone, $address);
+    $insertStmt->bind_param("ssssiii", $name, $email, $phone, $address, $product_id, $package_id, $package_id);
 
     if ($insertStmt->execute()) {
         $response['success'] = true;

@@ -109,6 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $phone = trim($_POST['phone']);
         $address = trim($_POST['address']);
         $status = $_POST['status'];
+        $billing_date = !empty($_POST['billing_date']) ? intval($_POST['billing_date']) : null;
+        $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
+        $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
+        $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
 
         // Enhanced validation checks
         if (empty($name)) {
@@ -161,16 +165,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $phone = $cleanPhone;
                 
                 // Prepare SQL statement to prevent SQL injection
-                $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, status) VALUES (?, ?, ?, ?, ?)");
-                $stmt->bind_param("sssss", $name, $email, $phone, $address, $status);
+                $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, product_id, package_id, billing_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssiiis", $name, $email, $phone, $address, $product_id, $package_id, $billing_date, $status);
 
                 // Execute the statement
                 if ($stmt->execute()) {
+                    $new_customer_id = $conn->insert_id;
+
+                    // Insert custom pricing for all packages in the table
+                    if (!empty($custom_amounts)) {
+                        foreach ($custom_amounts as $pkg_id => $amount) {
+                            if ($amount !== '') {
+                                $pkg_id = intval($pkg_id);
+                                $amt = floatval($amount);
+                                $cp_stmt = $conn->prepare("INSERT INTO customer_packages (customer_id, package_id, amount) VALUES (?, ?, ?)");
+                                $cp_stmt->bind_param("iid", $new_customer_id, $pkg_id, $amt);
+                                $cp_stmt->execute();
+                                $cp_stmt->close();
+                            }
+                        }
+                    }
+
                     // Set success message
                     $successMsg = "New customer added successfully!";
                     
                     // Clear form fields after successful submission
-                    $name = $email = $phone = $address = '';
+                    $name = $email = $phone = $address = $product_id = $package_id = $billing_date = '';
+                    $custom_amounts = [];
                 } else {
                     $errorMsg = "Error: " . $stmt->error;
                 }
@@ -181,6 +202,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 }
+
+// Fetch active products for the dropdown
+$productQuery = "SELECT id, name FROM products WHERE status = 'active' ORDER BY name ASC";
+$productsResult = $conn->query($productQuery);
 ?>
 
 <!DOCTYPE html>
@@ -254,7 +279,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 0.875em;
             color: #6c757d;
         }
+
+        /* Select2 Bootstrap 5 Theme Adjustments */
+        .select2-container--bootstrap-5 .select2-selection {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            min-height: calc(2.25rem + 2px);
+        }
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
     </style>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 </head>
 
 <body class="sb-nav-fixed">
@@ -339,6 +378,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                 <option value="active" <?php echo (isset($status) && $status == 'active') ? 'selected' : ''; ?>>Active</option>
                                                 <option value="inactive" <?php echo (isset($status) && $status == 'inactive') ? 'selected' : ''; ?>>Inactive</option>
                                             </select>
+                                        </div>
+
+                                        <!-- Billing Date Field -->
+                                        <div class="mb-3">
+                                            <label for="billing_date" class="form-label"><i class="fas fa-calendar-day"></i> Billing Date</label>
+                                            <select class="form-select" id="billing_date" name="billing_date">
+                                                <option value="">-- No specific billing date --</option>
+                                                <?php for($i = 1; $i <= 31; $i++): ?>
+                                                    <option value="<?php echo $i; ?>" <?php echo (isset($billing_date) && $billing_date == $i) ? 'selected' : ''; ?>>
+                                                        <?php echo $i; ?>
+                                                    </option>
+                                                <?php endfor; ?>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Product Selection Field -->
+                                        <div class="mb-3">
+                                            <label for="product_id" class="form-label"><i class="fas fa-box"></i> Select Product</label>
+                                            <select class="form-select" id="product_id" name="product_id">
+                                                <option value="">-- Select Product --</option>
+                                                <?php 
+                                                if ($productsResult && $productsResult->num_rows > 0):
+                                                    while ($product = $productsResult->fetch_assoc()): 
+                                                ?>
+                                                    <option value="<?php echo $product['id']; ?>" <?php echo (isset($product_id) && $product_id == $product['id']) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($product['name']); ?>
+                                                    </option>
+                                                <?php 
+                                                    endwhile;
+                                                endif;
+                                                ?>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Package Selection Table -->
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-cubes"></i> Select & Configure Packages</label>
+                                            <div id="packages-container" class="table-responsive" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
+                                                <p class="text-muted text-center my-3">Select a product first to see packages.</p>
+                                            </div>
                                         </div>
                                         
                                     </div>
@@ -786,6 +865,101 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
+    });
+
+    // Dependent Dropdown for Packages
+    const productSelect = document.getElementById('product_id');
+    const packagesContainer = document.getElementById('packages-container');
+
+    function loadPackages(productId, selectedPackageId = null) {
+        if (!productId) {
+            packagesContainer.innerHTML = '<p class="text-muted text-center my-3">Select a product first to see packages.</p>';
+            return;
+        }
+
+        packagesContainer.innerHTML = '<div class="text-center my-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        
+        // Fetch packages via AJAX
+        fetch(`get_packages.php?product_id=${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    packagesContainer.innerHTML = '<p class="text-muted text-center my-3">No active packages found for this product.</p>';
+                    return;
+                }
+
+                let html = `
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Package Description</th>
+                                <th style="width: 150px;">Amount (Rs.)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.forEach(pkg => {
+                    const isChecked = (selectedPackageId && pkg.id == selectedPackageId) ? 'checked' : '';
+                    html += `
+                        <tr>
+                            <td class="text-center">
+                                <input class="form-check-input" type="radio" name="package_id" value="${pkg.id}" id="pkg_${pkg.id}" ${isChecked} required>
+                            </td>
+                            <td>
+                                <label class="form-check-label d-block" for="pkg_${pkg.id}">
+                                    ${pkg.description} <br>
+                                    <small class="text-muted">Default: Rs. ${pkg.default_amount}</small>
+                                </label>
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" class="form-control form-control-sm" name="custom_amounts[${pkg.id}]" value="${pkg.default_amount}" placeholder="${pkg.default_amount}">
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                packagesContainer.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error fetching packages:', error);
+                packagesContainer.innerHTML = '<p class="text-danger text-center my-3">Error loading packages.</p>';
+            });
+    }
+
+    productSelect.addEventListener('change', function() {
+        loadPackages(this.value);
+    });
+
+    // Initial load if a product is already selected
+    if (productSelect.value) {
+        loadPackages(productSelect.value, '<?php echo isset($package_id) ? $package_id : ""; ?>');
+    }
+    </script>
+    
+    <!-- jQuery and Select2 JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('#product_id').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Select Product --',
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Re-trigger package loading when Select2 changes
+        $('#product_id').on('select2:select', function (e) {
+            const data = e.params.data;
+            loadPackages(data.id);
+        });
+
+        $('#product_id').on('select2:unselect', function (e) {
+            loadPackages('');
+        });
     });
     </script>
     
