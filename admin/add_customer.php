@@ -168,8 +168,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $phone = $cleanPhone;
                 
                  // Prepare SQL statement to prevent SQL injection
-                 $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, business_name, product_id, package_id, billing_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                 $stmt->bind_param("ssssssiis", $name, $email, $phone, $address, $business_name, $product_id, $package_id, $billing_date, $status);
+                 $stmt = $conn->prepare("INSERT INTO customers (name, email, phone, address, business_name, product_id, package_id, initial_package_id, billing_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("sssssiiiis", $name, $email, $phone, $address, $business_name, $product_id, $package_id, $package_id, $billing_date, $status);
 
                 // Execute the statement
                 if ($stmt->execute()) {

@@ -311,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                      $originalBillingDate = $customer['billing_date'];
                      $originalProductId = $customer['product_id'];
                      $originalPackageId = $customer['package_id'];
+                     $originalInitialPackageId = $customer['initial_package_id'];
                     
                     // Track changes in a structured format for the database
                     $changeDetails = array();
@@ -416,9 +417,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $changes = !empty($changedFields) ? " Changes: " . implode(", ", $changedFields) : "";
                     $activityDetails = "Customer ID #$customer_id ($name) was updated by user ID #{$_SESSION['user_id']}.{$changes}";
                     
+                      // Determine initial_package_id to save
+                      // If it's already set (not empty), keep it. 
+                      // If it's empty, use the current package_id from the database as the initial one.
+                      $initialPackageIdToSave = !empty($originalInitialPackageId) ? $originalInitialPackageId : $originalPackageId;
+                      // However, if the customer NEVER had a package (it's also empty), use the new package_id.
+                      if (empty($initialPackageIdToSave)) {
+                          $initialPackageIdToSave = $package_id;
+                      }
+
                       // Prepare SQL statement to prevent SQL injection
-                      $stmt = $conn->prepare("UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, business_name = ?, status = ?, billing_date = ?, product_id = ?, package_id = ? WHERE customer_id = ?");
-                      $stmt->bind_param("ssssssiiii", $name, $email, $phone, $address, $business_name, $status, $billing_date, $product_id, $package_id, $customer_id);
+                      $stmt = $conn->prepare("UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, business_name = ?, status = ?, billing_date = ?, product_id = ?, package_id = ?, initial_package_id = ? WHERE customer_id = ?");
+                      $stmt->bind_param("ssssssiiiii", $name, $email, $phone, $address, $business_name, $status, $billing_date, $product_id, $package_id, $initialPackageIdToSave, $customer_id);
 
                     // Execute the statement
                     if ($stmt->execute()) {
