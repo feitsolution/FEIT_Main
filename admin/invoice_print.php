@@ -375,7 +375,7 @@
                                         <div class="col-xl-12">
                                             <div>
                                                 <label for="invoice-note" class="form-label">Note:</label>
-                                                <textarea class="form-control form-control-light" id="invoice-note" rows="3">Once the invoice has been verified by the accounts payable team and recorded, the only task left is to send it for approval before releasing the payment</textarea>
+                                                <textarea class="form-control form-control-light" id="invoice-note" rows="3">Thank you for choosing our services. Please review the invoice details and ensure payment is completed by the due date. If there are any discrepancies, kindly inform us immediately.</textarea>
                                             </div>
                                         </div>
                                     </div>

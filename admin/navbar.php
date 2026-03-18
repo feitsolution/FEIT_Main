@@ -41,7 +41,7 @@ function getProfileImage($user) {
     <!-- Navbar Brand with Logo -->
     <a class="navbar-brand ps-3" href="index.php">
         <!-- Try with a more accurate path structure -->
-        <img src="img/system/FEIT.png" alt="FEIT Logo" height="36">
+        <img src="img/system/FEIT.png" alt="FEIT Logo" height="56" width="auto" class="d-inline-block align-text-top">
     </a>
     
     <!-- Sidebar Toggle -->

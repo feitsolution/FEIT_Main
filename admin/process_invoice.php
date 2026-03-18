@@ -68,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Prepare invoice details
         $invoice_date = $_POST['invoice_date'] ?? date('Y-m-d');
         $due_date = $_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days'));
-        $notes = $_POST['notes'] ?? 'Once the invoice has been verified by the accounts payable team and recorded, the only task left is to send it for approval before releasing the payment';
+        $notes = $_POST['notes'] ?? 'Thank you for choosing our services. Please review the invoice details and ensure payment is completed by the due date. If there are any discrepancies, kindly inform us immediately.';
         
         // Get currency from form input instead of hardcoding it
         $currency = isset($_POST['invoice_currency']) ? strtolower($_POST['invoice_currency']) : 'lkr';
@@ -112,6 +112,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         // Final total calculation
         $total_amount = $subtotal - $total_discount;
+        
+        // Validate total amount is greater than 0
+        if ($total_amount <= 0) {
+            throw new Exception("Invoice total amount must be greater than 0. Please ensure the products selected have a valid price.");
+        }
         
         // Insert invoice - UPDATED to include created_by column
         $insertInvoiceSql = "INSERT INTO invoices (

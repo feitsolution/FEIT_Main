@@ -495,7 +495,7 @@ $isModalView = ($format === 'html');
 
         <div class="notes">
             <div class="note-title">Note:</div>
-            <p><?php echo !empty($invoice['notes']) ? nl2br(htmlspecialchars($invoice['notes'])) : 'Once the invoice has been verified by the accounts payable team and recorded, the only task left is to send it for approval before releasing the payment'; ?>
+            <p><?php echo !empty($invoice['notes']) ? nl2br(htmlspecialchars($invoice['notes'])) : 'Thank you for choosing our services. Please review the invoice details and ensure payment is completed by the due date. If there are any discrepancies, kindly inform us immediately.'; ?>
             </p>
         </div>
 

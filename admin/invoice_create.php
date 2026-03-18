@@ -124,7 +124,15 @@ $customerResult = $conn->query($customerSql);
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main>
-                <div class="alert-container"></div>
+                <div class="alert-container">
+                    <?php if (isset($_SESSION['invoice_error'])): ?>
+                        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+                            <?= $_SESSION['invoice_error']; ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="<?php unset($_SESSION['invoice_error']); ?>"></button>
+                        </div>
+                        <?php unset($_SESSION['invoice_error']); ?>
+                    <?php endif; ?>
+                </div>
                 <h1 class="page-title mt-4 text-center mb-4">Create New Invoice</h1>
                 <div class="invoice-container">
                     <form method="post" action="process_invoice.php" id="invoiceForm" target="_blank">
@@ -146,7 +154,7 @@ $customerResult = $conn->query($customerSql);
                                         <label class="form-label"><strong>Currency</strong></label>
                                         <select name="invoice_currency" id="invoice_currency" class="form-select">
                                             <option value="usd">USD</option>
-                                            <option value="lkr">LKR</option>
+                                            <option value="lkr" selected>LKR</option>
                                         </select>
                                     </div>
                                 </div>
@@ -648,6 +656,14 @@ $customerResult = $conn->query($customerSql);
                 });
 
                 if (!isProductValid) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Validate total amount is greater than 0
+                let totalAmount = parseFloat($('#total_amount').val()) || 0;
+                if (totalAmount <= 0) {
+                    alert('Invoice total amount must be greater than 0.');
                     e.preventDefault();
                     return false;
                 }
