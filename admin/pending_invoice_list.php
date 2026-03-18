@@ -17,6 +17,100 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 include 'db_connection.php';
 include 'functions.php'; // Include helper functions
 
+// Process invoice cancellation
+if (isset($_POST['cancel_invoice']) && isset($_POST['invoice_id'])) {
+    $invoice_id = $_POST['invoice_id'];
+    $user_id = $_SESSION['user_id']; // Current logged-in user ID
+    
+    // Get invoice details for logging
+    $invoice_sql = "SELECT c.name FROM invoices i 
+                   LEFT JOIN customers c ON i.customer_id = c.customer_id
+                   WHERE i.invoice_id = ?";
+    $stmt = $conn->prepare($invoice_sql);
+    $stmt->bind_param("s", $invoice_id);
+    $stmt->execute();
+    $invoice_result = $stmt->get_result();
+    $invoice_data = $invoice_result->fetch_assoc();
+    $customer_name = isset($invoice_data['name']) ? $invoice_data['name'] : 'Unknown Customer';
+    
+    // Start transaction
+    $conn->begin_transaction();
+    
+    try {
+        // 1. Update the invoice status to 'cancel'
+        $update_invoice_sql = "UPDATE invoices SET status = 'cancel' WHERE invoice_id = ?";
+        $stmt = $conn->prepare($update_invoice_sql);
+        $stmt->bind_param("s", $invoice_id);
+        $stmt->execute();
+        
+        // 2. Update all related invoice items to 'cancel' status
+        $update_items_sql = "UPDATE invoice_items SET status = 'cancel' WHERE invoice_id = ?";
+        $stmt_items = $conn->prepare($update_items_sql);
+        $stmt_items->bind_param("s", $invoice_id);
+        $stmt_items->execute();
+        
+        // 3. Log the action in user_logs table
+        $action_type = "cancel_invoice";
+        $details = "Invoice ID #$invoice_id for customer ($customer_name) was canceled by user ID #$user_id";
+        
+        $log_sql = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) 
+                   VALUES (?, ?, ?, ?, NOW())";
+        $log_stmt = $conn->prepare($log_sql);
+        $log_stmt->bind_param("isss", $user_id, $action_type, $invoice_id, $details);
+        $log_stmt->execute();
+        
+        // Commit the transaction
+        $conn->commit();
+        
+        // Set success message
+        $_SESSION['message'] = "Invoice #$invoice_id has been canceled successfully.";
+        $_SESSION['message_type'] = "success";
+    } catch (Exception $e) {
+        // Rollback the transaction if something fails
+        $conn->rollback();
+        
+        // Set error message
+        $_SESSION['message'] = "Failed to cancel invoice. Error: " . $e->getMessage();
+        $_SESSION['message_type'] = "danger";
+    }
+    
+    // Build the redirect URL
+    $redirect_url = "pending_invoice_list.php";
+    
+    // Add search parameter if it exists
+    if (isset($_POST['search']) && !empty($_POST['search'])) {
+        $redirect_url .= "?search=" . urlencode($_POST['search']);
+        
+        // Add limit and page if they exist
+        if (isset($_POST['limit']) && !empty($_POST['limit'])) {
+            $redirect_url .= "&limit=" . (int)$_POST['limit'];
+        }
+        if (isset($_POST['page']) && !empty($_POST['page'])) {
+            $redirect_url .= "&page=" . (int)$_POST['page'];
+        }
+    } 
+    // If no search but we have limit or page
+    else if ((isset($_POST['limit']) && !empty($_POST['limit'])) || 
+             (isset($_POST['page']) && !empty($_POST['page']))) {
+        $redirect_url .= "?";
+        if (isset($_POST['limit']) && !empty($_POST['limit'])) {
+            $redirect_url .= "limit=" . (int)$_POST['limit'];
+        }
+        if (isset($_POST['page']) && !empty($_POST['page'])) {
+            $redirect_url .= (isset($_POST['limit']) && !empty($_POST['limit']) ? "&" : "") . "page=" . (int)$_POST['page'];
+        }
+    }
+    
+    // Make sure we're enforcing the redirect properly
+    if (headers_sent()) {
+        echo "<script>window.location.href='$redirect_url';</script>";
+        echo "<noscript><meta http-equiv='refresh' content='0;url=$redirect_url'></noscript>";
+    } else {
+        header("Location: $redirect_url");
+    }
+    exit();
+}
+
 // Initialize search parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
@@ -89,6 +183,19 @@ $result = $conn->query($sql);
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4>Pending Invoices</h4>
                     </div>
+                    
+                    <!-- Display alert messages if any -->
+                    <?php if (isset($_SESSION['message'])): ?>
+                        <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
+                            <?php 
+                                echo $_SESSION['message']; 
+                                unset($_SESSION['message']);
+                                unset($_SESSION['message_type']);
+                            ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="card">
                         <div class="card-body">
                             <div class="row mb-3">
@@ -210,6 +317,12 @@ $result = $conn->query($sql);
                                                                     data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>">
                                                                     <i class=""></i> Paid
                                                                 </a>
+                                                                <button type="button" class="btn btn-sm btn-danger cancel-invoice" title="Cancel Invoice"
+                                                                    data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"
+                                                                    data-customer="<?php echo htmlspecialchars($customerName); ?>"
+                                                                    data-bs-toggle="modal" data-bs-target="#cancelInvoiceModal">
+                                                                    <i class="fas fa-times-circle"></i>
+                                                                </button>
                                                             <?php endif; ?>
                                                         </div>
                                                     </td>
@@ -363,6 +476,36 @@ $result = $conn->query($sql);
             </div>
         </div>
     </div>
+
+    <!-- Modal for Cancel Invoice Confirmation -->
+    <div class="modal fade" id="cancelInvoiceModal" tabindex="-1" aria-labelledby="cancelInvoiceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="cancelInvoiceModalLabel">Cancel Invoice</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this invoice? This action cannot be undone.</p>
+                    <p><strong>Invoice ID: </strong><span id="cancel_invoice_id"></span></p>
+                    <p><strong>Customer: </strong><span id="cancel_customer_name"></span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <form method="post" id="cancelInvoiceForm">
+                        <input type="hidden" name="invoice_id" id="confirm_cancel_invoice_id">
+                        <input type="hidden" name="cancel_invoice" value="1">
+                        <!-- Add hidden fields to preserve current page state -->
+                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                        <input type="hidden" name="page" value="<?php echo $page; ?>">
+                        <button type="submit" class="btn btn-danger">Confirm Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -479,10 +622,23 @@ $result = $conn->query($sql);
                 });
             });
 
-            // Reset form when modal is hidden
             $('#markPaidModal').on('hidden.bs.modal', function () {
                 $('#markPaidForm')[0].reset();
             });
+
+            // Handle Cancel Invoice button click
+            $('.cancel-invoice').click(function() {
+                var invoiceId = $(this).data('id');
+                var customerName = $(this).data('customer');
+                $('#cancel_invoice_id').text(invoiceId);
+                $('#cancel_customer_name').text(customerName);
+                $('#confirm_cancel_invoice_id').val(invoiceId);
+            });
+            
+            // Fade out alert messages after 5 seconds
+            setTimeout(function() {
+                $(".alert-dismissible").fadeOut("slow");
+            }, 5000);
         });
     </script>
     <script src="js/scripts.js"></script>
