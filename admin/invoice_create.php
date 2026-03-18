@@ -26,7 +26,7 @@ $sql = "SELECT id, name, description, lkr_price, usd_price
 $result = $conn->query($sql);
 
 // Modify the customer SQL query to only fetch active customers
-$customerSql = "SELECT * FROM customers WHERE status = 'active' ORDER BY name ASC";
+$customerSql = "SELECT * FROM customers WHERE status = 'active' ORDER BY customer_id DESC";
 $customerResult = $conn->query($customerSql);
 
 ?>
@@ -82,7 +82,7 @@ $customerResult = $conn->query($customerSql);
         }
 
         .table> :not(caption)>*>* {
-            padding: 1px;
+            padding: 10px;
         }
 
         #invoice_table .remove_product {
@@ -98,6 +98,22 @@ $customerResult = $conn->query($customerSql);
             color: red;
             font-size: 0.8em;
             margin-top: 5px;
+        }
+        .customer-modal-content {
+            width: 90%;
+            max-width: 1000px; /* adjust as you like */
+            margin: 5% auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .customer-modal-content .input-group {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #fff;
+            padding-bottom: 10px;
         }
     </style>
 </head>
@@ -344,6 +360,8 @@ $customerResult = $conn->query($customerSql);
                         <table class="table table-hover">
                             <thead>
                                 <tr>
+                                    <th>ID</th>
+                                    <th>Business Name</th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Phone</th>
@@ -361,6 +379,8 @@ $customerResult = $conn->query($customerSql);
                                         data-email="<?= htmlspecialchars($customer['email'] ?? '') ?>"
                                         data-phone="<?= htmlspecialchars($customer['phone'] ?? '') ?>"
                                         data-address="<?= htmlspecialchars($customer['address'] ?? '') ?>">
+                                        <td><?= htmlspecialchars($customer['customer_id'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($customer['business_name'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($customer['name'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($customer['email'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($customer['phone'] ?? '') ?></td>

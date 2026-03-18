@@ -25,6 +25,7 @@ $download = isset($_GET['download']) && $_GET['download'] === 'true'; // Trigger
 // Fetch invoice details from database with individual item discounts
 $invoice_query = "SELECT i.*, i.pay_status AS invoice_pay_status, c.name as customer_name, 
                 c.address as customer_address, c.email as customer_email, c.phone as customer_phone,
+                c.business_name as customer_business_name,
                 p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
                 r.name as paid_by_name, u.name as user_name
                 FROM invoices i 
@@ -416,6 +417,9 @@ $isModalView = ($format === 'html');
             <div class="billing-block">
                 <div class="billing-title">Billing To :</div>
                 <div class="billing-info">
+                    <?php if (!empty($invoice['customer_business_name'])): ?>
+                        <strong><?php echo htmlspecialchars($invoice['customer_business_name']); ?></strong><br>
+                    <?php endif; ?>
                     <strong><?php echo htmlspecialchars($invoice['customer_name']); ?></strong><br>
                     <?php echo nl2br(htmlspecialchars($invoice['customer_address'])); ?><br>
                     Email: <?php echo htmlspecialchars($invoice['customer_email']); ?><br>
