@@ -122,7 +122,7 @@ $countSql = "SELECT COUNT(*) as total FROM invoices i
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              WHERE (i.status = 'pending' OR i.status IS NULL OR i.status = '')";
 
-$sql = "SELECT i.*, c.name as customer_name 
+$sql = "SELECT i.*, c.name as customer_name, c.business_name as customer_business_name
         FROM invoices i 
         LEFT JOIN customers c ON i.customer_id = c.customer_id
         WHERE (i.status = 'pending' OR i.status IS NULL OR i.status = '')";
@@ -133,6 +133,7 @@ if (!empty($search)) {
     $searchCondition = " AND (
                         i.invoice_id LIKE '%$searchTerm%' OR 
                         c.name LIKE '%$searchTerm%' OR 
+                        c.business_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%')";
@@ -251,6 +252,7 @@ $result = $conn->query($sql);
                                     <thead class="table-light">
                                         <tr>
                                             <th>Invoice ID</th>
+                                            <th>Business Name</th>
                                             <th>Customer Name</th>
                                             <th>Issue Date</th>
                                             <th>Due Date</th>
@@ -266,6 +268,7 @@ $result = $conn->query($sql);
                                                 <tr>
                                                     <td><?php echo isset($row['invoice_id']) ? htmlspecialchars($row['invoice_id']) : ''; ?>
                                                     </td>
+                                                    <td><?php echo isset($row['customer_business_name']) ? htmlspecialchars($row['customer_business_name']) : ''; ?></td>
                                                     <td>
                                                         <?php
                                                         $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';

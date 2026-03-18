@@ -122,7 +122,7 @@ $countSql = "SELECT COUNT(*) as total FROM invoices i
              LEFT JOIN customers c ON i.customer_id = c.customer_id
              LEFT JOIN users u2 ON i.created_by = u2.id"; // Added JOIN with users table for u2
 
-$sql = "SELECT i.*, c.name as customer_name, 
+$sql = "SELECT i.*, c.name as customer_name, c.business_name as customer_business_name, 
                p.payment_id, p.amount_paid, p.payment_method, p.payment_date, p.pay_by,
                u1.name as paid_by_name,
                u2.name as creator_name
@@ -138,6 +138,7 @@ if (!empty($search)) {
     $searchCondition = " WHERE (
                         i.invoice_id LIKE '%$searchTerm%' OR 
                         c.name LIKE '%$searchTerm%' OR 
+                        c.business_name LIKE '%$searchTerm%' OR 
                         i.issue_date LIKE '%$searchTerm%' OR 
                         i.due_date LIKE '%$searchTerm%' OR 
                         i.total_amount LIKE '%$searchTerm%' OR
@@ -258,6 +259,7 @@ $result = $conn->query($sql);
                                     <thead class="table-light">
                                         <tr>
                                             <th>Invoice ID</th>
+                                            <th>Business Name</th>
                                             <th>Customer Name</th>
                                             <th>Issue Date</th>
                                             <th>Due Date</th>
@@ -274,6 +276,12 @@ $result = $conn->query($sql);
                                             <?php while ($row = $result->fetch_assoc()): ?>
                                                 <tr>
                                                     <td><?php echo isset($row['invoice_id']) ? htmlspecialchars($row['invoice_id']) : ''; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                        $businessName = isset($row['customer_business_name']) ? htmlspecialchars($row['customer_business_name']) : '';
+                                                        echo $businessName;
+                                                        ?>
                                                     </td>
                                                     <td>
                                                         <?php
