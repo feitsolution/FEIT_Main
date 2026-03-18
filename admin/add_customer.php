@@ -114,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
          $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
          $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
          $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
+         $custom_max_counts = isset($_POST['custom_max_counts']) ? $_POST['custom_max_counts'] : [];
 
         // Enhanced validation checks
         if (empty($name)) {
@@ -175,14 +176,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute()) {
                     $new_customer_id = $conn->insert_id;
 
-                    // Insert custom pricing for all packages in the table
+                    // Insert custom pricing and max count for all packages in the table
                     if (!empty($custom_amounts)) {
                         foreach ($custom_amounts as $pkg_id => $amount) {
                             if ($amount !== '') {
                                 $pkg_id = intval($pkg_id);
                                 $amt = floatval($amount);
-                                $cp_stmt = $conn->prepare("INSERT INTO customer_packages (customer_id, package_id, amount) VALUES (?, ?, ?)");
-                                $cp_stmt->bind_param("iid", $new_customer_id, $pkg_id, $amt);
+                                $max = isset($custom_max_counts[$pkg_id]) && $custom_max_counts[$pkg_id] !== '' ? intval($custom_max_counts[$pkg_id]) : null;
+                                $cp_stmt = $conn->prepare("INSERT INTO customer_packages (customer_id, package_id, amount, max_count) VALUES (?, ?, ?, ?)");
+                                $cp_stmt->bind_param("iidi", $new_customer_id, $pkg_id, $amt, $max);
                                 $cp_stmt->execute();
                                 $cp_stmt->close();
                             }
@@ -193,8 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $successMsg = "New customer added successfully!";
                     
                     // Clear form fields after successful submission
-                    $name = $email = $phone = $address = $product_id = $package_id = $billing_date = '';
+                    $name = $email = $phone = $address = $business_name = $product_id = $package_id = $billing_date = '';
                     $custom_amounts = [];
+                    $custom_max_counts = [];
                 } else {
                     $errorMsg = "Error: " . $stmt->error;
                 }
@@ -906,6 +909,7 @@ $productsResult = $conn->query($productQuery);
                                 <th style="width: 50px;">Select</th>
                                 <th>Package Description</th>
                                 <th style="width: 150px;">Amount (Rs.)</th>
+                                <th style="width: 150px;">Max Count</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -913,6 +917,7 @@ $productsResult = $conn->query($productQuery);
 
                 data.forEach(pkg => {
                     const isChecked = (selectedPackageId && pkg.id == selectedPackageId) ? 'checked' : '';
+                    const default_max = pkg.default_max_count !== null ? pkg.default_max_count : '';
                     html += `
                         <tr>
                             <td class="text-center">
@@ -921,11 +926,14 @@ $productsResult = $conn->query($productQuery);
                             <td>
                                 <label class="form-check-label d-block" for="pkg_${pkg.id}">
                                     ${pkg.description} <br>
-                                    <small class="text-muted">Default: Rs. ${pkg.default_amount}</small>
+                                    <small class="text-muted">Default: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
                                 </label>
                             </td>
                             <td>
                                 <input type="number" step="0.01" class="form-control form-control-sm" name="custom_amounts[${pkg.id}]" value="${pkg.default_amount}" placeholder="${pkg.default_amount}">
+                            </td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm" name="custom_max_counts[${pkg.id}]" value="${default_max}" placeholder="${default_max}">
                             </td>
                         </tr>
                     `;

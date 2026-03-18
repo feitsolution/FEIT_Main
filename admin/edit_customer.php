@@ -202,14 +202,16 @@ try {
     $customer = $result->fetch_assoc();
     $stmt->close();
 
-    // Fetch custom pricing if it exists
+    // Fetch custom pricing and max counts if they exist
     $custom_prices = [];
-    $cp_stmt = $conn->prepare("SELECT package_id, amount FROM customer_packages WHERE customer_id = ?");
+    $custom_max_counts_db = [];
+    $cp_stmt = $conn->prepare("SELECT package_id, amount, max_count FROM customer_packages WHERE customer_id = ?");
     $cp_stmt->bind_param("i", $customer_id);
     $cp_stmt->execute();
     $cp_result = $cp_stmt->get_result();
     while ($cp_row = $cp_result->fetch_assoc()) {
         $custom_prices[$cp_row['package_id']] = $cp_row['amount'];
+        $custom_max_counts_db[$cp_row['package_id']] = $cp_row['max_count'];
     }
     $cp_stmt->close();
 
@@ -240,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
          $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
          $package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
          $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : [];
+         $custom_max_counts = isset($_POST['custom_max_counts']) ? $_POST['custom_max_counts'] : [];
 
         // Enhanced validation checks
         if (empty($name)) {
@@ -432,12 +435,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     // Execute the statement
                     if ($stmt->execute()) {
-                        // Update or insert custom pricing for all packages in the table
+                        // Update or insert custom pricing and max count for all packages in the table
                         if (!empty($custom_amounts)) {
                             foreach ($custom_amounts as $pkg_id => $amount) {
                                 if ($amount !== '') {
                                     $pkg_id = intval($pkg_id);
                                     $amt = floatval($amount);
+                                    $max = isset($custom_max_counts[$pkg_id]) && $custom_max_counts[$pkg_id] !== '' ? intval($custom_max_counts[$pkg_id]) : null;
                                     
                                     $cp_check = $conn->prepare("SELECT id FROM customer_packages WHERE customer_id = ? AND package_id = ?");
                                     $cp_check->bind_param("ii", $customer_id, $pkg_id);
@@ -446,13 +450,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     
                                     if ($cp_check_res->num_rows > 0) {
                                         $cp_id = $cp_check_res->fetch_assoc()['id'];
-                                        $cp_up_stmt = $conn->prepare("UPDATE customer_packages SET amount = ? WHERE id = ?");
-                                        $cp_up_stmt->bind_param("di", $amt, $cp_id);
+                                        $cp_up_stmt = $conn->prepare("UPDATE customer_packages SET amount = ?, max_count = ? WHERE id = ?");
+                                        $cp_up_stmt->bind_param("dii", $amt, $max, $cp_id);
                                         $cp_up_stmt->execute();
                                         $cp_up_stmt->close();
                                     } else {
-                                        $cp_in_stmt = $conn->prepare("INSERT INTO customer_packages (customer_id, package_id, amount) VALUES (?, ?, ?)");
-                                        $cp_in_stmt->bind_param("iid", $customer_id, $pkg_id, $amt);
+                                        $cp_in_stmt = $conn->prepare("INSERT INTO customer_packages (customer_id, package_id, amount, max_count) VALUES (?, ?, ?, ?)");
+                                        $cp_in_stmt->bind_param("iidi", $customer_id, $pkg_id, $amt, $max);
                                         $cp_in_stmt->execute();
                                         $cp_in_stmt->close();
                                     }
@@ -544,6 +548,7 @@ $billing_date = isset($_POST['billing_date']) ? intval($_POST['billing_date']) :
 $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : $customer['product_id'];
 $package_id = isset($_POST['package_id']) ? intval($_POST['package_id']) : $customer['package_id'];
 $custom_amounts = isset($_POST['custom_amounts']) ? $_POST['custom_amounts'] : $custom_prices;
+$custom_max_counts = isset($_POST['custom_max_counts']) ? $_POST['custom_max_counts'] : $custom_max_counts_db;
 
 // Fetch active products for the dropdown
 $productQuery = "SELECT id, name FROM products WHERE status = 'active' OR id = ? ORDER BY name ASC";
@@ -1439,6 +1444,7 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
                                 <th style="width: 50px;">Select</th>
                                 <th>Package Description</th>
                                 <th style="width: 150px;">Amount (Rs.)</th>
+                                <th style="width: 150px;">Max Count</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1447,6 +1453,8 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
                 data.forEach(pkg => {
                     const isChecked = (selectedPackageId && pkg.id == selectedPackageId) ? 'checked' : '';
                     const amount = pkg.custom_amount !== null ? pkg.custom_amount : pkg.default_amount;
+                    const max_count = pkg.custom_max_count !== null ? pkg.custom_max_count : (pkg.default_max_count !== null ? pkg.default_max_count : '');
+                    const default_max = pkg.default_max_count !== null ? pkg.default_max_count : '';
                     html += `
                         <tr>
                             <td class="text-center">
@@ -1455,11 +1463,14 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
                             <td>
                                 <label class="form-check-label d-block" for="pkg_${pkg.id}">
                                     ${pkg.description} <br>
-                                    <small class="text-muted">Default: Rs. ${pkg.default_amount}</small>
+                                    <small class="text-muted">Default: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
                                 </label>
                             </td>
                             <td>
                                 <input type="number" step="0.01" class="form-control form-control-sm" name="custom_amounts[${pkg.id}]" value="${amount}" placeholder="${pkg.default_amount}">
+                            </td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm" name="custom_max_counts[${pkg.id}]" value="${max_count}" placeholder="${default_max}">
                             </td>
                         </tr>
                     `;
