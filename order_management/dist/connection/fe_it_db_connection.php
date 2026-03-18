@@ -1,5 +1,4 @@
 <?php
-date_default_timezone_set("Asia/Colombo");
 // Database connection
 $fe_servername = getenv('DB_HOST');   // Database server
 $fe_username   = getenv('DB_USER');        // Database username (default for XAMPP is root)
