@@ -969,6 +969,20 @@ $productsResult = $conn->query($productQuery);
             allowClear: true,
             width: '100%'
         });
+        
+        $('#billing_date').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- No specific billing date --',
+            width: '100%',
+            dropdownCssClass: 'billing-dropdown',
+            minimumResultsForSearch: Infinity
+        });
+
+        $('#status').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            minimumResultsForSearch: Infinity
+        });
 
         // Re-trigger package loading when Select2 changes
         $('#product_id').on('select2:select', function (e) {
