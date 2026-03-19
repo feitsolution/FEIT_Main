@@ -15,6 +15,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit(); // Stop execution immediately
 }
 
+// Only Admin and Moderator can add products
+if (!isset($_SESSION['role_id']) || !in_array($_SESSION['role_id'], [1, 3])) {
+    header("Location: product_list.php");
+    exit();
+}
+
 // Include the database connection file
 include 'db_connection.php';
 include 'functions.php'; // Include helper functions

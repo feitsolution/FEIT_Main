@@ -22,6 +22,13 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+// Admin-only access
+if (!isset($_SESSION['role_id']) || $_SESSION['role_id'] != 1) {
+    ob_end_clean();
+    header("Location: index.php");
+    exit();
+}
+
 // Function to handle errors and redirect
 function handleError($errors, $user_id = 0) {
     $_SESSION['error_message'] = is_array($errors) ? implode("<br>", $errors) : $errors;

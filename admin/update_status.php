@@ -8,10 +8,20 @@ try {
     
     // Start session to get current user info
     session_start();
-    
+
     // Ensure we have a valid connection using the same variable as in the main file
     if (!isset($conn) || $conn->connect_error) {
         throw new Exception("Connection failed: " . ($conn->connect_error ?? "Database connection not established"));
+    }
+
+    // Check if user is logged in
+    if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+        throw new Exception("Please log in to continue.");
+    }
+
+    // Only Admin and Moderator can approve/reject inquiries
+    if (!isset($_SESSION['role_id']) || !in_array($_SESSION['role_id'], [1, 3])) {
+        throw new Exception("Access denied. Admin or Moderator privileges required.");
     }
 
     // Validate inputs

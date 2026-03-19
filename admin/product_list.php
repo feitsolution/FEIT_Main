@@ -20,8 +20,19 @@ include 'db_connection.php';
 
 include 'functions.php'; // Include helper functions
 
+// Get current user's role_id from session
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+$canEditRecords = ($current_user_role === 1 || $current_user_role === 3);
+
 // Process status toggle if submitted
 if(isset($_POST['toggle_status'])) {
+    // Only Admin and Moderator can toggle product status
+    if (!in_array($current_user_role, [1, 3])) {
+        $_SESSION['error_message'] = "Access denied. Admin or Moderator privileges required.";
+        header("Location: product_list.php");
+        exit();
+    }
+    
     $product_id = $_POST['product_id'];
     $new_status = $_POST['new_status'];
     $user_id = $_SESSION['user_id']; // Get the current user's ID from session
@@ -211,6 +222,7 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                                         <i class="fas fa-eye"></i> View
                                                     </button>
                                                     
+                                                    <?php if ($canEditRecords): ?>
                                                     <?php
                                                     // Status toggle button
                                                     $status = isset($row['status']) ? $row['status'] : 'active';
@@ -231,6 +243,7 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                                         <input type="hidden" name="new_status" value="<?= $newStatus ?>">
                                                         <input type="hidden" name="toggle_status" value="1">
                                                     </form>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
 
@@ -273,9 +286,11 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                            <?php if ($canEditRecords): ?>
                                                             <a href="edit_product.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn btn-primary">
                                                                 <i class="fas fa-edit"></i> Edit
                                                             </a>
+                                                            <?php endif; ?>
                                                         </div>
                                                     </div>
                                                 </div>

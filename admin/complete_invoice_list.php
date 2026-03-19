@@ -17,6 +17,13 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 include 'db_connection.php';
 include 'functions.php'; // Include helper functions
 
+// Only Admin and Moderator can access complete invoices
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+if ($current_user_role !== 1 && $current_user_role !== 3) {
+    header("Location: invoice_list.php");
+    exit();
+}
+
 // Initialize search parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;

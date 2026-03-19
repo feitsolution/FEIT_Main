@@ -17,8 +17,19 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 include 'db_connection.php';
 include 'functions.php'; // Include helper functions
 
+// Get current user's role_id from session
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+$canEditRecords = ($current_user_role === 1 || $current_user_role === 3);
+
 // Process invoice cancellation
 if (isset($_POST['cancel_invoice']) && isset($_POST['invoice_id'])) {
+    // Only Admin and Moderator can cancel invoices
+    if (!$canEditRecords) {
+        $_SESSION['error_message'] = "Access denied. Admin or Moderator privileges required.";
+        header("Location: invoice_list.php");
+        exit();
+    }
+    
     $invoice_id = $_POST['invoice_id'];
     $user_id = $_SESSION['user_id']; // Current logged-in user ID
     
@@ -355,8 +366,8 @@ $result = $conn->query($sql);
                                                             </a>
                                                             
                                                             <?php 
-                                                            // Only show cancel button for pending invoices that are not paid
-                                                            if ($status != 'cancel' && $status != 'done' && $payStatus != 'paid'): 
+                                                            // Only show cancel button for pending invoices that are not paid, and only for Admin/Moderator
+                                                            if ($canEditRecords && $status != 'cancel' && $status != 'done' && $payStatus != 'paid'): 
                                                             ?>
                                                                 <button type="button" class="btn btn-sm btn-danger cancel-invoice" title="Cancel Invoice"
                                                                     data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"

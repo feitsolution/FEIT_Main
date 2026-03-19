@@ -119,6 +119,15 @@
     <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
         <div class="sb-sidenav-menu">
             <div class="nav">
+                <?php
+                $userRoleId = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+                $isAdmin = ($userRoleId === 1);
+                $isModerator = ($userRoleId === 3);
+                $isUser = ($userRoleId === 2);
+                $canApproveReject = $isAdmin || $isModerator;
+                $canManageUsers = $isAdmin;
+                $canEditRecords = $isAdmin || $isModerator;
+                ?>
                 <div class="sb-sidenav-menu-heading">Navigation</div>
                 <a class="nav-link" href="index.php" id="dashboard-link">
                     <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
@@ -140,12 +149,7 @@
                         <a class="nav-link" href="invoice_list.php" id="all-invoices-link">
                             All Invoices 
                         </a>
-                        <!-- <a class="nav-link" href="paid_invoice.php" id="paid-invoices-link">
-                            Paid Invoices 
-                        </a>
-                        <a class="nav-link" href="unpaid_invoice.php" id="unpaid-invoices-link">
-                            Unpaid Invoices 
-                        </a> -->
+                        <?php if ($canEditRecords): ?>
                         <a class="nav-link" href="pending_invoice_list.php" id="pending-invoices-link">
                             Pending Invoices 
                         </a>
@@ -155,6 +159,7 @@
                         <a class="nav-link" href="cancel_invoice_list.php" id="cancel-invoices-link">
                             Cancel Invoices 
                         </a>
+                        <?php endif; ?>
                     </nav>
                 </div>
                 
@@ -170,7 +175,9 @@
                         <a class="nav-link" href="customer_list.php" id="all-customers-link">
                             All Customers 
                         </a>
+                        <?php if ($canEditRecords): ?>
                         <a class="nav-link" href="add_customer.php" id="add-customer-link">Add New Customer</a>
+                        <?php endif; ?>
                     </nav>
                 </div>
 
@@ -186,6 +193,7 @@
                         <a class="nav-link" href="display_inquries.php" id="all-inquiries-link">
                             All Inquiries 
                         </a>
+                        <?php if ($canApproveReject): ?>
                         <a class="nav-link" href="display_pending_inquiries.php" id="pending-inquiries-link">
                             Pending Inquiries 
                         </a>
@@ -194,12 +202,13 @@
                         </a>
                         <a class="nav-link" href="display_rejected_inquiries.php" id="rejected-inquiries-link">
                             Rejected Inquiries
-                             <!-- <span class="badge bg-danger"><?php echo $rejected_inquiries; ?></span> -->
                         </a>
+                        <?php endif; ?>
                     </nav>
                 </div>
                 
                   <!-- Users Section -->
+                <?php if ($canManageUsers): ?>
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers"
                     aria-expanded="false" aria-controls="collapseUsers" id="users-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
@@ -216,6 +225,7 @@
                         <a class="nav-link" href="add_user.php" id="add-user-link">Add New User</a>
                     </nav> 
                 </div>
+                <?php endif; ?>
                 
                 <!-- Products Section -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseProducts"
@@ -232,7 +242,9 @@
                         <a class="nav-link" href="package_list.php" id="all-packages-link">
                             Package List
                         </a>
+                        <?php if ($canEditRecords): ?>
                         <a class="nav-link" href="add_product.php" id="add-product-link">Add New Product</a>
+                        <?php endif; ?>
                     </nav>
                 </div>
             </div>

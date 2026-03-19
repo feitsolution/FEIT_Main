@@ -11,6 +11,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+// Only Admin and Moderator can edit packages
+if (!isset($_SESSION['role_id']) || !in_array($_SESSION['role_id'], [1, 3])) {
+    header("Location: package_list.php");
+    exit();
+}
+
 // Include database connection
 include 'db_connection.php';
 include 'functions.php';

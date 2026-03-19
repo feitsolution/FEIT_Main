@@ -15,8 +15,19 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 include 'db_connection.php';
 include 'functions.php';
 
+// Get current user's role_id from session
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+$canEditRecords = ($current_user_role === 1 || $current_user_role === 3);
+
 // Process status toggle if submitted
 if(isset($_POST['toggle_status'])) {
+    // Only Admin and Moderator can toggle package status
+    if (!in_array($current_user_role, [1, 3])) {
+        $_SESSION['error_message'] = "Access denied. Admin or Moderator privileges required.";
+        header("Location: package_list.php");
+        exit();
+    }
+    
     $package_id = $_POST['package_id'];
     $new_status = $_POST['new_status'];
     $user_id = $_SESSION['user_id'];
@@ -151,6 +162,7 @@ $totalPackages = $countResult->fetch_assoc()['total'];
                                                     <span class="<?= $statusClass ?>"><?= ucfirst($status) ?></span>
                                                 </td>
                                                 <td>
+                                                    <?php if ($canEditRecords): ?>
                                                     <a href="edit_package.php?id=<?= $row['id'] ?>" class="btn btn-primary btn-sm mb-1">
                                                         <i class="fas fa-edit"></i> Edit
                                                     </a>
@@ -171,6 +183,7 @@ $totalPackages = $countResult->fetch_assoc()['total'];
                                                         <input type="hidden" name="new_status" value="<?= $newStatus ?>">
                                                         <input type="hidden" name="toggle_status" value="1">
                                                     </form>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endwhile; ?>

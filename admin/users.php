@@ -11,6 +11,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+// Admin-only access
+if (!isset($_SESSION['role_id']) || $_SESSION['role_id'] != 1) {
+    header("Location: index.php");
+    exit();
+}
+
 // Include the database connection file
 include 'db_connection.php';
 include 'functions.php';
@@ -18,6 +24,14 @@ include 'functions.php';
 // Handle user status update via AJAX if it's a POST request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     $response = ['success' => false, 'message' => 'Unknown error'];
+
+    // Only admin can update user status
+    if (!isset($_SESSION['role_id']) || $_SESSION['role_id'] != 1) {
+        $response = ['success' => false, 'message' => 'Access denied. Admin privileges required.'];
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit();
+    }
 
     if (isset($_POST['user_id']) && isset($_POST['new_status'])) {
         $user_id = $conn->real_escape_string($_POST['user_id']);

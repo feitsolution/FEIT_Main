@@ -19,6 +19,16 @@ include 'db_connection.php';
 
 include 'functions.php'; // Include helper functions
 
+// Get current user's role_id from session
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+$canApproveReject = ($current_user_role === 1 || $current_user_role === 3);
+
+// Only Admin and Moderator can access rejected inquiries page
+if (!$canApproveReject) {
+    header("Location: display_inquries.php");
+    exit();
+}
+
 
 // Fetch rejected inquiries
 $sql = "SELECT * FROM user_form_data WHERE status = 'rejected' ORDER BY created_at DESC";

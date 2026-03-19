@@ -6,6 +6,10 @@ session_start();
 include 'db_connection.php';
 include 'functions.php';
 
+// Get current user's role_id from session
+$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
+$canEditRecords = ($current_user_role === 1 || $current_user_role === 3);
+
 // Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     if (ob_get_level()) {
@@ -218,27 +222,31 @@ $result = $conn->query($sql);
                                                  </span>
                                              </td>
                                              <td>
-                                                 <div class="btn-group-compact">
-                                                     <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>" class="btn btn-info btn-sm">Edit</a>
-                                                     <button class="btn btn-primary btn-sm view-customer-btn" 
-                                                             data-customer-id="<?= $row['customer_id'] ?>" 
-                                                             data-customer-name="<?= htmlspecialchars($row['name']) ?>"
-                                                             data-customer-email="<?= htmlspecialchars($row['email']) ?>"
-                                                             data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
-                                                             data-customer-address="<?= htmlspecialchars($row['address']) ?>"
-                                                             data-customer-status="<?= htmlspecialchars($row['status']) ?>"
-                                                             data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
-                                                             data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
-                                                         View
-                                                     </button>
-                                                     <button class="btn btn-<?= $row['status'] == 'Active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
-                                                             data-customer-id="<?= $row['customer_id'] ?>"
-                                                             data-current-status="<?= $row['status'] ?>"
-                                                             data-customer-name="<?= htmlspecialchars($row['name']) ?>">
-                                                         <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
-                                                     </button>
-                                                 </div>
-                                             </td>
+                                                  <div class="btn-group-compact">
+                                                      <?php if ($canEditRecords): ?>
+                                                      <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>" class="btn btn-info btn-sm">Edit</a>
+                                                      <?php endif; ?>
+                                                      <button class="btn btn-primary btn-sm view-customer-btn" 
+                                                              data-customer-id="<?= $row['customer_id'] ?>" 
+                                                              data-customer-name="<?= htmlspecialchars($row['name']) ?>"
+                                                              data-customer-email="<?= htmlspecialchars($row['email']) ?>"
+                                                              data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
+                                                              data-customer-address="<?= htmlspecialchars($row['address']) ?>"
+                                                              data-customer-status="<?= htmlspecialchars($row['status']) ?>"
+                                                              data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
+                                                              data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
+                                                          View
+                                                      </button>
+                                                      <?php if ($canEditRecords): ?>
+                                                      <button class="btn btn-<?= $row['status'] == 'Active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
+                                                              data-customer-id="<?= $row['customer_id'] ?>"
+                                                              data-current-status="<?= $row['status'] ?>"
+                                                              data-customer-name="<?= htmlspecialchars($row['name']) ?>">
+                                                          <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
+                                                      </button>
+                                                      <?php endif; ?>
+                                                  </div>
+                                              </td>
                                          </tr>
                                      <?php endwhile; ?>
                                  </tbody>
