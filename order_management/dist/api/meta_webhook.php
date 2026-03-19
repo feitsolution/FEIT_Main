@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // Handle Real-time Lead Notifications (POST request)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = file_get_contents('php://output');
+    $input = file_get_contents('php://input');
     $data = json_decode($input, true);
 
     if (isset($data['object']) && $data['object'] === 'page') {
