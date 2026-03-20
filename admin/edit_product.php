@@ -228,17 +228,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                              </div>';
                     }
                     ?>
-
-                     <!-- Breadcrumb Navigation -->
-                     <nav aria-label="breadcrumb" >
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="product_list.php">Product List</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Edit Product</li>
-                        </ol>
-                    </nav>
-
-                   
                         <div class="col-12">
                             <div class="form-container shadow">
                                 <form method="POST" action="edit_product.php?id=<?= $product_id ?>" id="editProductForm">

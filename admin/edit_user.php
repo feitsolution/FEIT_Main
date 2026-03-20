@@ -213,15 +213,6 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                         </div>
                     <?php endif; ?>
 
-                    <!-- Breadcrumb Navigation -->
-                    <nav aria-label="breadcrumb" class="mb-4">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.php" class="text-decoration-none"><i class="fas fa-home me-1"></i>Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="users.php" class="text-decoration-none"><i class="fas fa-users me-1"></i>Users</a></li>
-                            <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-user-edit me-1"></i>Edit User</li>
-                        </ol>
-                    </nav>
-
                     <div class="form-container">
                         <form method="POST" action="update_edit_user.php" id="editUserForm" novalidate>
                             <!-- CSRF Token and User ID -->

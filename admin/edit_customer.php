@@ -771,15 +771,6 @@ $productsResult = $pStmt->get_result();
                         </div>
                     <?php endif; ?>
 
-                    <!-- Breadcrumb Navigation -->
-                    <nav aria-label="breadcrumb" class="mb-4">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.php" class="text-decoration-none"><i class="fas fa-home me-1"></i>Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="customer_list.php" class="text-decoration-none"><i class="fas fa-users me-1"></i>Customers</a></li>
-                            <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-user-edit me-1"></i>Edit Customer</li>
-                        </ol>
-                    </nav>
-
                     <div class="col-12">
                         <div class="form-container shadow">
                             <form method="POST" action="edit_customer.php?id=<?php echo $customer_id; ?>" id="editCustomerForm" novalidate>

@@ -137,6 +137,7 @@ $showButtons = ($format === 'view');
 $isModalView = ($format === 'html');
 ?>
 
+<?php if (!$isModalView): ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -146,8 +147,10 @@ $isModalView = ($format === 'html');
     <title>Invoice #<?php echo $invoice_id; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet" />
+<?php endif; ?>
 
     <style>
+        <?php if (!$isModalView): ?>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -156,6 +159,7 @@ $isModalView = ($format === 'html');
             font-size: 14px;
             color: #333;
         }
+        <?php endif; ?>
 
         .invoice-container {
             max-width: 100%;
@@ -319,21 +323,21 @@ $isModalView = ($format === 'html');
             display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
-            color: white;
+            color: white !important;
             font-weight: bold;
             text-transform: uppercase;
             font-size: 12px;
         }
 
-        .bg-success {
+        .invoice-container .bg-success {
             background-color: #28a745;
         }
 
-        .bg-warning {
+        .invoice-container .bg-warning {
             background-color: #fd7e14;
         }
 
-        .bg-danger {
+        .invoice-container .bg-danger {
             background-color: #dc3545;
         }
 
@@ -369,9 +373,11 @@ $isModalView = ($format === 'html');
             }
         }
     </style>
+<?php if (!$isModalView): ?>
 </head>
 
 <body>
+<?php endif; ?>
     <div class="invoice-container">
         <?php if ($showButtons): ?>
             <div class="control-buttons">
@@ -604,9 +610,11 @@ $isModalView = ($format === 'html');
             }
         });
     </script>
+<?php if (!$isModalView): ?>
 </body>
 
 </html>
+<?php endif; ?>
 <?php
 $conn->close();
 ?>

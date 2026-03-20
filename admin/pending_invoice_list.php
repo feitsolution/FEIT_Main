@@ -533,7 +533,10 @@ $result = $conn->query($sql);
                 $.ajax({
                     url: 'download_invoice.php',
                     type: 'GET',
-                    data: { id: invoiceId },
+                    data: { 
+                        id: invoiceId,
+                        format: 'html'
+                    },
                     success: function (response) {
                         // Populate the modal with the fetched data
                         $('#invoiceDetails').html(response);

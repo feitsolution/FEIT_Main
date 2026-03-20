@@ -158,14 +158,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
                     <?php endif; ?>
 
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="package_list.php">Package List</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Edit Package</li>
-                        </ol>
-                    </nav>
-
                     <div class="col-12">
                         <div class="form-container shadow">
                             <form method="POST" action="edit_package.php?id=<?= $package_id ?>" id="editPackageForm">
