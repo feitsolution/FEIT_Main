@@ -10,7 +10,6 @@ require_once 'db_connection.php';
 
 // User data retrieval
 $user = null;
-$roles = [];
 
 if (isset($_SESSION['user_id'])) {
     // Get user with role in a single query
