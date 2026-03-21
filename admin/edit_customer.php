@@ -689,7 +689,8 @@ $productsResult = $pStmt->get_result();
 </head>
 
 <body class="sb-nav-fixed">
-    <?php include 'navbar.php'; ?>
+    <?php include('loader.php'); ?>
+<?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
 

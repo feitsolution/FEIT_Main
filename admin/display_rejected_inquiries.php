@@ -68,6 +68,7 @@ if ($count_result) {
 
 
 <body class="sb-nav-fixed">
+<?php include('loader.php'); ?>
 <?php include 'navbar.php'; ?>
 
 <div id="layoutSidenav">
