@@ -97,60 +97,76 @@ if ($tableExists && $tableExists->num_rows > 0) {
     <?php include('header.php'); ?>
     <title>Dashboard - FEIT Admin</title>
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
+    <link href="css/forms.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
         /* Greeting */
         .dash-greeting {
-            padding: 18px 0 6px;
+            padding: 24px 0 16px;
         }
         .dash-greeting h4 {
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 700;
             color: #1e293b;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            letter-spacing: -0.02em;
         }
         .dash-greeting p {
-            font-size: 14px;
+            font-size: 15px;
             color: #64748b;
             margin: 0;
         }
 
         /* Stat cards */
         .stat-card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            transition: box-shadow 0.2s, transform 0.2s;
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 16px;
+            box-shadow: var(--premium-card-shadow);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #ffffff;
             overflow: hidden;
+            height: 100%;
         }
         .stat-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+            border-color: var(--premium-primary-light);
         }
         .stat-card .card-body {
-            padding: 20px;
+            padding: 18px 20px;
         }
         .stat-card .icon-circle {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover .icon-circle {
+            transform: scale(1.05) rotate(-3deg);
         }
         .stat-card .stat-label {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.05em;
             color: #94a3b8;
             margin-bottom: 4px;
         }
         .stat-card .stat-number {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #0f172a;
-            line-height: 1.2;
+            line-height: 1.1;
+            letter-spacing: -0.01em;
         }
         .stat-card .stat-link {
             font-size: 12px;
@@ -158,56 +174,83 @@ if ($tableExists && $tableExists->num_rows > 0) {
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            margin-top: 10px;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            transition: all 0.2s;
+        }
+        .stat-card .stat-link:hover {
+            background: var(--premium-primary-light);
+            color: white !important;
         }
         .stat-card .stat-link i {
-            font-size: 10px;
-            transition: transform 0.15s;
+            font-size: 11px;
+            transition: transform 0.2s;
         }
         .stat-card .stat-link:hover i {
-            transform: translateX(3px);
+            transform: translateX(4px);
         }
 
         /* Section headings */
         .section-label {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
-            color: #334155;
-            margin: 24px 0 12px;
-            padding-left: 2px;
+            color: #475569;
+            margin: 32px 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-label::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background: #e2e8f0;
         }
 
         /* Quick actions */
         .quick-action {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
+            gap: 12px;
+            padding: 14px 20px;
             background: #fff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            border-radius: 12px;
             text-decoration: none;
             color: #334155;
             font-weight: 600;
-            font-size: 13px;
-            transition: all 0.15s;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .quick-action:hover {
-            border-color: #cbd5e1;
+            border-color: var(--premium-primary);
             background: #f8fafc;
-            color: #1e293b;
+            color: var(--premium-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-1px);
         }
         .quick-action .qa-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
             flex-shrink: 0;
+            transition: all 0.2s;
         }
+        .quick-action:hover .qa-icon {
+            transform: scale(1.1);
+        }
+
+        /* Custom colors for stats */
+        .bg-purple { background-color: rgba(124, 58, 237, 0.1) !important; color: #7c3aed !important; }
+        .text-purple { color: #7c3aed !important; }
     </style>
 </head>
 
@@ -247,72 +290,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
                             <span class="qa-icon bg-info bg-opacity-10 text-info"><i class="fas fa-box-open"></i></span>
                             Add Product
                         </a>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Inquiries -->
-                <div class="section-label">Inquiries</div>
-                <div class="row g-3">
-                    <div class="col-xl-3 col-md-6">
-                        <div class="card stat-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="stat-label">Total Inquiries</div>
-                                        <div class="stat-number"><?= number_format($stats['all_inquiries']) ?></div>
-                                    </div>
-                                    <div class="icon-circle bg-info bg-opacity-10 text-info"><i class="fas fa-inbox"></i></div>
-                                </div>
-                                <a href="display_inquries.php" class="stat-link text-info">View all <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <?php if ($isAdmin || $isModerator): ?>
-                    <div class="col-xl-3 col-md-6">
-                        <div class="card stat-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="stat-label">Pending</div>
-                                        <div class="stat-number"><?= number_format($stats['pending_inquiries']) ?></div>
-                                    </div>
-                                    <div class="icon-circle bg-warning bg-opacity-10 text-warning"><i class="fas fa-clock"></i></div>
-                                </div>
-                                <a href="display_pending_inquiries.php" class="stat-link text-warning">Review <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-md-6">
-                        <div class="card stat-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="stat-label">Approved</div>
-                                        <div class="stat-number"><?= number_format($stats['approved_inquiries']) ?></div>
-                                    </div>
-                                    <div class="icon-circle bg-success bg-opacity-10 text-success"><i class="fas fa-check-circle"></i></div>
-                                </div>
-                                <a href="display_approved_inquiries.php" class="stat-link text-success">View <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-md-6">
-                        <div class="card stat-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="stat-label">Rejected</div>
-                                        <div class="stat-number"><?= number_format($stats['rejected_inquiries']) ?></div>
-                                    </div>
-                                    <div class="icon-circle bg-danger bg-opacity-10 text-danger"><i class="fas fa-times-circle"></i></div>
-                                </div>
-                                <a href="display_rejected_inquiries.php" class="stat-link text-danger">View <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        </div>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -385,6 +362,72 @@ if ($tableExists && $tableExists->num_rows > 0) {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Inquiries -->
+                <div class="section-label">Inquiries</div>
+                <div class="row g-3">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="stat-label">Total Inquiries</div>
+                                        <div class="stat-number"><?= number_format($stats['all_inquiries']) ?></div>
+                                    </div>
+                                    <div class="icon-circle bg-info bg-opacity-10 text-info"><i class="fas fa-inbox"></i></div>
+                                </div>
+                                <a href="display_inquries.php" class="stat-link text-info">View all <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if ($isAdmin || $isModerator): ?>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="stat-label">Pending</div>
+                                        <div class="stat-number"><?= number_format($stats['pending_inquiries']) ?></div>
+                                    </div>
+                                    <div class="icon-circle bg-warning bg-opacity-10 text-warning"><i class="fas fa-clock"></i></div>
+                                </div>
+                                <a href="display_pending_inquiries.php" class="stat-link text-warning">Review <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="stat-label">Approved</div>
+                                        <div class="stat-number"><?= number_format($stats['approved_inquiries']) ?></div>
+                                    </div>
+                                    <div class="icon-circle bg-success bg-opacity-10 text-success"><i class="fas fa-check-circle"></i></div>
+                                </div>
+                                <a href="display_approved_inquiries.php" class="stat-link text-success">View <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="stat-label">Rejected</div>
+                                        <div class="stat-number"><?= number_format($stats['rejected_inquiries']) ?></div>
+                                    </div>
+                                    <div class="icon-circle bg-danger bg-opacity-10 text-danger"><i class="fas fa-times-circle"></i></div>
+                                </div>
+                                <a href="display_rejected_inquiries.php" class="stat-link text-danger">View <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Overview -->

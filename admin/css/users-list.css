@@ -1,0 +1,244 @@
+/* ============================================
+   Users List Premium Styles
+   ============================================ */
+
+/* Card Container */
+.users-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.users-card .card-body {
+    padding: 24px;
+}
+
+.users-card .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #edf2f7;
+}
+
+/* Enhanced Table */
+.table-users {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table-users thead th {
+    background: #f7f8fc;
+    color: #4a5568;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    border-bottom: 2px solid #e2e8f0;
+    border-top: none;
+    white-space: nowrap;
+}
+
+.table-users tbody td {
+    padding: 14px 16px;
+    font-size: 0.99rem;
+    color: #4a5568;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+}
+
+.table-users tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table-users tbody tr:hover {
+    background-color: #f7faff;
+}
+
+.table-users tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Soft Badges */
+.badge-soft {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.badge-soft:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.95);
+}
+
+.badge-soft-success {
+    background-color: #e6f9f0;
+    color: #1a7a4c;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-danger {
+    background-color: #fef0f0;
+    color: #c0392b;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-warning {
+    background-color: #fff8e6;
+    color: #b07d1a;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-info {
+    background-color: #e8f4fd;
+    color: #2471a3;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-secondary {
+    background-color: #f0f1f3;
+    color: #5a6268;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+/* Action Buttons */
+.user-action-btns .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.user-action-btns .btn-edit {
+    background: #e8f4fd;
+    color: #2471a3;
+}
+
+.user-action-btns .btn-edit:hover {
+    background: #d0e8f9;
+    color: #1a5276;
+}
+
+.user-action-btns .btn-view {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.user-action-btns .btn-view:hover {
+    background: #e2e8f0;
+    color: #2d3748;
+}
+
+.user-action-btns .btn-deactivate {
+    background: #fef0f0;
+    color: #c0392b;
+}
+
+.user-action-btns .btn-deactivate:hover {
+    background: #fdd;
+    color: #922b21;
+}
+
+.user-action-btns .btn-activate {
+    background: #e6f9f0;
+    color: #1a7a4c;
+}
+
+.user-action-btns .btn-activate:hover {
+    background: #c8f0dc;
+    color: #145a35;
+}
+
+/* Contact Info */
+.user-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.user-role {
+    color: #a0aec0;
+    font-size: 0.82rem;
+}
+
+.user-id-text {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.user-created {
+    color: #a0aec0;
+    font-size: 0.78rem;
+}
+
+/* Pagination Container */
+.pagination-container {
+    padding: 10px 0;
+}
+
+/* Pagination */
+.pagination {
+    gap: 4px;
+}
+
+.pagination .page-link {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin: 0;
+    color: #4a5568;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.25s;
+    background: transparent;
+}
+
+.pagination .page-link:hover {
+    background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+    color: #2d3748;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #4e73df 0%, #3b5ec9 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(78, 115, 223, 0.3);
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    color: #cbd5e0;
+}
+
+/* Entries Info */
+.entries-info {
+    font-size: 0.88rem;
+    color: #718096;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+/* SweetAlert customizations */
+.swal2-popup {
+    font-size: 0.9rem !important;
+}

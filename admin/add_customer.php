@@ -232,48 +232,18 @@ $productsResult = $conn->query($productQuery);
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/forms.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .form-container {
-            padding: 25px;
-            background-color: #fff;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-        
-        .section-header {
-            border-left: 4px solid #1565C0;
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 500;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
         
         .form-floating .form-control {
             height: calc(3.5rem + 2px);
-        }
-        
-        .save-btn {
-            background-color: #1565C0;
-            float: right;
-            padding: 8px 25px;
-        }
-        
-        .error-feedback {
-            color: #dc3545;
-            font-size: 0.875em;
-            margin-top: 0.25rem;
-            display: none;
-        }
-        
-        .is-invalid {
-            border-color: #dc3545;
-            padding-right: calc(1.5em + 0.75rem);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right calc(0.375em + 0.1875rem) center;
-            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
         }
         
         .is-valid {
@@ -283,6 +253,20 @@ $productsResult = $conn->query($productQuery);
             background-repeat: no-repeat;
             background-position: right calc(0.375em + 0.1875rem) center;
             background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        /* Select2 Theme Tweaks to match Premium UI */
+        .select2-container--bootstrap-5 .select2-selection {
+            border: 1.5px solid var(--premium-input-border);
+            border-radius: 8px;
+            min-height: 45px;
+            padding-top: 5px;
+            background-color: #fbfcfd;
+        }
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+            border-color: var(--premium-primary-light);
+            box-shadow: 0 0 0 4px var(--premium-input-focus);
+            background-color: #fff;
         }
         
         /* Email validation specific */
@@ -334,7 +318,7 @@ $productsResult = $conn->query($productQuery);
                     <?php endif; ?>
                     
                     <div class="col-12">
-                        <div class="form-container shadow">
+                        <div class="premium-form-container">
                             <form method="POST" action="add_customer.php" id="addCustomerForm" novalidate>
                                 <!-- CSRF Token -->
                                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
@@ -342,7 +326,9 @@ $productsResult = $conn->query($productQuery);
                                 <div class="row">
                                     <!-- Customer Details Section -->
                                     <div class="col-md-6">
-                                        <div class="section-header">Customer Details</div>
+                                        <div class="premium-section-header">
+                                            <i class="fas fa-id-card"></i> Customer Details
+                                        </div>
 
                                         <!-- Business Name Field -->
                                         <div class="mb-3">
@@ -388,7 +374,9 @@ $productsResult = $conn->query($productQuery);
                                     
                                     <!-- Configuration Details Section -->
                                     <div class="col-md-6">
-                                        <div class="section-header">Configuration Details</div>
+                                        <div class="premium-section-header">
+                                            <i class="fas fa-cog"></i> Configuration Details
+                                        </div>
                                         
                                         <!-- Status Field -->
                                         <div class="mb-3">
@@ -443,10 +431,12 @@ $productsResult = $conn->query($productQuery);
                                     </div>
                                 </div>
                                 
-                                <!-- Submit Button -->
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary save-btn" id="submitBtn">
+                                <div class="row mt-4 pt-3 border-top">
+                                    <div class="col-12 d-flex justify-content-end gap-3">
+                                        <a href="customer_list.php" class="premium-back-btn text-decoration-none d-flex align-items-center">
+                                            <i class="fas fa-arrow-left me-2"></i> Cancel
+                                        </a>
+                                        <button type="submit" class="premium-save-btn" id="submitBtn">
                                             <i class="fas fa-user-plus"></i> Add Customer
                                         </button>
                                     </div>

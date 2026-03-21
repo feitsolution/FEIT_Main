@@ -162,27 +162,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/forms.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .form-container {
-            padding: 25px;
-            background-color: #fff;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-
-        .section-header {
-            border-left: 4px solid #1565C0;
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 500;
-        }
-
-        .save-btn {
-            background-color: #1565C0;
-            float: right;
-            padding: 8px 25px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
 
         /* Popup modal styles */
@@ -227,14 +213,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                              '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                              </div>';
                     }
-                    ?>
+                    ?>  
                         <div class="col-12">
-                            <div class="form-container shadow">
+                            <div class="premium-form-container">
                                 <form method="POST" action="edit_product.php?id=<?= $product_id ?>" id="editProductForm">
                                     <div class="row">
                                         <!-- Product Details Section -->
                                         <div class="col-md-6">
-                                            <div class="section-header">Product Details</div>
+                                            <div class="premium-section-header">
+                                                <i class="fas fa-tag"></i> Product Details
+                                            </div>
 
                                             <!-- Name Field -->
                                             <div class="mb-3">
@@ -260,7 +248,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                         <!-- Pricing Details Section -->
                                         <div class="col-md-6">
-                                            <div class="section-header">Pricing Details</div>
+                                            <div class="premium-section-header">
+                                                <i class="fas fa-dollar-sign"></i> Pricing Details
+                                            </div>
                                             
                                             <!-- LKR Price Field -->
                                             <div class="mb-3">
@@ -285,9 +275,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     </div>
 
                                     <!-- Submit Button -->
-                                    <div class="row mt-3">
-                                        <div class="col-12">
-                                            <button type="submit" class="btn btn-primary save-btn">
+                                    <div class="row mt-4 pt-3 border-top">
+                                        <div class="col-12 d-flex justify-content-end gap-3">
+                                            <a href="product_list.php" class="premium-back-btn text-decoration-none d-flex align-items-center">
+                                                <i class="fas fa-arrow-left me-2"></i> Cancel
+                                            </a>
+                                            <button type="submit" class="premium-save-btn">
                                                 <i class="fas fa-save"></i> Update Product
                                             </button>
                                         </div>

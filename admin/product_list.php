@@ -78,14 +78,39 @@ if(isset($_POST['toggle_status'])) {
     $stmt->close();
 }
 
-// Fetch products
-$sql = "SELECT * FROM products ORDER BY id ASC";
-$result = $conn->query($sql);
+// Initialize search parameters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
 
-// Count total products
-$countQuery = "SELECT COUNT(*) as total FROM products";
-$countResult = $conn->query($countQuery);
-$totalproducts = $countResult->fetch_assoc()['total'];
+// Build basic SQL query
+$countSql = "SELECT COUNT(*) as total FROM products";
+$sql = "SELECT * FROM products";
+
+// Add search condition if search term is provided
+if (!empty($search)) {
+    $searchTerm = $conn->real_escape_string($search);
+    $searchCondition = " WHERE id LIKE '%$searchTerm%' OR 
+                        name LIKE '%$searchTerm%' OR 
+                        description LIKE '%$searchTerm%' OR
+                        status LIKE '%$searchTerm%'";
+    $countSql .= $searchCondition;
+    $sql .= $searchCondition;
+}
+
+// Add order by and pagination
+$sql .= " ORDER BY id ASC LIMIT $limit OFFSET $offset";
+
+// Execute the queries
+$countResult = $conn->query($countSql);
+$totalRows = 0;
+if ($countResult && $countResult->num_rows > 0) {
+    $totalRows = $countResult->fetch_assoc()['total'];
+}
+$totalPages = ceil($totalRows / $limit);
+
+$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -99,8 +124,9 @@ $totalproducts = $countResult->fetch_assoc()['total'];
     <title>All Products </title>
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/product-list.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     
     <!-- Add SweetAlert2 CSS and JS -->
@@ -153,18 +179,60 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                     }
                     ?>
 
-                    <h1 class="mt-3">Products</h1>
-                    <ol class="breadcrumb mb-4">
-                        <!-- Total Product Count -->
-                        <div class="alert alert-info">
-                            <strong>Total Products:</strong> <?= $totalproducts ?>
-                        </div>
-                    </ol>
-                    <div class="card mb-4">
+                    <br>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4>All Products</h4>
+                    </div>
+
+                    <div class="card product-card mb-4">
                         <div class="card-body">
+                            <!-- Premium Filter Bar -->
+                            <div class="invoice-filter-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                                        <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
+                                        <input type="text" name="search" class="form-control ps-4"
+                                            placeholder="Search products by name, ID, status..."
+                                            value="<?php echo htmlspecialchars($search); ?>">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-filter">
+                                        <i class="fas fa-search me-1"></i> Search
+                                    </button>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="product_list.php" class="btn btn-outline-secondary btn-clear">
+                                            <i class="fas fa-times me-1"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                    <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                                <form method="get" class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($search)): ?>
+                                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="page" value="1">
+                                    <span class="entries-label">Show</span>
+                                    <select name="limit" class="form-select" style="width: 80px;" onchange="this.form.submit()">
+                                        <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                        <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                        <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                        <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                    </select>
+                                    <span class="entries-label">entries</span>
+                                </form>
+                            </div>
+
+                            <?php if (!empty($search)): ?>
+                                <div class="search-results-alert mb-4">
+                                    <i class="fas fa-filter me-1"></i>
+                                    Showing results for: <strong><?php echo htmlspecialchars($search); ?></strong>
+                                    — <strong><?php echo $totalRows; ?></strong> found
+                                </div>
+                            <?php endif; ?>
+
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="productsTable">
-                                    <thead class="table-dark">
+                                <table class="table table-product" id="productsTable">
+                                    <thead>
                                         <tr>
                                             <th>ID</th>
                                             <th>Name</th>
@@ -179,71 +247,73 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                     <tbody>
                                         <?php while ($row = $result->fetch_assoc()): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($row['id']) ?></td>
-                                                <td><?= htmlspecialchars($row['name']) ?></td>
+                                                <td><span class="product-id"><?= htmlspecialchars($row['id']) ?></span></td>
+                                                <td><span class="product-name"><?= htmlspecialchars($row['name']) ?></span></td>
                                                 <td>
-                                                    <?php 
-                                                        $description = htmlspecialchars($row['description']);
-                                                        echo strlen($description) > 50 ? substr($description, 0, 50) . '...' : $description; 
-                                                    ?>
+                                                    <span class="product-desc" title="<?= htmlspecialchars($row['description']) ?>">
+                                                        <?= htmlspecialchars($row['description']) ?>
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <?php
                                                     if (isset($row['lkr_price'])) {
-                                                        echo number_format($row['lkr_price'], 2) . ' LKR';
+                                                        echo '<span class="product-price">' . number_format($row['lkr_price'], 2) . '</span><span class="product-currency">LKR</span>';
                                                     } elseif (isset($row['price']) && isset($row['currency']) && $row['currency'] == 'LKR') {
-                                                        echo number_format($row['price'], 2) . ' LKR';
+                                                        echo '<span class="product-price">' . number_format($row['price'], 2) . '</span><span class="product-currency">LKR</span>';
                                                     } else {
-                                                        echo 'N/A';
+                                                        echo '<span class="product-currency">N/A</span>';
                                                     }
                                                     ?>
                                                 </td>
                                                 <td>
                                                     <?php
                                                     if (isset($row['usd_price'])) {
-                                                        echo number_format($row['usd_price'], 2) . ' USD';
+                                                        echo '<span class="product-price">' . number_format($row['usd_price'], 2) . '</span><span class="product-currency">USD</span>';
                                                     } elseif (isset($row['price']) && isset($row['currency']) && $row['currency'] == 'USD') {
-                                                        echo number_format($row['price'], 2) . ' USD';
+                                                        echo '<span class="product-price">' . number_format($row['price'], 2) . '</span><span class="product-currency">USD</span>';
                                                     } else {
-                                                        echo 'N/A';
+                                                        echo '<span class="product-currency">N/A</span>';
                                                     }
                                                     ?>
                                                 </td>
-                                                <td><?= htmlspecialchars($row['created_at']) ?></td>
+                                                <td><span class="product-date"><?= htmlspecialchars($row['created_at']) ?></span></td>
                                                 <td>
                                                     <?php
                                                     $status = isset($row['status']) ? $row['status'] : 'active';
-                                                    $statusClass = $status == 'active' ? 'status-active' : 'status-inactive';
                                                     ?>
-                                                    <span class="<?= $statusClass ?>"><?= ucfirst($status) ?></span>
+                                                    <?php if ($status == 'active'): ?>
+                                                        <span class="badge-soft badge-soft-success">Active</span>
+                                                    <?php else: ?>
+                                                        <span class="badge-soft badge-soft-secondary">Inactive</span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <button class="btn btn-info btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
-                                                        <i class="fas fa-eye"></i> View
-                                                    </button>
-                                                    
-                                                    <?php if ($canEditRecords): ?>
-                                                    <?php
-                                                    // Status toggle button
-                                                    $status = isset($row['status']) ? $row['status'] : 'active';
-                                                    $newStatus = $status == 'active' ? 'inactive' : 'active';
-                                                    $btnClass = $status == 'active' ? 'btn-danger' : 'btn-success';
-                                                    $btnText = $status == 'active' ? 'Deactivate' : 'Activate';
-                                                    $btnIcon = $status == 'active' ? 'fa-ban' : 'fa-check';
-                                                    ?>
-                                                    <!-- SweetAlert Status Toggle Button -->
-                                                    <button type="button" class="btn <?= $btnClass ?> btn-sm mb-1" 
-                                                            onclick="confirmStatusChange(<?= $row['id'] ?>, '<?= $newStatus ?>', '<?= htmlspecialchars($row['name']) ?>')">
-                                                        <i class="fas <?= $btnIcon ?>"></i> <?= $btnText ?>
-                                                    </button>
-                                                    
-                                                    <!-- Hidden form for status toggle submission -->
-                                                    <form id="toggleForm<?= $row['id'] ?>" action="" method="POST" style="display:none;">
-                                                        <input type="hidden" name="product_id" value="<?= $row['id'] ?>">
-                                                        <input type="hidden" name="new_status" value="<?= $newStatus ?>">
-                                                        <input type="hidden" name="toggle_status" value="1">
-                                                    </form>
-                                                    <?php endif; ?>
+                                                    <div class="product-action-btns d-flex gap-1">
+                                                        <button class="btn btn-view" title="View Details" data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        
+                                                        <?php if ($canEditRecords): ?>
+                                                        <a href="edit_product.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn btn-edit" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Product">
+                                                            <i class="fas fa-pen"></i>
+                                                        </a>
+                                                        
+                                                        <?php
+                                                        $newStatus = $status == 'active' ? 'inactive' : 'active';
+                                                        ?>
+                                                        <button type="button" class="btn <?= $status == 'active' ? 'btn-deactivate' : 'btn-activate' ?>"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" title="<?= $status == 'active' ? 'Deactivate' : 'Activate' ?>"
+                                                                onclick="confirmStatusChange(<?= $row['id'] ?>, '<?= $newStatus ?>', '<?= htmlspecialchars($row['name']) ?>')">
+                                                            <i class="fas <?= $status == 'active' ? 'fa-ban' : 'fa-check' ?>"></i>
+                                                        </button>
+                                                        
+                                                        <form id="toggleForm<?= $row['id'] ?>" action="" method="POST" style="display:none;">
+                                                            <input type="hidden" name="product_id" value="<?= $row['id'] ?>">
+                                                            <input type="hidden" name="new_status" value="<?= $newStatus ?>">
+                                                            <input type="hidden" name="toggle_status" value="1">
+                                                        </form>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                             </tr>
 
@@ -282,7 +352,13 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                                                 ?>
                                                             </p>
                                                             <p><strong>Created At:</strong> <?= htmlspecialchars($row['created_at']) ?></p>
-                                                            <p><strong>Status:</strong> <span class="<?= $statusClass ?>"><?= ucfirst($status) ?></span></p>
+                                                            <p><strong>Status:</strong> 
+                                                                <?php if ($status == 'active'): ?>
+                                                                    <span class="badge-soft badge-soft-success">Active</span>
+                                                                <?php else: ?>
+                                                                    <span class="badge-soft badge-soft-secondary">Inactive</span>
+                                                                <?php endif; ?>
+                                                            </p>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -299,6 +375,74 @@ $totalproducts = $countResult->fetch_assoc()['total'];
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Premium Pagination -->
+                            <div class="pagination-container d-flex justify-content-between align-items-center mt-4">
+                                <div class="entries-info">
+                                    <?php if ($result && $result->num_rows > 0): ?>
+                                        Showing <strong><?php echo ($offset + 1); ?></strong> to
+                                        <strong><?php echo min($offset + $limit, $totalRows); ?></strong> of <strong><?php echo $totalRows; ?></strong>
+                                        entries
+                                    <?php else: ?>
+                                        Showing <strong>0</strong> to <strong>0</strong> of <strong>0</strong> entries
+                                    <?php endif; ?>
+                                </div>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination mb-0">
+                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+
+                                        <?php
+                                        // Display a limited number of page links
+                                        $maxPagesToShow = 5;
+                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                        // Show "..." before the first page link if needed
+                                        if ($startPage > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
+                                            </li>
+                                            <?php if ($startPage > 2): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+
+                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
+                                                <a class="page-link"
+                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                                            </li>
+                                        <?php endfor; ?>
+
+                                        <?php 
+                                        // Show "..." after the last page link if needed
+                                        if ($endPage < $totalPages): ?>
+                                            <?php if ($endPage < $totalPages - 1): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+
+                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -306,16 +450,25 @@ $totalproducts = $countResult->fetch_assoc()['total'];
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="js/scripts.js"></script>
     <script>
-        // Initialize the datatable
+        // Initialize Bootstrap tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+        // Remove Datatable initialization as we moved to server-side pagination
+        /*
         window.addEventListener('DOMContentLoaded', event => {
             const datatablesSimple = document.getElementById('productsTable');
             if (datatablesSimple) {
                 new simpleDatatables.DataTable(datatablesSimple);
             }
         });
+        */
         
         // SweetAlert confirmation function
         function confirmStatusChange(productId, newStatus, productName) {

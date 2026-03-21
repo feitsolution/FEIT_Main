@@ -173,6 +173,7 @@ $result = $conn->query($sql);
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/invoice-list.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
@@ -204,68 +205,62 @@ $result = $conn->query($sql);
                         </div>
                     <?php endif; ?>
                     
-                    <div class="card">
+                    <div class="card invoice-card">
                         <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <form method="get" class="d-flex">
-                                        <input type="text" name="search" class="form-control me-2"
-                                            placeholder="Search invoices..."
+                            <!-- Premium Filter Bar -->
+                            <div class="invoice-filter-bar d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                                        <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
+                                        <input type="text" name="search" class="form-control ps-4"
+                                            placeholder="Search by invoice ID, customer, date..."
                                             value="<?php echo htmlspecialchars($search); ?>">
-                                        <button type="submit" class="btn btn-outline-primary">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <?php if (!empty($search)): ?>
-                                            <a href="pending_invoice_list.php" class="btn btn-outline-secondary ms-2">
-                                                <i class="fas fa-times"></i> Clear
-                                            </a>
-                                        <?php endif; ?>
-                                        <!-- Preserve other GET parameters -->
-                                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
-                                        <input type="hidden" name="page" value="1"> <!-- Reset to page 1 when searching -->
-                                    </form>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <form method="get" class="d-inline">
-                                        <!-- Preserve search term when changing limit -->
-                                        <?php if (!empty($search)): ?>
-                                            <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
-                                        <?php endif; ?>
-                                        <div class="d-inline-block">
-                                            <label>Show</label>
-                                            <select name="limit" class="form-select d-inline-block w-auto ms-1"
-                                                onchange="this.form.submit()">
-                                                <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
-                                                <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
-                                                <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
-                                                <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
-                                            </select>
-                                            <label>entries</label>
-                                        </div>
-                                    </form>
-                                </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-filter">
+                                        <i class="fas fa-search me-1"></i> Search
+                                    </button>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="pending_invoice_list.php" class="btn btn-outline-secondary btn-clear">
+                                            <i class="fas fa-times me-1"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                    <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                                <form method="get" class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($search)): ?>
+                                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="page" value="1">
+                                    <span class="entries-label">Show</span>
+                                    <select name="limit" class="form-select" style="width: 80px;" onchange="this.form.submit()">
+                                        <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                        <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                        <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                        <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                    </select>
+                                    <span class="entries-label">entries</span>
+                                </form>
                             </div>
 
-                            <h5 class="mb-3">Manage Pending Invoices</h5>
                             <?php if (!empty($search)): ?>
-                                <div class="alert alert-info">
-                                    Showing search results for: <strong><?php echo htmlspecialchars($search); ?></strong>
-                                    (<?php echo $totalRows; ?> results found)
+                                <div class="search-results-alert">
+                                    <i class="fas fa-filter me-1"></i>
+                                    Showing results for: <strong><?php echo htmlspecialchars($search); ?></strong>
+                                    — <strong><?php echo $totalRows; ?></strong> found
                                 </div>
                             <?php endif; ?>
                             
                             <div class="table-responsive">
-                                <table class="table table-bordered table-hover" id="invoice_table">
+                                <table class="table table-invoice" id="invoice_table">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Invoice ID</th>
-                                            <th>Business Name</th>
-                                            <th>Customer Name</th>
+                                            <th>Customer</th>
                                             <th>Issue Date</th>
                                             <th>Due Date</th>
-                                            <th>Total Amount</th>
+                                            <th>Amount</th>
                                             <th>Status</th>
-                                            <th>Pay Status</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -275,12 +270,21 @@ $result = $conn->query($sql);
                                                 <tr>
                                                     <td><?php echo isset($row['invoice_id']) ? htmlspecialchars($row['invoice_id']) : ''; ?>
                                                     </td>
-                                                    <td><?php echo isset($row['customer_business_name']) ? htmlspecialchars($row['customer_business_name']) : ''; ?></td>
                                                     <td>
                                                         <?php
+                                                        $businessName = isset($row['customer_business_name']) ? htmlspecialchars($row['customer_business_name']) : '';
                                                         $customerName = isset($row['customer_name']) ? htmlspecialchars($row['customer_name']) : 'N/A';
                                                         $customerId = isset($row['customer_id']) ? htmlspecialchars($row['customer_id']) : '';
-                                                        echo $customerName . ($customerId ? " ($customerId)" : "");
+
+                                                        if ($businessName) {
+                                                            echo '<div class="fw-semibold">' . $businessName . '</div>';
+                                                            echo '<div class="text-muted" style="font-size: 0.82rem;">' . $customerName;
+                                                            if ($customerId) echo ' <span class="customer-id">(' . $customerId . ')</span>';
+                                                            echo '</div>';
+                                                        } else {
+                                                            echo '<div class="fw-semibold">' . $customerName . '</div>';
+                                                            if ($customerId) echo '<div class="customer-id">(' . $customerId . ')</div>';
+                                                        }
                                                         ?>
                                                     </td>
                                                     <td><?php echo isset($row['issue_date']) ? htmlspecialchars(date('d/m/Y', strtotime($row['issue_date']))) : ''; ?>
@@ -292,42 +296,43 @@ $result = $conn->query($sql);
                                                         $amount = isset($row['total_amount']) ? htmlspecialchars(number_format((float) $row['total_amount'], 2)) : '0.00';
                                                         $currency = isset($row['currency']) ? $row['currency'] : 'lkr';
                                                         $currencySymbol = ($currency == 'usd') ? '$' : 'Rs';
-                                                        echo $amount . ' (' . $currencySymbol . ')';
+                                                        $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
+
+                                                        echo '<div class="amount-text">' . $amount . ' <span class="currency-symbol">(' . $currencySymbol . ')</span></div>';
+
+                                                        if ($payStatus == 'paid'): ?>
+                                                            <span class="badge-soft badge-soft-success mt-1">Paid</span>
+                                                        <?php else: ?>
+                                                            <span class="badge-soft badge-soft-danger mt-1">Unpaid</span>
+                                                        <?php endif;
                                                         ?>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-warning">Pending</span>
+                                                        <span class="badge-soft badge-soft-warning">Pending</span>
                                                     </td>
                                                     <td>
-                                                        <?php
-                                                        $payStatus = isset($row['pay_status']) ? $row['pay_status'] : 'unpaid';
-                                                        if ($payStatus == 'paid'): ?>
-                                                            <span class="badge bg-success">Paid</span>
-                                                        <?php else: ?>
-                                                            <span class="badge bg-danger">Unpaid</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <a href="#" class="btn btn-sm btn-info text-white view-invoice"
-                                                                title="View"
+                                                        <div class="action-btn-group d-flex gap-1">
+                                                            <a href="#" class="btn btn-view view-invoice"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" title="View Invoice"
                                                                 data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>">
                                                                 <i class="fas fa-eye"></i>
                                                             </a>
                                                             <a href="download_invoice.php?id=<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"
-                                                                class="btn btn-sm btn-secondary" title="Download"
+                                                                class="btn btn-download"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" title="Download Invoice"
                                                                 target="_blank">
                                                                 <i class="fas fa-download"></i>
                                                             </a>
                                                             <?php if ($payStatus == 'paid'): ?>
 
                                                             <?php else: ?>
-                                                                <a href="#" class="btn btn-sm btn-primary text-white mark-paid"
-                                                                    title="Mark as Paid"
+                                                                <a href="#" class="btn btn-view mark-paid"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Mark as Paid"
                                                                     data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>">
-                                                                    <i class=""></i> Paid
+                                                                    <i class="fas fa-check"></i>
                                                                 </a>
-                                                                <button type="button" class="btn btn-sm btn-danger cancel-invoice" title="Cancel Invoice"
+                                                                <button type="button" class="btn btn-cancel cancel-invoice"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Cancel Invoice"
                                                                     data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"
                                                                     data-customer="<?php echo htmlspecialchars($customerName); ?>"
                                                                     data-bs-toggle="modal" data-bs-target="#cancelInvoiceModal">
@@ -340,76 +345,79 @@ $result = $conn->query($sql);
                                             <?php endwhile; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="8" class="text-center">No pending invoices found</td>
+                                                <td colspan="7" class="text-center">No pending invoices found</td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
+                            <!-- Premium Pagination -->
+                            <div class="pagination-container d-flex justify-content-between align-items-center mt-4">
+                                <div class="entries-info">
                                     <?php if ($result && $result->num_rows > 0): ?>
-                                        Showing <?php echo ($offset + 1); ?> to
-                                        <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?>
+                                        Showing <strong><?php echo ($offset + 1); ?></strong> to
+                                        <strong><?php echo min($offset + $limit, $totalRows); ?></strong> of <strong><?php echo $totalRows; ?></strong>
                                         entries
                                     <?php else: ?>
-                                        Showing 0 to 0 of 0 entries
+                                        Showing <strong>0</strong> to <strong>0</strong> of <strong>0</strong> entries
                                     <?php endif; ?>
                                 </div>
-                                <div class="col-md-6">
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination justify-content-end">
-                                            <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                                                <a class="page-link"
-                                                    href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination mb-0">
+                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+
+                                        <?php
+                                        // Display a limited number of page links
+                                        $maxPagesToShow = 5;
+                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                        // Show "..." before the first page link if needed
+                                        if ($startPage > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
                                             </li>
-
-                                            <?php
-                                            // Display a limited number of page links
-                                            $maxPagesToShow = 5;
-                                            $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
-                                            $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
-
-                                            // Show "..." before the first page link if needed
-                                            if ($startPage > 1): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
-                                                </li>
-                                                <?php if ($startPage > 2): ?>
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-
-                                            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                                <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
-                                                    <a class="page-link"
-                                                        href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
-                                                </li>
-                                            <?php endfor; ?>
-
-                                            <?php 
-                                            // Show "..." after the last page link if needed
-                                            if ($endPage < $totalPages): ?>
-                                                <?php if ($endPage < $totalPages - 1): ?>
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                <?php endif; ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            <?php if ($startPage > 2): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
                                                 </li>
                                             <?php endif; ?>
+                                        <?php endif; ?>
 
-                                            <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
                                                 <a class="page-link"
-                                                    href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
                                             </li>
-                                        </ul>
-                                    </nav>
-                                </div>
+                                        <?php endfor; ?>
+
+                                        <?php 
+                                        // Show "..." after the last page link if needed
+                                        if ($endPage < $totalPages): ?>
+                                            <?php if ($endPage < $totalPages - 1): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+
+                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -520,6 +528,12 @@ $result = $conn->query($sql);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
             // Handle "View" button click
             $('.view-invoice').click(function (e) {
                 e.preventDefault(); // Prevent default link behavior

@@ -100,25 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/forms.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .form-container {
-            padding: 25px;
-            background-color: #fff;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-        .section-header {
-            border-left: 4px solid #1565C0;
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 500;
-        }
-        .save-btn {
-            background-color: #1565C0;
-            float: right;
-            padding: 8px 25px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
         .popup-overlay {
             position: fixed;
@@ -159,11 +147,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <?php endif; ?>
 
                     <div class="col-12">
-                        <div class="form-container shadow">
+                        <div class="premium-form-container">
                             <form method="POST" action="edit_package.php?id=<?= $package_id ?>" id="editPackageForm">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <div class="section-header">Package Details</div>
+                                        <div class="premium-section-header">
+                                            <i class="fas fa-box-open"></i> Package Details
+                                        </div>
                                         
                                         <div class="mb-3">
                                             <label class="form-label">Product (Read-only)</label>
@@ -184,7 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     </div>
                                     
                                     <div class="col-md-6">
-                                        <div class="section-header">Configuration</div>
+                                        <div class="premium-section-header">
+                                            <i class="fas fa-cog"></i> Configuration
+                                        </div>
                                         
                                         <div class="mb-3">
                                             <label for="amount" class="form-label">Amount (LKR)</label>
@@ -202,12 +194,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     </div>
                                 </div>
 
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary save-btn">
-                                            <i class="fas fa-save"></i> Save Changes
+                                <div class="row mt-4 pt-3 border-top">
+                                    <div class="col-12 d-flex justify-content-end gap-3">
+                                        <a href="package_list.php" class="premium-back-btn text-decoration-none d-flex align-items-center">
+                                            <i class="fas fa-arrow-left me-2"></i> Cancel
+                                        </a>
+                                        <button type="submit" class="premium-save-btn">
+                                            <i class="fas fa-save me-2"></i> Save Changes
                                         </button>
-                                        <a href="package_list.php" class="btn btn-secondary" style="float: right; margin-right: 10px; padding: 8px 25px;">Cancel</a>
                                     </div>
                                 </div>
                             </form>

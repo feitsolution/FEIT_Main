@@ -41,6 +41,8 @@ $totalInquiries = $countResult->fetch_assoc()['total'];
     <title> All Inquiry</title>
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
+    <link href="css/inquiry-list.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
@@ -60,42 +62,41 @@ $totalInquiries = $countResult->fetch_assoc()['total'];
 
         <div id="layoutSidenav_content">
             <main>
-                <div class="alert-container"></div>
                 <div class="container-fluid px-4">
-                    
-                    <h1 class="mt-3">All Inquiries</h1>
-                    <ol class="breadcrumb mb-4">
-                        <!-- Total Inquiry Count -->
-                        <div class="alert alert-info">
-                            <strong>Total Inquiries:</strong> <?= $totalInquiries ?>
-                        </div>
-                    </ol>
-                    <div class="table-container">
-                        <div class="spinner-overlay">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                    <br>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4>All Inquiries</h4>
+                    </div>
+
+                    <div class="card inquiry-card">
+                        <div class="card-body">
+                            <div class="table-responsive" style="position: relative;">
+                                <div class="spinner-overlay">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <table class="table table-inquiry">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Message</th>
+                                            <th>Company</th>
+                                            <th>Created At</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php while ($row = $result->fetch_assoc()): ?>
+                                            <?php include 'inquiry_rows.php'; ?>
+                                            <!-- View Modal -->
+                                            <?php include 'modal.php'; ?>
+                                        <?php endwhile; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Message</th>
-                                        <th>Company</th>
-                                        <th>Created At</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-                                        <?php include 'inquiry_rows.php'; ?>
-                                        <!-- View Modal -->
-                                        <?php include 'modal.php'; ?>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -104,7 +105,15 @@ $totalInquiries = $countResult->fetch_assoc()['total'];
             <!-- Required scripts -->
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Initialize Bootstrap tooltips
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+                });
+            </script>
         </div>
         <script src="js/scripts.js"></script>
     </div>

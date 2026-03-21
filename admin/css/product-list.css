@@ -1,0 +1,308 @@
+/* ============================================
+   Product & Package List Premium Styles
+   ============================================ */
+
+/* Card Container */
+.product-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.product-card .card-body {
+    padding: 24px;
+}
+
+.product-card .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #edf2f7;
+}
+
+/* Enhanced Table */
+.table-product {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table-product thead th {
+    background: #f7f8fc;
+    color: #4a5568;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    border-bottom: 2px solid #e2e8f0;
+    border-top: none;
+    white-space: nowrap;
+}
+
+.table-product tbody td {
+    padding: 14px 16px;
+    font-size: 0.99rem;
+    color: #4a5568;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+}
+
+.table-product tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table-product tbody tr:hover {
+    background-color: #f7faff;
+}
+
+.table-product tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Soft Badges */
+.badge-soft {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.badge-soft:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.95);
+}
+
+.badge-soft-success {
+    background-color: #e6f9f0;
+    color: #1a7a4c;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-danger {
+    background-color: #fef0f0;
+    color: #c0392b;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-warning {
+    background-color: #fff8e6;
+    color: #b07d1a;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-info {
+    background-color: #e8f4fd;
+    color: #2471a3;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-secondary {
+    background-color: #f0f1f3;
+    color: #5a6268;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+/* Action Buttons */
+.product-action-btns .btn {
+    height: 32px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.product-action-btns .btn-view {
+    background: #e8f4fd;
+    color: #2471a3;
+}
+
+.product-action-btns .btn-view:hover {
+    background: #d0e8f9;
+    color: #1a5276;
+}
+
+.product-action-btns .btn-edit {
+    background: #e8f4fd;
+    color: #2471a3;
+}
+
+.product-action-btns .btn-edit:hover {
+    background: #d0e8f9;
+    color: #1a5276;
+}
+
+.product-action-btns .btn-deactivate {
+    background: #fef0f0;
+    color: #c0392b;
+}
+
+.product-action-btns .btn-deactivate:hover {
+    background: #fdd;
+    color: #922b21;
+}
+
+.product-action-btns .btn-activate {
+    background: #e6f9f0;
+    color: #1a7a4c;
+}
+
+.product-action-btns .btn-activate:hover {
+    background: #c8f0dc;
+    color: #145a35;
+}
+
+/* Product Name */
+.product-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.product-id {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+/* Description */
+.product-desc {
+    font-size: 0.85rem;
+    color: #718096;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+/* Price */
+.product-price {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.product-currency {
+    color: #a0aec0;
+    font-size: 0.82rem;
+    margin-left: 2px;
+}
+
+/* Date */
+.product-date {
+    color: #a0aec0;
+    font-size: 0.82rem;
+}
+
+/* Pagination Container */
+.pagination-container {
+    padding: 10px 0;
+}
+
+/* Pagination */
+.pagination {
+    gap: 4px;
+}
+
+.pagination .page-link {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin: 0;
+    color: #4a5568;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.25s;
+    background: transparent;
+}
+
+.pagination .page-link:hover {
+    background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+    color: #2d3748;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #4e73df 0%, #3b5ec9 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(78, 115, 223, 0.3);
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    color: #cbd5e0;
+}
+
+/* Entries Info */
+.entries-info {
+    font-size: 0.88rem;
+    color: #718096;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+/* SweetAlert customizations */
+.swal2-popup {
+    font-size: 0.9rem !important;
+}
+
+/* Simple DataTables overrides for premium look */
+.datatable-wrapper .datatable-top {
+    padding: 12px 0;
+}
+
+.datatable-wrapper .datatable-search .datatable-input {
+    border-radius: 8px;
+    border-color: #dee2e6;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+}
+
+.datatable-wrapper .datatable-search .datatable-input:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 3px rgba(78,115,223,0.1);
+}
+
+.datatable-wrapper .datatable-selector {
+    border-radius: 8px;
+    border-color: #dee2e6;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+}
+
+.datatable-wrapper .datatable-pagination .datatable-pagination-list {
+    gap: 4px;
+}
+
+.datatable-wrapper .datatable-pagination .datatable-pagination-list-item .datatable-pagination-list-item-link {
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    border: none;
+    color: #4a5568;
+}
+
+.datatable-wrapper .datatable-pagination .datatable-pagination-list-item .datatable-pagination-list-item-link:hover {
+    background: #edf2f7;
+}
+
+.datatable-wrapper .datatable-pagination .datatable-pagination-list-item.active .datatable-pagination-list-item-link {
+    background: #4e73df;
+    color: #fff;
+}

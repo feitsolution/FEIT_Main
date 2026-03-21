@@ -58,57 +58,18 @@ while ($roleRow = $roleResult->fetch_assoc()) {
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/forms.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .form-container {
-            padding: 25px;
-            background-color: #fff;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-
-        .section-header {
-            border-left: 4px solid #1565C0;
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 500;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
 
         .form-floating .form-control {
             height: calc(3.5rem + 2px);
-        }
-
-        .save-btn {
-            background-color: #1565C0;
-            float: right;
-            padding: 8px 25px;
-        }
-        
-        .error-feedback {
-            color: #dc3545;
-            font-size: 0.875em;
-            margin-top: 0.25rem;
-            display: none;
-        }
-        
-        .is-invalid {
-            border-color: #dc3545;
-            padding-right: calc(1.5em + 0.75rem);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right calc(0.375em + 0.1875rem) center;
-            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-        }
-        
-        .is-valid {
-            border-color: #198754;
-            padding-right: calc(1.5em + 0.75rem);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right calc(0.375em + 0.1875rem) center;
-            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
         }
         
         /* Email validation specific */
@@ -145,7 +106,7 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                         </div>
                     <?php endif; ?>
                      
-                    <div class="form-container shadow">
+                    <div class="premium-form-container">
                         <form method="POST" action="update_user.php" id="addUserForm" novalidate>
                             <!-- CSRF Token -->
                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
@@ -153,7 +114,9 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                             <div class="row">
                                 <!-- User Details Section -->
                                 <div class="col-md-6">
-                                    <div class="section-header">User Details</div>
+                                    <div class="premium-section-header">
+                                        <i class="fas fa-user-circle"></i> User Details
+                                    </div>
 
                                     <!-- Name Field -->
                                     <div class="mb-3">
@@ -205,6 +168,9 @@ while ($roleRow = $roleResult->fetch_assoc()) {
 
                                 <!-- Configuration Details Section -->
                                 <div class="col-md-6">
+                                    <div class="premium-section-header">
+                                        <i class="fas fa-user-shield"></i> Configuration Details
+                                    </div>
                                     <!-- NIC Field -->
                                     <div class="mb-3">
                                         <label for="nic" class="form-label">
@@ -255,9 +221,12 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                             </div>
 
                             <!-- Submit Button -->
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary save-btn" id="submitBtn">
+                            <div class="row mt-4 pt-3 border-top">
+                                <div class="col-12 d-flex justify-content-end gap-3">
+                                    <a href="users.php" class="premium-back-btn text-decoration-none d-flex align-items-center">
+                                        <i class="fas fa-arrow-left me-2"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="premium-save-btn" id="submitBtn">
                                         <i class="fas fa-user-plus"></i> Add User
                                     </button>
                                 </div>

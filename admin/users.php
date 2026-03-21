@@ -127,32 +127,56 @@ $current_user_role = isset($_SESSION['role_id']) ? $_SESSION['role_id'] : 0;
 // Check if user is admin (role_id = 1)
 $is_admin = ($current_user_role == 1);
 
-// Modify SQL based on user role
+// Initialize search parameters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// Build search condition
+$searchCondition = "";
+if (!empty($search)) {
+    $searchTerm = $conn->real_escape_string($search);
+    $searchCondition = " AND (u.id LIKE '%$searchTerm%' OR 
+                            u.name LIKE '%$searchTerm%' OR 
+                            u.email LIKE '%$searchTerm%' OR
+                            u.mobile LIKE '%$searchTerm%' OR
+                            r.name LIKE '%$searchTerm%' OR
+                            u.status LIKE '%$searchTerm%')";
+}
+
+// Modify SQL based on user role and search
 if ($is_admin) {
     // Admin can see all users
     $sql = "SELECT u.*, r.name AS role_name 
             FROM users u 
             JOIN roles r ON u.role_id = r.id 
-            ORDER BY u.id ASC";
+            WHERE 1=1 $searchCondition
+            ORDER BY u.id ASC 
+            LIMIT $limit OFFSET $offset";
+    
+    $countQuery = "SELECT COUNT(*) as total FROM users u JOIN roles r ON u.role_id = r.id WHERE 1=1 $searchCondition";
 } else {
     // Non-admin users can only see non-admin users
     $sql = "SELECT u.*, r.name AS role_name 
             FROM users u 
             JOIN roles r ON u.role_id = r.id 
-            WHERE u.role_id != 1
-            ORDER BY u.id ASC";
+            WHERE u.role_id != 1 $searchCondition
+            ORDER BY u.id ASC 
+            LIMIT $limit OFFSET $offset";
+            
+    $countQuery = "SELECT COUNT(*) as total FROM users u JOIN roles r ON u.role_id = r.id WHERE u.role_id != 1 $searchCondition";
 }
+
+// Execute queries
+$countResult = $conn->query($countQuery);
+$totalRows = 0;
+if ($countResult && $countResult->num_rows > 0) {
+    $totalRows = $countResult->fetch_assoc()['total'];
+}
+$totalPages = ceil($totalRows / $limit);
 
 $result = $conn->query($sql);
-
-// Count total users (adjusted based on user role)
-if ($is_admin) {
-    $countQuery = "SELECT COUNT(*) as total FROM users";
-} else {
-    $countQuery = "SELECT COUNT(*) as total FROM users WHERE role_id != 1";
-}
-$countResult = $conn->query($countQuery);
-$totalusers = $countResult->fetch_assoc()['total'];
 ?>
 
 <!DOCTYPE html>
@@ -164,48 +188,12 @@ $totalusers = $countResult->fetch_assoc()['total'];
     <title>All Users</title>
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/users-list.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <!-- SweetAlert CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
-    <style>
-        /* Compact action buttons */
-        .btn-group-compact {
-            display: flex;
-            flex-direction: row;
-            gap: 0.25rem;
-        }
-
-        .btn-group-compact .btn {
-            padding: 0.2rem 0.4rem;
-            font-size: 0.75rem;
-        }
-
-        /* Custom modal styles */
-        .modal-custom-body {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .modal-custom-body p {
-            margin-bottom: 0.25rem;
-        }
-
-        /* Success and Error Message Styles */
-        .alert-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1050;
-        }
-        
-        /* SweetAlert customizations */
-        .swal2-popup {
-            font-size: 0.9rem !important;
-        }
-    </style>
 </head>
 
 <body class="sb-nav-fixed">
@@ -215,81 +203,196 @@ $totalusers = $countResult->fetch_assoc()['total'];
     <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main>
-                <div class="alert-container" id="alertContainer"></div>
-                <div class="container-fluid px-3">
-                    <h1 class="mt-3">Users</h1>
-                    <ol class="breadcrumb mb-4">
-                        <!-- Total User Count -->
-                        <div class="alert alert-info">
-                            <strong>Total Users:</strong> <?= $totalusers ?>
-                            <?php if (!$is_admin): ?>
-                                <small>(Admin users not included)</small>
-                            <?php endif; ?>
-                        </div>
-                    </ol>
-                    <div class="table-container">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>User ID<br><small class="text-muted">Created At</small></th>
-                                    <th>Name<br><small class="text-muted">Role (ID)</small></th>
-                                    <th>Contact Info</th>
-                                    <th>Mobile</th>
-                                    <th>NIC</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php while ($row = $result->fetch_assoc()): ?>
-                                    <tr id="user-row-<?= $row['id'] ?>">
-                                        <td>
-                                            <?= htmlspecialchars($row['id']) ?>
-                                            <br>
-                                            <small class="text-muted"><?= htmlspecialchars($row['created_at']) ?></small>
-                                        </td>
-                                        <td>
-                                            <?= htmlspecialchars($row['name']) ?>
-                                            <br>
-                                            <small class="text-muted"><?= htmlspecialchars($row['role_name']) ?> (<?= htmlspecialchars($row['role_id']) ?>)</small>
-                                        </td>
-                                        <td><?= htmlspecialchars($row['email']) ?></td>
-                                        <td><?= isset($row['mobile']) ? htmlspecialchars($row['mobile']) : 'N/A' ?></td>
-                                        <td><?= isset($row['nic']) ? htmlspecialchars($row['nic']) : 'N/A' ?></td>
-                                        <td>
-                                            <span class="user-status-badge badge <?= $row['status'] == 'active' ? 'bg-success' : 'bg-secondary' ?>">
-                                                <?= htmlspecialchars($row['status']) ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group-compact">
-                                                <a href="edit_user.php?id=<?= htmlspecialchars($row['id']) ?>&name=<?= urlencode(htmlspecialchars($row['name'])) ?>&email=<?= urlencode(htmlspecialchars($row['email'])) ?>&status=<?= htmlspecialchars($row['status']) ?>&role=<?= urlencode(htmlspecialchars($row['role_name'])) ?>" class="btn btn-info btn-sm">Edit</a>
-                                                <button class="btn btn-primary btn-sm view-user-btn" 
-                                                        data-user-id="<?= $row['id'] ?>" 
-                                                        data-user-name="<?= htmlspecialchars($row['name']) ?>"
-                                                        data-user-email="<?= htmlspecialchars($row['email']) ?>"
-                                                        data-user-mobile="<?= isset($row['mobile']) ? htmlspecialchars($row['mobile']) : 'N/A' ?>"
-                                                        data-user-nic="<?= isset($row['nic']) ? htmlspecialchars($row['nic']) : 'N/A' ?>"
-                                                        data-user-status="<?= htmlspecialchars($row['status']) ?>"
-                                                        data-user-role="<?= htmlspecialchars($row['role_name']) ?>"
-                                                        data-user-role-id="<?= htmlspecialchars($row['role_id']) ?>"
-                                                        data-user-created="<?= htmlspecialchars($row['created_at']) ?>">
-                                                    View
-                                                </button>
-                                                <button class="btn btn-<?= $row['status'] == 'active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
-                                                        data-user-id="<?= $row['id'] ?>"
-                                                        data-current-status="<?= $row['status'] ?>"
-                                                        data-user-name="<?= htmlspecialchars($row['name']) ?>">
-                                                    <?= $row['status'] == 'active' ? 'Deactivate' : 'Activate' ?>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
+                <div class="container-fluid px-4">
+                    <br>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4>All Users</h4>
                     </div>
+
+                    <div class="card users-card">
+                        <div class="card-body">
+                            <!-- Premium Filter Bar -->
+                            <div class="invoice-filter-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                                        <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
+                                        <input type="text" name="search" class="form-control ps-4"
+                                            placeholder="Search users by name, email, role..."
+                                            value="<?php echo htmlspecialchars($search); ?>">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-filter">
+                                        <i class="fas fa-search me-1"></i> Search
+                                    </button>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="users.php" class="btn btn-outline-secondary btn-clear">
+                                            <i class="fas fa-times me-1"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                    <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                                <form method="get" class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($search)): ?>
+                                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="page" value="1">
+                                    <span class="entries-label">Show</span>
+                                    <select name="limit" class="form-select" style="width: 80px;" onchange="this.form.submit()">
+                                        <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                        <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                        <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                        <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                    </select>
+                                    <span class="entries-label">entries</span>
+                                </form>
+                            </div>
+
+                            <?php if (!empty($search)): ?>
+                                <div class="search-results-alert mb-4">
+                                    <i class="fas fa-filter me-1"></i>
+                                    Showing results for: <strong><?php echo htmlspecialchars($search); ?></strong>
+                                    — <strong><?php echo $totalRows; ?></strong> found
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="table-responsive">
+                                <table class="table table-users">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Name</th>
+                                            <th>Contact Info</th>
+                                            <th>Mobile</th>
+                                            <th>NIC</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php while ($row = $result->fetch_assoc()): ?>
+                                            <tr id="user-row-<?= $row['id'] ?>">
+                                                <td>
+                                                    <span class="user-id-text"><?= htmlspecialchars($row['id']) ?></span>
+                                                    <br>
+                                                    <span class="user-created"><?= htmlspecialchars($row['created_at']) ?></span>
+                                                </td>
+                                                <td>
+                                                    <div class="user-name"><?= htmlspecialchars($row['name']) ?></div>
+                                                    <div class="user-role"><?= htmlspecialchars($row['role_name']) ?></div>
+                                                </td>
+                                                <td><?= htmlspecialchars($row['email']) ?></td>
+                                                <td><?= isset($row['mobile']) ? htmlspecialchars($row['mobile']) : 'N/A' ?></td>
+                                                <td><?= isset($row['nic']) ? htmlspecialchars($row['nic']) : 'N/A' ?></td>
+                                                <td>
+                                                    <?php if ($row['status'] == 'active'): ?>
+                                                        <span class="user-status-badge badge-soft badge-soft-success">Active</span>
+                                                    <?php else: ?>
+                                                        <span class="user-status-badge badge-soft badge-soft-secondary">Inactive</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <div class="user-action-btns d-flex gap-1">
+                                                        <a href="edit_user.php?id=<?= htmlspecialchars($row['id']) ?>&name=<?= urlencode(htmlspecialchars($row['name'])) ?>&email=<?= urlencode(htmlspecialchars($row['email'])) ?>&status=<?= htmlspecialchars($row['status']) ?>&role=<?= urlencode(htmlspecialchars($row['role_name'])) ?>"
+                                                            class="btn btn-edit"
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Edit User">
+                                                            <i class="fas fa-pen"></i>
+                                                        </a>
+                                                        <button class="btn btn-view view-user-btn"
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"
+                                                            data-user-id="<?= $row['id'] ?>"
+                                                            data-user-name="<?= htmlspecialchars($row['name']) ?>"
+                                                            data-user-email="<?= htmlspecialchars($row['email']) ?>"
+                                                            data-user-mobile="<?= isset($row['mobile']) ? htmlspecialchars($row['mobile']) : 'N/A' ?>"
+                                                            data-user-nic="<?= isset($row['nic']) ? htmlspecialchars($row['nic']) : 'N/A' ?>"
+                                                            data-user-status="<?= htmlspecialchars($row['status']) ?>"
+                                                            data-user-role="<?= htmlspecialchars($row['role_name']) ?>"
+                                                            data-user-role-id="<?= htmlspecialchars($row['role_id']) ?>"
+                                                            data-user-created="<?= htmlspecialchars($row['created_at']) ?>">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button class="btn <?= $row['status'] == 'active' ? 'btn-deactivate' : 'btn-activate' ?> toggle-status-btn"
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" title="<?= $row['status'] == 'active' ? 'Deactivate' : 'Activate' ?>"
+                                                            data-user-id="<?= $row['id'] ?>"
+                                                            data-current-status="<?= $row['status'] ?>"
+                                                            data-user-name="<?= htmlspecialchars($row['name']) ?>">
+                                                            <i class="fas <?= $row['status'] == 'active' ? 'fa-ban' : 'fa-check' ?>"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Premium Pagination -->
+                            <div class="pagination-container d-flex justify-content-between align-items-center mt-4">
+                                <div class="entries-info">
+                                    <?php if ($result && $result->num_rows > 0): ?>
+                                        Showing <strong><?php echo ($offset + 1); ?></strong> to
+                                        <strong><?php echo min($offset + $limit, $totalRows); ?></strong> of <strong><?php echo $totalRows; ?></strong>
+                                        entries
+                                    <?php else: ?>
+                                        Showing <strong>0</strong> to <strong>0</strong> of <strong>0</strong> entries
+                                    <?php endif; ?>
+                                </div>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination mb-0">
+                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+
+                                        <?php
+                                        // Display a limited number of page links
+                                        $maxPagesToShow = 5;
+                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                        // Show "..." before the first page link if needed
+                                        if ($startPage > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
+                                            </li>
+                                            <?php if ($startPage > 2): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+
+                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
+                                                <a class="page-link"
+                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                                            </li>
+                                        <?php endfor; ?>
+
+                                        <?php 
+                                        // Show "..." after the last page link if needed
+                                        if ($endPage < $totalPages): ?>
+                                            <?php if ($endPage < $totalPages - 1): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+
+                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -314,12 +417,17 @@ $totalusers = $countResult->fetch_assoc()['total'];
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <!-- SweetAlert JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     <script src="js/scripts.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
         // Function to show alert messages
         function showAlert(type, message) {
             const alertContainer = document.getElementById('alertContainer');
@@ -441,20 +549,22 @@ $totalusers = $countResult->fetch_assoc()['total'];
                                 const toggleButton = userRow.querySelector('.toggle-status-btn');
 
                                 if (newStatus === 'active') {
-                                    statusBadge.classList.remove('bg-secondary');
-                                    statusBadge.classList.add('bg-success');
-                                    toggleButton.classList.remove('btn-success');
-                                    toggleButton.classList.add('btn-danger');
-                                    toggleButton.textContent = 'Deactivate';
+                                    statusBadge.classList.remove('badge-soft-secondary');
+                                    statusBadge.classList.add('badge-soft-success');
+                                    statusBadge.textContent = 'Active';
+                                    toggleButton.classList.remove('btn-activate');
+                                    toggleButton.classList.add('btn-deactivate');
+                                    toggleButton.innerHTML = '<i class="fas fa-ban"></i>';
+                                    toggleButton.setAttribute('title', 'Deactivate');
                                 } else {
-                                    statusBadge.classList.remove('bg-success');
-                                    statusBadge.classList.add('bg-secondary');
-                                    toggleButton.classList.remove('btn-danger');
-                                    toggleButton.classList.add('btn-success');
-                                    toggleButton.textContent = 'Activate';
+                                    statusBadge.classList.remove('badge-soft-success');
+                                    statusBadge.classList.add('badge-soft-secondary');
+                                    statusBadge.textContent = 'Inactive';
+                                    toggleButton.classList.remove('btn-deactivate');
+                                    toggleButton.classList.add('btn-activate');
+                                    toggleButton.innerHTML = '<i class="fas fa-check"></i>';
+                                    toggleButton.setAttribute('title', 'Activate');
                                 }
-
-                                statusBadge.textContent = newStatus;
                                 toggleButton.setAttribute('data-current-status', newStatus);
 
                                 // Show success message

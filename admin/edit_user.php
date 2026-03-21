@@ -90,91 +90,17 @@ while ($roleRow = $roleResult->fetch_assoc()) {
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/forms.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .form-container {
-            padding: 25px;
-            background-color: #fff;
-            border-radius: 5px;
-            margin-bottom: 30px;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
-        }
-
-        .section-header {
-            border-left: 4px solid #1565C0;
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 500;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
 
         .form-floating .form-control {
             height: calc(3.5rem + 2px);
-        }
-
-        .save-btn {
-            background-color: #1565C0;
-            float: right;
-            padding: 8px 25px;
-        }
-        
-        .error-feedback {
-            color: #dc3545;
-            font-size: 0.875em;
-            margin-top: 0.25rem;
-            display: none;
-        }
-        
-        .is-invalid {
-            border-color: #dc3545;
-            padding-right: calc(1.5em + 0.75rem);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right calc(0.375em + 0.1875rem) center;
-            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        
-        .input-group .btn:focus {
-            box-shadow: none;
-        }
-        
-        .input-icon {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-        }
-        
-        .back-btn {
-            margin-right: 10px;
-        }
-        
-        .alert {
-            border-radius: 5px;
-            border-left-width: 5px;
-        }
-        
-        .alert-success {
-            border-left-color: #198754;
-        }
-        
-        .alert-danger {
-            border-left-color: #dc3545;
-        }
-        
-        .form-floating label {
-            opacity: 0.65;
-        }
-        
-        /* Add spacing between section header and first field */
-        .section-header {
-            margin-bottom: 30px;  /* Increased from 20px to 30px */
         }
     </style>
 </head>
@@ -213,7 +139,7 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                         </div>
                     <?php endif; ?>
 
-                    <div class="form-container">
+                    <div class="premium-form-container">
                         <form method="POST" action="update_edit_user.php" id="editUserForm" novalidate>
                             <!-- CSRF Token and User ID -->
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -223,7 +149,9 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                             <div class="row">
                                 <!-- User Details Section -->
                                 <div class="col-md-6">
-                                    <div class="section-header mb-2">User Details</div>
+                                    <div class="premium-section-header">
+                                        <i class="fas fa-user-circle"></i> User Details
+                                    </div>
 
                                     <!-- Name Field -->
                                     <div class="mb-3 position-relative">
@@ -276,7 +204,9 @@ while ($roleRow = $roleResult->fetch_assoc()) {
 
                                 <!-- Additional Details Section -->
                                 <div class="col-md-6">
-                                    <div class="section-header mb-2">Configuration Details</div>
+                                    <div class="premium-section-header">
+                                        <i class="fas fa-user-shield"></i> Configuration Details
+                                    </div>
                                     
                                     <!-- NIC Field -->
                                     <div class="mb-3 position-relative">
@@ -329,13 +259,13 @@ while ($roleRow = $roleResult->fetch_assoc()) {
                             </div>
 
                             <!-- Submit Buttons -->
-                            <div class="row mt-4">
-                                <div class="col-12">
-                                    <a href="users.php" class="btn btn-secondary back-btn">
-                                        <i class="fas fa-arrow-left me-1"></i> Back to Users
+                            <div class="row mt-4 pt-3 border-top">
+                                <div class="col-12 d-flex justify-content-end gap-3">
+                                    <a href="users.php" class="premium-back-btn text-decoration-none d-flex align-items-center">
+                                        <i class="fas fa-arrow-left me-2"></i> Back to Users
                                     </a>
-                                    <button type="submit" class="btn btn-primary save-btn" id="submitBtn">
-                                        <i class="fas fa-save me-1"></i> Save Changes
+                                    <button type="submit" class="premium-save-btn" id="submitBtn">
+                                        <i class="fas fa-save me-2"></i> Save Changes
                                     </button>
                                 </div>
                             </div>

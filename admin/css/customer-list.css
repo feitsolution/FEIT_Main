@@ -1,0 +1,327 @@
+/* ============================================
+   Customer List Premium Styles
+   ============================================ */
+
+/* Filter Bar */
+.customer-filter-bar {
+    background: #fff;
+    border: 1px solid #e8ecef;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+}
+
+.customer-filter-bar .form-control {
+    border-radius: 8px;
+    border-color: #dee2e6;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.customer-filter-bar .form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 3px rgba(78,115,223,0.1);
+}
+
+.customer-filter-bar .btn-filter {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.customer-filter-bar .btn-clear {
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    color: #6c757d;
+    border-color: #dee2e6;
+    transition: all 0.2s;
+}
+
+.customer-filter-bar .btn-clear:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.customer-filter-bar .form-select {
+    border-radius: 8px;
+    border-color: #dee2e6;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.customer-filter-bar .entries-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+/* Card Container */
+.customer-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.customer-card .card-body {
+    padding: 24px;
+}
+
+.customer-card .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #edf2f7;
+}
+
+/* Enhanced Table */
+.table-customer {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table-customer thead th {
+    background: #f7f8fc;
+    color: #4a5568;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    border-bottom: 2px solid #e2e8f0;
+    border-top: none;
+    white-space: nowrap;
+}
+
+.table-customer tbody td {
+    padding: 14px 16px;
+    font-size: 0.99rem;
+    color: #4a5568;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+}
+
+.table-customer tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table-customer tbody tr:hover {
+    background-color: #f7faff;
+}
+
+.table-customer tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Soft Badges */
+.badge-soft {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.badge-soft:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.95);
+}
+
+.badge-soft-success {
+    background-color: #e6f9f0;
+    color: #1a7a4c;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-danger {
+    background-color: #fef0f0;
+    color: #c0392b;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-warning {
+    background-color: #fff8e6;
+    color: #b07d1a;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-info {
+    background-color: #e8f4fd;
+    color: #2471a3;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+.badge-soft-secondary {
+    background-color: #f0f1f3;
+    color: #5a6268;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.08);
+}
+
+/* Action Buttons */
+.customer-action-btns .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.customer-action-btns .btn-edit {
+    background: #e8f4fd;
+    color: #2471a3;
+}
+
+.customer-action-btns .btn-edit:hover {
+    background: #d0e8f9;
+    color: #1a5276;
+}
+
+.customer-action-btns .btn-view {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.customer-action-btns .btn-view:hover {
+    background: #e2e8f0;
+    color: #2d3748;
+}
+
+.customer-action-btns .btn-deactivate {
+    background: #fef0f0;
+    color: #c0392b;
+}
+
+.customer-action-btns .btn-deactivate:hover {
+    background: #fdd;
+    color: #922b21;
+}
+
+.customer-action-btns .btn-activate {
+    background: #e6f9f0;
+    color: #1a7a4c;
+}
+
+.customer-action-btns .btn-activate:hover {
+    background: #c8f0dc;
+    color: #145a35;
+}
+
+/* Pagination */
+.pagination .page-link {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin: 0 2px;
+    color: #4a5568;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.pagination .page-link:hover {
+    background: #edf2f7;
+    color: #2d3748;
+}
+
+.pagination .page-item.active .page-link {
+    background: #4e73df;
+    color: #fff;
+}
+
+.pagination .page-item.disabled .page-link {
+    background: transparent;
+    color: #cbd5e0;
+}
+
+.pagination .page-link:focus {
+    box-shadow: 0 0 0 3px rgba(78,115,223,0.15);
+}
+
+/* Entries Info */
+.entries-info {
+    font-size: 0.88rem;
+    color: #718096;
+}
+
+.entries-info strong {
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* Search Results Alert */
+.search-results-alert {
+    background: #edf7ff;
+    border: 1px solid #bee3f8;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 0.88rem;
+    color: #2a4365;
+    margin-bottom: 16px;
+}
+
+.search-results-alert strong {
+    color: #1a365d;
+}
+
+/* Contact Info */
+.contact-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.contact-email {
+    color: #a0aec0;
+    font-size: 0.82rem;
+}
+
+/* Customer ID */
+.customer-id-text {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.customer-created {
+    color: #a0aec0;
+    font-size: 0.78rem;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    color: #cbd5e0;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    color: #a0aec0;
+    font-size: 0.95rem;
+}
+
+/* SweetAlert customizations */
+.swal2-popup {
+    font-size: 0.9rem !important;
+}

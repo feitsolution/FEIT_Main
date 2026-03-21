@@ -127,16 +127,13 @@ function hasMultipleChanges($details) {
     <title>User Activity Logs</title>
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/users-list.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     <style>
-        /* Custom styles for details column */
         .details-cell {
-            max-width: 400px; /* Limit width */
+            max-width: 400px;
         }
         .details-cell ul {
             margin-top: 5px;
@@ -149,10 +146,10 @@ function hasMultipleChanges($details) {
             display: inline-block;
         }
         .toggle-changes.collapsed::after {
-            content: " ▼";
+            content: " \25BC";
         }
         .toggle-changes:not(.collapsed)::after {
-            content: " ▲";
+            content: " \25B2";
         }
         .toggle-changes:not(.collapsed) {
             margin-bottom: 5px;
@@ -172,64 +169,60 @@ function hasMultipleChanges($details) {
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4>User Activity Logs</h4>
                     </div>
-                    <div class="card">
+                    <div class="card users-card">
                         <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <form method="get" class="d-flex">
-                                        <input type="text" name="search" class="form-control me-2"
-                                            placeholder="Search logs..."
+                            <!-- Premium Filter Bar -->
+                            <div class="invoice-filter-bar d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                                        <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
+                                        <input type="text" name="search" class="form-control ps-4"
+                                            placeholder="Search logs by user, action, details..."
                                             value="<?php echo htmlspecialchars($search); ?>">
-                                        <button type="submit" class="btn btn-outline-primary">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <?php if (!empty($search)): ?>
-                                            <a href="user_logs.php" class="btn btn-outline-secondary ms-2">
-                                                <i class="fas fa-times"></i> Clear
-                                            </a>
-                                        <?php endif; ?>
-                                        <!-- Preserve other GET parameters -->
-                                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
-                                        <input type="hidden" name="page" value="1"> <!-- Reset to page 1 when searching -->
-                                    </form>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <form method="get" class="d-inline">
-                                        <!-- Preserve search term when changing limit -->
-                                        <?php if (!empty($search)): ?>
-                                            <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
-                                        <?php endif; ?>
-                                        <div class="d-inline-block">
-                                            <label>Show</label>
-                                            <select name="limit" class="form-select d-inline-block w-auto ms-1"
-                                                onchange="this.form.submit()">
-                                                <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
-                                                <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
-                                                <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
-                                                <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
-                                            </select>
-                                            <label>entries</label>
-                                        </div>
-                                    </form>
-                                </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-filter">
+                                        <i class="fas fa-search me-1"></i> Search
+                                    </button>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="user_logs.php" class="btn btn-outline-secondary btn-clear">
+                                            <i class="fas fa-times me-1"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                    <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                                <form method="get" class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($search)): ?>
+                                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="page" value="1">
+                                    <span class="entries-label">Show</span>
+                                    <select name="limit" class="form-select" style="width: 80px;" onchange="this.form.submit()">
+                                        <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                        <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                        <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                        <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                    </select>
+                                    <span class="entries-label">entries</span>
+                                </form>
                             </div>
-
-                            <!--<h5 class="mb-3">User Activity History</h5>-->
+<br>
                             <?php if (!empty($search)): ?>
-                                <div class="alert alert-info">
-                                    Showing search results for: <strong><?php echo htmlspecialchars($search); ?></strong>
-                                    (<?php echo $totalRows; ?> results found)
+                                <div class="search-results-alert">
+                                    <i class="fas fa-filter me-1"></i>
+                                    Showing results for: <strong><?php echo htmlspecialchars($search); ?></strong>
+                                    — <strong><?php echo $totalRows; ?></strong> found
                                 </div>
                             <?php endif; ?>
                             
                             <div class="table-responsive">
-                                <table class="table table-bordered table-hover">
-                                    <thead class="table-light">
+                                <table class="table table-users">
+                                    <thead>
                                         <tr>
                                             <th>Action ID</th>
-                                            <th>User ID and Name</th>
+                                            <th>User</th>
                                             <th>Action Type</th>
-                                            <th width="40%">Details</th>
+                                            <th>Details</th>
                                             <th>Action Date</th>
                                         </tr>
                                     </thead>
@@ -237,106 +230,128 @@ function hasMultipleChanges($details) {
                                         <?php if ($result && $result->num_rows > 0): ?>
                                             <?php while ($row = $result->fetch_assoc()): ?>
                                                 <tr>
-                                                    <td><?php echo htmlspecialchars($row['id']); ?></td>
                                                     <td>
-                                                        <?php echo htmlspecialchars($row['user_id']); ?> - 
-                                                        <?php echo !empty($row['user_name']) ? htmlspecialchars($row['user_name']) : 'N/A'; ?>
+                                                        <span class="user-id-text">#<?php echo htmlspecialchars($row['id']); ?></span>
                                                     </td>
                                                     <td>
-                                                        <span class="action-type-text">
+                                                        <div class="user-name"><?php echo !empty($row['user_name']) ? htmlspecialchars($row['user_name']) : 'N/A'; ?></div>
+                                                        <div class="user-role">ID: <?php echo htmlspecialchars($row['user_id']); ?></div>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                        $action = strtolower($row['action_type']);
+                                                        if (strpos($action, 'create') !== false || strpos($action, 'add') !== false) {
+                                                            $badgeClass = 'badge-soft-success';
+                                                        } elseif (strpos($action, 'delete') !== false || strpos($action, 'cancel') !== false) {
+                                                            $badgeClass = 'badge-soft-danger';
+                                                        } elseif (strpos($action, 'edit') !== false || strpos($action, 'update') !== false) {
+                                                            $badgeClass = 'badge-soft-warning';
+                                                        } else {
+                                                            $badgeClass = 'badge-soft-info';
+                                                        }
+                                                        ?>
+                                                        <span class="badge-soft <?php echo $badgeClass; ?>">
                                                             <?php echo htmlspecialchars($row['action_type']); ?>
                                                         </span>
                                                     </td>
                                                     <td class="details-cell">
                                                         <?php 
-                                                        // Format the details text with collapsible changes
                                                         $formattedDetails = formatDetailsText(
                                                             $row['details'], 
                                                             $row['user_id'], 
                                                             isset($row['user_name']) ? $row['user_name'] : '',
                                                             $row['action_type']
                                                         );
-                                                        
-                                                        // Output the formatted details (don't use htmlspecialchars to allow HTML from formatting)
                                                         echo $formattedDetails;
                                                         ?>
                                                     </td>
-                                                    <td><?php echo htmlspecialchars(date('d/m/Y H:i:s', strtotime($row['created_at']))); ?></td>
+                                                    <td>
+                                                        <div class="user-name"><?php echo date('M d, Y', strtotime($row['created_at'])); ?></div>
+                                                        <div class="user-role"><?php echo date('h:i:s A', strtotime($row['created_at'])); ?></div>
+                                                    </td>
                                                 </tr>
                                             <?php endwhile; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="5" class="text-center">No user logs found</td>
+                                                <td colspan="5" class="text-center py-5">
+                                                    <div style="color: #a0aec0;">
+                                                        <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                                        No user logs found
+                                                    </div>
+                                                </td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
+                            <!-- Premium Pagination -->
+                            <div class="pagination-container d-flex justify-content-between align-items-center mt-4">
+                                <div class="entries-info">
                                     <?php if ($result && $result->num_rows > 0): ?>
-                                        Showing <?php echo ($offset + 1); ?> to
-                                        <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?>
+                                        Showing <strong><?php echo ($offset + 1); ?></strong> to
+                                        <strong><?php echo min($offset + $limit, $totalRows); ?></strong> of <strong><?php echo $totalRows; ?></strong>
                                         entries
                                     <?php else: ?>
-                                        Showing 0 to 0 of 0 entries
+                                        Showing <strong>0</strong> to <strong>0</strong> of <strong>0</strong> entries
                                     <?php endif; ?>
                                 </div>
-                                <div class="col-md-6">
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination justify-content-end">
-                                            <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                                                <a class="page-link"
-                                                    href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination mb-0">
+                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+
+                                        <?php
+                                        // Display a limited number of page links
+                                        $maxPagesToShow = 5;
+                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                        // Show "..." before the first page link if needed
+                                        if ($startPage > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
                                             </li>
-
-                                            <?php
-                                            // Display a limited number of page links
-                                            $maxPagesToShow = 5;
-                                            $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
-                                            $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
-
-                                            // Show "..." before the first page link if needed
-                                            if ($startPage > 1): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
-                                                </li>
-                                                <?php if ($startPage > 2): ?>
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-
-                                            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                                <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
-                                                    <a class="page-link"
-                                                        href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
-                                                </li>
-                                            <?php endfor; ?>
-
-                                            <?php 
-                                            // Show "..." after the last page link if needed
-                                            if ($endPage < $totalPages): ?>
-                                                <?php if ($endPage < $totalPages - 1): ?>
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                <?php endif; ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            <?php if ($startPage > 2): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
                                                 </li>
                                             <?php endif; ?>
+                                        <?php endif; ?>
 
-                                            <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
                                                 <a class="page-link"
-                                                    href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
                                             </li>
-                                        </ul>
-                                    </nav>
-                                </div>
+                                        <?php endfor; ?>
+
+                                        <?php 
+                                        // Show "..." after the last page link if needed
+                                        if ($endPage < $totalPages): ?>
+                                            <?php if ($endPage < $totalPages - 1): ?>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            <?php endif; ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+
+                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                            <a class="page-link"
+                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
                             </div>
+
                         </div>
                     </div>
                 </div>

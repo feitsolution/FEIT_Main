@@ -44,6 +44,7 @@ if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchCondition = " WHERE (
                         customer_id LIKE '%$searchTerm%' OR 
+                        business_name LIKE '%$searchTerm%' OR 
                         name LIKE '%$searchTerm%' OR 
                         email LIKE '%$searchTerm%' OR 
                         phone LIKE '%$searchTerm%' OR 
@@ -79,31 +80,11 @@ $result = $conn->query($sql);
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="css/customer-list.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <!-- SweetAlert CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
-    <style>
-        .btn-group-compact {
-            display: flex;
-            flex-direction: row;
-            gap: 0.25rem;
-        }
-        .btn-group-compact .btn {
-            padding: 0.2rem 0.4rem;
-            font-size: 0.75rem;
-        }
-        .alert-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1050;
-            min-width: 300px;
-        }
-        /* SweetAlert customizations */
-        .swal2-popup {
-            font-size: 0.9rem !important;
-        }
-    </style>
 </head>
 
 <body class="sb-nav-fixed">
@@ -112,86 +93,78 @@ $result = $conn->query($sql);
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main>
-                <!-- Alert Container for Dynamic and Session Messages -->
-                <div class="alert-container" id="alertContainer">
-                    <?php 
-                    // Display session success message
-                    if ($success_message) {
-                        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">' . 
-                             htmlspecialchars($success_message) . 
-                             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' . 
-                             '</div>';
-                    }
-
-                    // Display session error message
-                    if ($error_message) {
-                        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">' . 
-                             htmlspecialchars($error_message) . 
-                             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' . 
-                             '</div>';
-                    }
-                    ?>
-                </div>
-
                 <div class="container-fluid px-4">
-                    <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
-                        <h1>Customers</h1>
+                    <br>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4>Customers List</h4>
                     </div>
                     
-                    <div class="card mb-4">
+                    <!-- Display alert messages if any -->
+                    <?php if ($success_message): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <?php echo htmlspecialchars($success_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($error_message): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <?php echo htmlspecialchars($error_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="card customer-card mb-4">
                         <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <form method="get" class="d-flex">
-                                        <input type="text" name="search" class="form-control me-2"
-                                            placeholder="Search customers..."
+                            <!-- Premium Filter Bar -->
+                            <div class="customer-filter-bar d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                                        <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
+                                        <input type="text" name="search" class="form-control ps-4"
+                                            placeholder="Search by name, email, phone..."
                                             value="<?php echo htmlspecialchars($search); ?>">
-                                        <button type="submit" class="btn btn-outline-primary">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <?php if (!empty($search)): ?>
-                                            <a href="customer_list.php" class="btn btn-outline-secondary ms-2">
-                                                <i class="fas fa-times"></i> Clear
-                                            </a>
-                                        <?php endif; ?>
-                                        <input type="hidden" name="limit" value="<?php echo $limit; ?>">
-                                        <input type="hidden" name="page" value="1">
-                                    </form>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <form method="get" id="limitForm">
-                                        <?php if (!empty($search)): ?>
-                                            <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
-                                        <?php endif; ?>
-                                        <input type="hidden" name="page" value="1">
-                                        <div class="d-inline-block">
-                                            <label>Show</label>
-                                            <select name="limit" class="form-select d-inline-block w-auto ms-1"
-                                                onchange="document.getElementById('limitForm').submit()">
-                                                <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
-                                                <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
-                                                <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
-                                                <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
-                                            </select>
-                                            <label>entries</label>
-                                        </div>
-                                    </form>
-                                </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-filter">
+                                        <i class="fas fa-search me-1"></i> Search
+                                    </button>
+                                    <?php if (!empty($search)): ?>
+                                        <a href="customer_list.php" class="btn btn-outline-secondary btn-clear">
+                                            <i class="fas fa-times me-1"></i> Clear
+                                        </a>
+                                    <?php endif; ?>
+                                    <input type="hidden" name="limit" value="<?php echo $limit; ?>">
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                                <form method="get" id="limitForm" class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($search)): ?>
+                                        <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="page" value="1">
+                                    <span class="entries-label">Show</span>
+                                    <select name="limit" class="form-select" style="width: 80px;" onchange="document.getElementById('limitForm').submit()">
+                                        <option value="10" <?php if ($limit == 10) echo 'selected'; ?>>10</option>
+                                        <option value="25" <?php if ($limit == 25) echo 'selected'; ?>>25</option>
+                                        <option value="50" <?php if ($limit == 50) echo 'selected'; ?>>50</option>
+                                        <option value="100" <?php if ($limit == 100) echo 'selected'; ?>>100</option>
+                                    </select>
+                                    <span class="entries-label">entries</span>
+                                </form>
                             </div>
-
-                            <div class="alert alert-info py-2 mb-3">
-                                <strong>Total Customers:</strong> <?= $totalRows ?>
-                                <?php if (!empty($search)): ?>
-                                    <span class="ms-2">(Search results for: "<?= htmlspecialchars($search) ?>")</span>
-                                <?php endif; ?>
-                            </div>
-
+                            <?php if (!empty($search)): ?>
+                                <div class="search-results-alert">
+                                    <i class="fas fa-filter me-1"></i>
+                                    Showing results for: <strong><?php echo htmlspecialchars($search); ?></strong>
+                                    — <strong><?php echo $totalRows; ?></strong> found
+                                </div>
+                            <?php endif; ?>
+<br>
                     <div class="table-container">
                      <div class="table-responsive">
-                             <table class="table table-striped table-hover">
-                                 <thead class="table-dark">
+                             <table class="table table-customer">
+                                 <thead>
                                      <tr>
-                                         <th>Customer ID<br><small class="text-muted">Created At</small></th>
+                                         <th>Customer ID</th>
                                          <th>Business Name</th>
                                          <th>Contact Info</th>
                                          <th>Phone</th>
@@ -204,45 +177,52 @@ $result = $conn->query($sql);
                                      <?php while ($row = $result->fetch_assoc()): ?>
                                          <tr id="customer-row-<?= $row['customer_id'] ?>">
                                              <td>
-                                                 <?= htmlspecialchars($row['customer_id']) ?>
+                                                 <span class="customer-id-text"><?= htmlspecialchars($row['customer_id']) ?></span>
                                                  <br>
-                                                 <small class="text-muted"><?= htmlspecialchars($row['created_at']) ?></small>
+                                                 <span class="customer-created"><?= htmlspecialchars($row['created_at']) ?></span>
                                              </td>
                                              <td><?= htmlspecialchars($row['business_name']) ?></td>
                                              <td>
-                                                 <?= htmlspecialchars($row['name']) ?>
-                                                 <br>
-                                                 <small class="text-muted"><?= htmlspecialchars($row['email']) ?></small>
+                                                 <div class="contact-name"><?= htmlspecialchars($row['name']) ?></div>
+                                                 <div class="contact-email"><?= htmlspecialchars($row['email']) ?></div>
                                              </td>
                                              <td><?= htmlspecialchars($row['phone']) ?></td>
                                              <td><?= htmlspecialchars($row['address']) ?></td>
                                              <td>
-                                                 <span class="customer-status-badge badge <?= $row['status'] == 'Active' ? 'bg-success' : 'bg-secondary' ?>">
-                                                     <?= htmlspecialchars($row['status']) ?>
-                                                 </span>
+                                                 <?php if ($row['status'] == 'Active'): ?>
+                                                     <span class="customer-status-badge badge-soft badge-soft-success">Active</span>
+                                                 <?php else: ?>
+                                                     <span class="customer-status-badge badge-soft badge-soft-secondary">Inactive</span>
+                                                 <?php endif; ?>
                                              </td>
                                              <td>
-                                                  <div class="btn-group-compact">
+                                                  <div class="customer-action-btns d-flex gap-1">
                                                       <?php if ($canEditRecords): ?>
-                                                      <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>" class="btn btn-info btn-sm">Edit</a>
+                                                      <a href="edit_customer.php?id=<?= htmlspecialchars($row['customer_id']) ?>"
+                                                          class="btn btn-edit"
+                                                          data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Customer">
+                                                          <i class="fas fa-pen"></i>
+                                                      </a>
                                                       <?php endif; ?>
-                                                      <button class="btn btn-primary btn-sm view-customer-btn" 
-                                                              data-customer-id="<?= $row['customer_id'] ?>" 
-                                                              data-customer-name="<?= htmlspecialchars($row['name']) ?>"
-                                                              data-customer-email="<?= htmlspecialchars($row['email']) ?>"
-                                                              data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
-                                                              data-customer-address="<?= htmlspecialchars($row['address']) ?>"
-                                                              data-customer-status="<?= htmlspecialchars($row['status']) ?>"
-                                                              data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
-                                                              data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
-                                                          View
+                                                      <button class="btn btn-view view-customer-btn"
+                                                          data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"
+                                                          data-customer-id="<?= $row['customer_id'] ?>"
+                                                          data-customer-name="<?= htmlspecialchars($row['name']) ?>"
+                                                          data-customer-email="<?= htmlspecialchars($row['email']) ?>"
+                                                          data-customer-phone="<?= htmlspecialchars($row['phone']) ?>"
+                                                          data-customer-address="<?= htmlspecialchars($row['address']) ?>"
+                                                          data-customer-status="<?= htmlspecialchars($row['status']) ?>"
+                                                          data-customer-billing="<?= htmlspecialchars($row['billing_date'] ?? 'Not Set') ?>"
+                                                          data-customer-created="<?= htmlspecialchars($row['created_at']) ?>">
+                                                          <i class="fas fa-eye"></i>
                                                       </button>
                                                       <?php if ($canEditRecords): ?>
-                                                      <button class="btn btn-<?= $row['status'] == 'Active' ? 'danger' : 'success' ?> btn-sm toggle-status-btn" 
-                                                              data-customer-id="<?= $row['customer_id'] ?>"
-                                                              data-current-status="<?= $row['status'] ?>"
-                                                              data-customer-name="<?= htmlspecialchars($row['name']) ?>">
-                                                          <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
+                                                      <button class="btn <?= $row['status'] == 'Active' ? 'btn-deactivate' : 'btn-activate' ?> toggle-status-btn"
+                                                          data-bs-toggle="tooltip" data-bs-placement="top" title="<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>"
+                                                          data-customer-id="<?= $row['customer_id'] ?>"
+                                                          data-current-status="<?= $row['status'] ?>"
+                                                          data-customer-name="<?= htmlspecialchars($row['name']) ?>">
+                                                          <i class="fas <?= $row['status'] == 'Active' ? 'fa-ban' : 'fa-check' ?>"></i>
                                                       </button>
                                                       <?php endif; ?>
                                                   </div>
@@ -254,57 +234,60 @@ $result = $conn->query($sql);
                         </div>
                     </div>
 
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                Showing <?php echo ($totalRows > 0) ? ($offset + 1) : 0; ?> to
-                                <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?>
+                        <!-- Premium Pagination -->
+                        <div class="pagination-container d-flex justify-content-between align-items-center mt-4">
+                            <div class="entries-info">
+                                Showing <strong><?php echo ($totalRows > 0) ? ($offset + 1) : 0; ?></strong> to
+                                <strong><?php echo min($offset + $limit, $totalRows); ?></strong> of <strong><?php echo $totalRows; ?></strong>
                                 entries
                             </div>
-                            <div class="col-md-6">
-                                <nav aria-label="Page navigation">
-                                    <ul class="pagination justify-content-end mb-0">
-                                        <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
-                                            <a class="page-link"
-                                                href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item <?php if ($page <= 1) echo 'disabled'; ?>">
+                                        <a class="page-link"
+                                            href="?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <?php
+                                    $maxPagesToShow = 5;
+                                    $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
+                                    $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+
+                                    if ($startPage > 1): ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
                                         </li>
-
-                                        <?php
-                                        $maxPagesToShow = 5;
-                                        $startPage = max(1, min($page - floor($maxPagesToShow / 2), $totalPages - $maxPagesToShow + 1));
-                                        $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
-
-                                        if ($startPage > 1): ?>
-                                            <li class="page-item">
-                                                <a class="page-link" href="?page=1&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">1</a>
-                                            </li>
-                                            <?php if ($startPage > 2): ?>
-                                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                                            <?php endif; ?>
+                                        <?php if ($startPage > 2): ?>
+                                            <li class="page-item disabled"><span class="page-link">...</span></li>
                                         <?php endif; ?>
+                                    <?php endif; ?>
 
-                                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                            <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
-                                                <a class="page-link"
-                                                    href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
-                                            </li>
-                                        <?php endfor; ?>
-
-                                        <?php if ($endPage < $totalPages): ?>
-                                            <?php if ($endPage < $totalPages - 1): ?>
-                                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                                            <?php endif; ?>
-                                            <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
-                                            </li>
-                                        <?php endif; ?>
-
-                                        <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                    <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                        <li class="page-item <?php if ($page == $i) echo 'active'; ?>">
                                             <a class="page-link"
-                                                href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                                href="?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
                                         </li>
-                                    </ul>
-                                </nav>
-                            </div>
+                                    <?php endfor; ?>
+
+                                    <?php if ($endPage < $totalPages): ?>
+                                        <?php if ($endPage < $totalPages - 1): ?>
+                                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                                        <?php endif; ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=<?php echo $totalPages; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>"><?php echo $totalPages; ?></a>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <li class="page-item <?php if ($page >= $totalPages) echo 'disabled'; ?>">
+                                        <a class="page-link"
+                                            href="?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&search=<?php echo urlencode($search); ?>">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
                         </div>
                     </div> <!-- card-body close -->
                 </div> <!-- card close -->
@@ -331,23 +314,28 @@ $result = $conn->query($sql);
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <!-- SweetAlert JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     <script src="js/scripts.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
         // Function to show alert messages
         function showAlert(message, type) {
-            const alertContainer = document.getElementById('alertContainer');
+            const container = document.querySelector('.container-fluid.px-4');
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
-            
-            alertContainer.appendChild(alertDiv);
+            container.insertBefore(alertDiv, container.firstChild);
 
             // Auto-dismiss after 5 seconds
             setTimeout(() => {
@@ -460,17 +448,19 @@ $result = $conn->query($sql);
                                 const toggleButton = customerRow.querySelector('.toggle-status-btn');
 
                                 if (data.new_status === 'Active') {
-                                    statusBadge.classList.remove('bg-secondary');
-                                    statusBadge.classList.add('bg-success');
-                                    toggleButton.classList.remove('btn-success');
-                                    toggleButton.classList.add('btn-danger');
-                                    toggleButton.textContent = 'Deactivate';
+                                    statusBadge.classList.remove('badge-soft-secondary');
+                                    statusBadge.classList.add('badge-soft-success');
+                                    toggleButton.classList.remove('btn-activate');
+                                    toggleButton.classList.add('btn-deactivate');
+                                    toggleButton.innerHTML = '<i class="fas fa-ban"></i>';
+                                    toggleButton.setAttribute('title', 'Deactivate');
                                 } else {
-                                    statusBadge.classList.remove('bg-success');
-                                    statusBadge.classList.add('bg-secondary');
-                                    toggleButton.classList.remove('btn-danger');
-                                    toggleButton.classList.add('btn-success');
-                                    toggleButton.textContent = 'Activate';
+                                    statusBadge.classList.remove('badge-soft-success');
+                                    statusBadge.classList.add('badge-soft-secondary');
+                                    toggleButton.classList.remove('btn-deactivate');
+                                    toggleButton.classList.add('btn-activate');
+                                    toggleButton.innerHTML = '<i class="fas fa-check"></i>';
+                                    toggleButton.setAttribute('title', 'Activate');
                                 }
 
                                 statusBadge.textContent = data.new_status;
