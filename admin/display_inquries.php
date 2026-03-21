@@ -33,7 +33,6 @@ $totalInquiries = $countResult->fetch_assoc()['total'];
     data-menu-styles="dark" data-toggled="close">
 
 <head>
-<?php include('header.php'); ?>
     <?php
     // Include header.php file which contains all the meta tags, CSS links, and other header elements
     include('header.php');

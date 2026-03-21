@@ -306,7 +306,6 @@ try {
 <!DOCTYPE html>
 <html>
 <head>
-<?php include('header.php'); ?>
     <title>Redirecting...</title>
     <script>
         // JavaScript fallback redirect - updated to edit_user.php
@@ -332,7 +331,6 @@ try {
 <!DOCTYPE html>
 <html>
 <head>
-<?php include('header.php'); ?>
     <title>Redirecting...</title>
     <script>
         // JavaScript fallback redirect

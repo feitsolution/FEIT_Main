@@ -131,7 +131,6 @@ $autoPrint = !$show_payment_details;
 <html lang="en">
 
 <head>
-<?php include('header.php'); ?>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Invoice #<?php echo $invoice_id; ?></title>
