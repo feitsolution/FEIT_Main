@@ -445,6 +445,7 @@ $conn->close();
             }
         }
     </style>
+    <?php include 'loader.php'; ?>
 </head>
 
 <body>

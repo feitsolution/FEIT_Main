@@ -234,6 +234,8 @@ function getUserInitials($name) {
     }
 </style>
 
+<?php include 'loader.php'; ?>
+
 <nav class="sb-topnav navbar navbar-expand navbar-dark navbar-feit">
     <!-- Sidebar Toggle -->
     <button class="sidebar-toggle-btn order-1 order-lg-0 me-3" id="sidebarToggle" href="#!">
