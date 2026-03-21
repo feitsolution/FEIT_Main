@@ -135,7 +135,6 @@ $result = $conn->query($sql);
 </head>
 
 <body class="sb-nav-fixed">
-<?php include('loader.php'); ?>
 <?php include 'navbar.php'; ?>
 
 <div id="layoutSidenav">

@@ -42,7 +42,6 @@ $result = $conn->query($sql);
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
 </head>
 <body class="sb-nav-fixed">
-<?php include('loader.php'); ?>
 <?php include 'navbar.php'; ?>
 
 <div id="layoutSidenav">

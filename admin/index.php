@@ -255,8 +255,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
 </head>
 
 <body class="sb-nav-fixed">
-
-<?php include('loader.php'); ?>
 <?php include 'navbar.php'; ?>
 
 <div id="layoutSidenav">
