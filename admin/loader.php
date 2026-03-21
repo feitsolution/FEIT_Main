@@ -1,105 +1,75 @@
-<!-- HitZak Style Full-Screen Loader -->
+<!-- Premium Page Loading Styles -->
 <style>
-    .loader-bg {
+    /* Top Progress Bar */
+    #loading-bar {
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        background: #ffffff;
-        z-index: 999999;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        transition: opacity 0.5s ease, visibility 0.5s ease;
+        width: 0%;
+        height: 3px;
+        background: linear-gradient(to right, #4a6cf7, #6366f1, #a855f7);
+        z-index: 99999;
+        opacity: 1;
+        transition: width 0.4s cubic-bezier(0.1, 0.7, 1.0, 0.1), opacity 0.4s ease;
+        box-shadow: 0 0 10px rgba(74, 108, 247, 0.5);
     }
-
-    .loader-track {
-        height: 5px;
-        width: 100%;
-        background: #f1f5f9;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .loader-fill {
-        width: 300px;
-        height: 100%;
-        background: #4a6cf7;
-        position: absolute;
-        top: 0;
-        left: 0;
-        animation: hitZak 0.8s ease-in-out infinite alternate;
-        box-shadow: 0 0 15px rgba(74, 108, 247, 0.4);
-    }
-
-    @keyframes hitZak {
-        0% {
-            left: 0;
-            transform: translateX(-1%);
-        }
-        100% {
-            left: 100%;
-            transform: translateX(-99%);
-        }
-    }
-
-    /* Dark Mode support if needed */
-    [data-theme-mode="dark"] .loader-bg {
-        background: #1a1a1a;
-    }
-    [data-theme-mode="dark"] .loader-track {
-        background: #2d2d2d;
-    }
-
-    /* Prevent interaction while loading */
-    body.loading {
-        overflow: hidden;
+    
+    #loading-bar.complete {
+        width: 100% !important;
+        opacity: 0;
     }
 </style>
 
-<div class="loader-bg" id="site-loader">
-    <div class="loader-track">
-        <div class="loader-fill"></div>
-    </div>
-</div>
+<div id="loading-bar"></div>
 
+<!-- Smooth Page Loading Script -->
 <script>
     (function() {
-        const loader = document.getElementById('site-loader');
+        const bar = document.getElementById('loading-bar');
         
-        function hideLoader() {
-            if (!loader) return;
+        // Start progress
+        setTimeout(() => {
+            if (bar) bar.style.width = '30%';
+        }, 10);
+
+        // Simulated progress
+        const progressInterval = setInterval(() => {
+            if (!bar) return;
+            let currentWidth = parseFloat(bar.style.width);
+            if (currentWidth < 90) {
+                bar.style.width = (currentWidth + (90 - currentWidth) * 0.1) + '%';
+            }
+        }, 200);
+
+        // Handle Page Load
+        function completeLoading() {
+            if (document.body.classList.contains('loaded')) return;
             
-            loader.style.opacity = '0';
-            loader.style.visibility = 'hidden';
-            document.body.classList.remove('loading');
-            
-            setTimeout(() => {
-                if (loader.parentNode) {
-                    loader.remove();
-                }
-            }, 600);
+            clearInterval(progressInterval);
+            if (bar) {
+                bar.classList.add('complete');
+                setTimeout(() => {
+                    bar.style.width = '0%';
+                    bar.classList.remove('complete');
+                }, 500);
+            }
+            document.body.classList.add('loaded');
         }
 
-        // Add loading class to body
-        document.body.classList.add('loading');
-
-        // Trigger on DOMContentLoaded for snappier feel
+        // Trigger on DOMContentLoaded for faster visibility
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            hideLoader();
+            completeLoading();
         } else {
-            document.addEventListener('DOMContentLoaded', hideLoader);
+            document.addEventListener('DOMContentLoaded', completeLoading);
         }
 
-        // Fallback for slow resources
-        window.addEventListener('load', hideLoader);
+        // Also trigger on full window load as a fallback
+        window.addEventListener('load', completeLoading);
 
-        // Ultimate failsafe
-        setTimeout(hideLoader, 2000);
+        // Ultimate failsafe: ensure page is visible after 2 seconds
+        setTimeout(completeLoading, 2000);
 
-        // Re-show loader on navigation (Optional, for that "app" feel)
+        // Show loading bar on any navigation link click
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
             if (!link) return;
@@ -107,21 +77,33 @@
             const href = link.getAttribute('href');
             const target = link.getAttribute('target');
 
-            if (!href || href === '#' || href.startsWith('javascript:') || 
+            // Skip non-navigation links
+            if (!href || href === '#' || href === '#!' || href.startsWith('javascript:') || 
                 target === '_blank' || link.hasAttribute('data-bs-toggle') || 
                 e.ctrlKey || e.metaKey || e.shiftKey) {
                 return;
             }
 
-            // Optional: You can choose NOT to re-show the full-screen loader on click
-            // to avoid being too intrusive. But if you want it:
-            /*
-            const newLoader = loader.cloneNode(true);
-            newLoader.id = 'temp-loader';
-            newLoader.style.opacity = '0';
-            document.body.appendChild(newLoader);
-            setTimeout(() => newLoader.style.opacity = '1', 10);
-            */
+            // Show loading bar for the next page
+            if (bar) {
+                bar.style.opacity = '1';
+                bar.style.width = '40%';
+                
+                // Immediate fade out of current body for transition
+                document.body.style.opacity = '0.7';
+            }
+        });
+
+        // Handle browser back/forward (reset bar)
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) {
+                if (bar) {
+                    bar.style.width = '0%';
+                    bar.style.opacity = '0';
+                }
+                document.body.classList.add('loaded');
+                document.body.style.opacity = '1';
+            }
         });
     })();
 </script>

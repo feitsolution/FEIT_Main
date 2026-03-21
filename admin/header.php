@@ -21,3 +21,14 @@
 
 <!-- Link to Font Awesome CSS from CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Initial Body Opacity for Smooth Fade-in -->
+<style>
+    body {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    body.loaded {
+        opacity: 1 !important;
+    }
+</style>
