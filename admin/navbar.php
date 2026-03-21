@@ -1,6 +1,8 @@
 <?php
 // Start session and setup
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // CSRF token generation
 $_SESSION['csrf_token'] = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(32));
