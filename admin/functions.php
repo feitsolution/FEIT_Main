@@ -86,3 +86,4 @@ function requireAdmin($redirectPage = 'index.php') {
         exit();
     }
 }
+?>

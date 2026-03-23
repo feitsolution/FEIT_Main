@@ -1,8 +1,6 @@
 <?php
 // Start session and setup
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 
 // CSRF token generation
 $_SESSION['csrf_token'] = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(32));
@@ -21,22 +19,9 @@ if (isset($_SESSION['user_id'])) {
         LEFT JOIN roles r ON u.role_id = r.id 
         WHERE u.id = ?
     ");
-    if ($stmt) {
-        $stmt->bind_param("i", $_SESSION['user_id']);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
-    } else {
-        // Fallback: query without roles table
-        $stmt2 = $conn->prepare("SELECT * FROM users WHERE id = ?");
-        if ($stmt2) {
-            $stmt2->bind_param("i", $_SESSION['user_id']);
-            $stmt2->execute();
-            $user = $stmt2->get_result()->fetch_assoc();
-            if ($user) {
-                $user['role_name'] = 'Staff';
-            }
-        }
-    }
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
     
 }
 
@@ -68,53 +53,40 @@ function getUserInitials($name) {
     }
 
     .navbar-feit .navbar-brand {
-    display: flex;
-    align-items: center;   /* ensures vertical centering */
-    justify-content: center;
-    height: 100%;
-    margin-right: 1rem;
-}
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0;
+        margin-right: 1rem;
+    }
 
-.navbar-feit .navbar-brand img {
-    height: 55px;   /* increased from 42px */
-    width: auto;
-    display: block;
-}
+    .navbar-feit .navbar-brand img {
+        height: 42px;
+        width: auto;
+        transition: opacity 0.2s;
+    }
 
     .navbar-feit .navbar-brand:hover img {
         opacity: 0.85;
     }
 
     .sidebar-toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-
-    color: rgba(255, 255, 255, 0.7);
-    cursor: pointer;
-
-    transition: background 0.2s ease, color 0.2s ease;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.2s ease;
     }
 
     .sidebar-toggle-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #ffffff;
-    }
-
-    .sidebar-toggle-btn:active {
         background: rgba(255, 255, 255, 0.12);
-    }
-
-    .sidebar-toggle-btn:focus-visible {
-        outline: none;
-        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
     .navbar-user-section {
@@ -203,7 +175,16 @@ function getUserInitials($name) {
     }
 
     .dropdown-menu-feit::before {
-        display: none;
+        content: '';
+        position: absolute;
+        top: -6px;
+        right: 20px;
+        width: 12px;
+        height: 12px;
+        background: #1e2a3a;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        transform: rotate(45deg);
     }
 
     .dropdown-item-feit {
@@ -251,49 +232,20 @@ function getUserInitials($name) {
             display: none;
         }
     }
-
-    .dropdown-item-feit {
-    background: transparent;
-    }
-
-    .dropdown-item-feit:hover,
-    .dropdown-item-feit:focus,
-    .dropdown-item-feit:active {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: #fff;
-    }
-
-    .dropdown-item-feit.text-danger:hover,
-    .dropdown-item-feit.text-danger:focus,
-    .dropdown-item-feit.text-danger:active {
-        background: rgba(248, 113, 113, 0.1) !important;
-        color: #fca5a5 !important;
-    }
-
-    .item-icon {
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    font-size: 13px;
-    }
 </style>
 
 <?php include 'loader.php'; ?>
 
 <nav class="sb-topnav navbar navbar-expand navbar-dark navbar-feit">
-    <!-- Navbar Brand with Logo -->
-    <a class="navbar-brand" href="index.php">
-        <img src="img/system/FEIT.png" alt="FEIT" class="navbar-brand-logo">
-    </a>
-
     <!-- Sidebar Toggle -->
     <button class="sidebar-toggle-btn order-1 order-lg-0 me-3" id="sidebarToggle" href="#!">
         <i class="fas fa-bars"></i>
     </button>
+
+    <!-- Navbar Brand with Logo -->
+    <a class="navbar-brand" href="index.php">
+        <img src="img/system/FEIT.png" alt="FEIT" class="navbar-brand-logo">
+    </a>
 
     <!-- Spacer -->
     <div class="flex-grow-1"></div>
