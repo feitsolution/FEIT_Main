@@ -258,8 +258,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
 </head>
 
 <body class="sb-nav-fixed">
-<!-- TEMPORARY DEBUG: Remove after fixing -->
-<div id="debug-banner" style="position:fixed;top:0;left:0;right:0;z-index:99999999;background:red;color:white;padding:10px;font-size:16px;text-align:center;">DEBUG: Page loaded OK - If you see this but page is blank, the LOADER is the issue</div>
 
 <?php include 'navbar.php'; ?>
 
