@@ -158,7 +158,7 @@ function hasMultipleChanges($details) {
 </head>
 
 <body class="sb-nav-fixed">
-<?php include 'navbar.php'; ?>
+    <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
 

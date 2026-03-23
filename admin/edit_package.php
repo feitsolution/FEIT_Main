@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 
 <body class="sb-nav-fixed">
-<?php include 'navbar.php'; ?>
+    <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">

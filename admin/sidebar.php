@@ -4,6 +4,10 @@
     background: linear-gradient(180deg, #1a1a2e 0%, #0f172a 100%);
     min-height: 100vh;
     border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 
 .sb-sidenav-menu-heading {
@@ -26,6 +30,13 @@
     text-decoration: none;
 }
 
+.sb-nav-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+}
+
 .sb-sidenav-menu .nav-link .sb-nav-link-icon {
     color: rgba(148, 163, 184, 0.5);
     margin-right: 0.75rem;
@@ -42,9 +53,8 @@
 }
 
 .sb-sidenav-menu .nav-link.active {
-    background: rgba(99, 102, 241, 0.15);
-    color: #a5b4fc;
-    font-weight: 600;
+    background: rgba(99, 102, 241, 0.2);
+    color: #c7d2fe;
 }
 
 .sb-sidenav-menu .nav-link.active .sb-nav-link-icon {
@@ -63,12 +73,17 @@
 
 .sb-sidenav-menu-nested.nav {
     padding-left: 1rem;
-    background: linear-gradient(180deg, #1f1f37ff 0%, #1f1f37ff 100%);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
 }
 
 .sb-sidenav-menu-nested.nav .nav-link {
     padding: 0.4rem 1rem;
     font-size: 13px;
+}
+
+.sb-sidenav-menu-nested .nav-link:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .sb-sidenav-footer {
@@ -78,12 +93,6 @@
     background: rgba(0, 0, 0, 0.15);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     color: rgba(148, 163, 184, 0.6);
-}
-
-#sidenavAccordion {
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 
 #sidenavAccordion::-webkit-scrollbar {
@@ -129,7 +138,7 @@
                 <div class="sb-sidenav-menu-heading">Business</div>
 
                 <!-- Invoices -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseInvoices"
+                <a class="nav-link collapsed" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseInvoices"
                     aria-expanded="false" aria-controls="collapseInvoices" id="invoices-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                     Invoices
@@ -148,7 +157,7 @@
                 </div>
 
                 <!-- Customers -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCustomers"
+                <a class="nav-link collapsed" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseCustomers"
                     aria-expanded="false" aria-controls="collapseCustomers" id="customers-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                     Customers
@@ -164,7 +173,7 @@
                 </div>
 
                 <!-- Inquiries -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseInquiries"
+                <a class="nav-link collapsed" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseInquiries"
                     aria-expanded="false" aria-controls="collapseInquiries" id="inquiries-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-envelope-open-text"></i></div>
                     Inquiries
@@ -184,7 +193,7 @@
                 <!-- Users (Admin Only) -->
                 <?php if ($canManageUsers): ?>
                 <div class="sb-sidenav-menu-heading">Administration</div>
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers"
+                <a class="nav-link collapsed" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseUsers"
                     aria-expanded="false" aria-controls="collapseUsers" id="users-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-user-shield"></i></div>
                     Users
@@ -201,7 +210,7 @@
 
                 <!-- Products -->
                 <div class="sb-sidenav-menu-heading">Catalog</div>
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseProducts"
+                <a class="nav-link collapsed" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseProducts"
                     aria-expanded="false" aria-controls="collapseProducts" id="products-dropdown">
                     <div class="sb-nav-link-icon"><i class="fas fa-boxes-stacked"></i></div>
                     Products
@@ -224,7 +233,7 @@
 <!-- Active State Script -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const currentPage = window.location.pathname.split('/').pop();
+    const currentPage = window.location.pathname.split('/').pop().split('?')[0];
     document.querySelectorAll('.sb-sidenav-menu .nav-link').forEach(link => {
         const href = link.getAttribute('href');
         if (href && href !== '#' && href !== '#!') {
