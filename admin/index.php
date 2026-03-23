@@ -1,6 +1,9 @@
 <?php
 // Start session at the very beginning
 session_start();
+// TEMPORARY: Show errors on host for debugging (REMOVE after fixing)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Check if user is logged in, if not redirect to login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
@@ -255,6 +258,7 @@ if ($tableExists && $tableExists->num_rows > 0) {
 </head>
 
 <body class="sb-nav-fixed">
+
 <?php include 'navbar.php'; ?>
 
 <div id="layoutSidenav">
