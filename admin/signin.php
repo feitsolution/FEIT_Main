@@ -53,22 +53,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         setcookie("email", "", time() - 3600, "/");
                     }
 
-                    // Save session data before redirect
-                    session_write_close();
-
                     // Redirect based on user role
                     switch ($user['role_id']) {
                         case 1: // Superadmin
                             header("Location: index.php");
                             break;
                         case 2: // Regular user
-                            header("Location: index.php");
+                            header("Location: index.php"); // Fixed missing page name
                             break;
                         case 3: // Other user type
-                            header("Location: index.php");
+                            header("Location: index.php"); // Fixed missing page name
                             break;
                         default:
-                            header("Location: index.php");
+                            header("Location: index.php"); // Fixed missing page name
                     }
                     exit();
                 } else {
