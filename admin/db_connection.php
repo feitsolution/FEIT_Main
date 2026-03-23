@@ -1,4 +1,6 @@
 <?php
+date_default_timezone_set("Asia/Colombo");
+
 // Database connection
 $servername = getenv('DB_HOST');
 $username   = getenv('DB_USER');
