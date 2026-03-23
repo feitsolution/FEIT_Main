@@ -38,7 +38,6 @@ $customerResult = $conn->query($customerSql);
     <title>Create Invoice</title>
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .invoice-container {
             background: #fff;

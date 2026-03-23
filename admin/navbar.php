@@ -52,6 +52,7 @@ function getUserInitials($name) {
         padding: 0 1rem;
         height: 60px;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        font-family: 'Inter', sans-serif;
     }
 
     .navbar-feit .navbar-brand {
@@ -113,6 +114,11 @@ function getUserInitials($name) {
         border-radius: 10px;
         transition: background 0.2s;
         text-decoration: none;
+    }
+
+    /* Hide Bootstrap Default Caret */
+    .navbar-user-section::after {
+        display: none !important;
     }
 
     .navbar-user-section:hover {

@@ -48,7 +48,6 @@ $totalPendingInquiries = $pendingCountResult->fetch_assoc()['total_pending'];
     <!-- FAVICON -->
     <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/inquiry-list.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
