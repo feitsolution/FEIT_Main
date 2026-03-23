@@ -1,81 +1,50 @@
 <?php
-// TEMPORARY DEBUG FILE - DELETE AFTER FIXING
+// TEMPORARY DEBUG FILE - DELETE AFTER FIXING THE ISSUE
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-echo "<h2>Step-by-step index.php debug</h2>";
+echo "<h2>Host Debug Test</h2>";
 
-// Step 1: Session
-echo "<p>1. session_start... ";
+// 1. PHP Version
+echo "<p><b>PHP Version:</b> " . phpversion() . "</p>";
+
+// 2. Session test
 session_start();
-echo "<b style='color:green'>OK</b></p>";
+echo "<p><b>Session Status:</b> " . (session_status() === PHP_SESSION_ACTIVE ? 'Active' : 'NOT Active') . "</p>";
+echo "<p><b>Session ID:</b> " . session_id() . "</p>";
+echo "<p><b>Session Data:</b></p><pre>" . print_r($_SESSION, true) . "</pre>";
 
-// Step 2: Session check
-echo "<p>2. Logged in: " . (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true ? '<b style="color:green">YES</b>' : '<b style="color:red">NO</b>') . "</p>";
+// 3. Check if logged in
+$loggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+echo "<p><b>Logged In:</b> " . ($loggedIn ? 'YES' : 'NO - This is why you see a blank page! index.php redirects you back to signin.php') . "</p>";
 
-// Step 3: DB Connection
-echo "<p>3. db_connection.php... ";
+// 4. Database connection test
+echo "<h3>Database Test</h3>";
 include 'db_connection.php';
-echo "<b style='color:green'>OK</b></p>";
-
-// Step 4: Functions
-echo "<p>4. functions.php... ";
-include 'functions.php';
-echo "<b style='color:green'>OK</b></p>";
-
-// Step 5: Role checks
-echo "<p>5. Role checks... ";
-$current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
-$isAdmin = ($current_user_role === 1);
-echo "Role: $current_user_role, isAdmin: " . ($isAdmin ? 'YES' : 'NO') . " <b style='color:green'>OK</b></p>";
-
-// Step 6: DB Queries
-echo "<p>6. DB queries... ";
-try {
-    $result = $conn->query("SELECT COUNT(*) as count FROM users");
-    if ($result) {
-        $row = $result->fetch_assoc();
-        echo "Users: " . $row['count'] . " ";
+if ($conn->connect_error) {
+    echo "<p style='color:red;'><b>DB Connection FAILED:</b> " . $conn->connect_error . "</p>";
+} else {
+    echo "<p style='color:green;'><b>DB Connection:</b> OK</p>";
+    
+    // Check tables
+    $tables = ['users', 'roles', 'customers', 'products', 'invoices', 'user_form_data'];
+    foreach ($tables as $table) {
+        $result = $conn->query("SHOW TABLES LIKE '$table'");
+        $exists = ($result && $result->num_rows > 0) ? 'EXISTS' : 'MISSING';
+        $color = $exists === 'EXISTS' ? 'green' : 'red';
+        echo "<p><b>Table '$table':</b> <span style='color:$color;'>$exists</span></p>";
     }
-    echo "<b style='color:green'>OK</b></p>";
-} catch (Exception $e) {
-    echo "<b style='color:red'>FAILED: " . $e->getMessage() . "</b></p>";
+    $conn->close();
 }
 
-// Step 7: Header include
-echo "<p>7. header.php... ";
-ob_start();
-include 'header.php';
-ob_end_clean();
-echo "<b style='color:green'>OK</b></p>";
+// 5. Check key files exist
+echo "<h3>File Check</h3>";
+$files = ['index.php', 'signin.php', 'navbar.php', 'sidebar.php', 'functions.php', 'header.php', 'loader.php', 'css/styles.css', 'css/forms.css', 'js/scripts.js'];
+foreach ($files as $file) {
+    $exists = file_exists(__DIR__ . '/' . $file) ? 'OK' : 'MISSING';
+    $color = $exists === 'OK' ? 'green' : 'red';
+    echo "<p><b>$file:</b> <span style='color:$color;'>$exists</span></p>";
+}
 
-// Step 8: Navbar include
-echo "<p>8. navbar.php... ";
-ob_start();
-include 'navbar.php';
-$navContent = ob_get_clean();
-echo "<b style='color:green'>OK</b> (" . strlen($navContent) . " bytes)</p>";
-
-// Step 9: Sidebar include  
-echo "<p>9. sidebar.php... ";
-ob_start();
-include 'sidebar.php';
-$sideContent = ob_get_clean();
-echo "<b style='color:green'>OK</b> (" . strlen($sideContent) . " bytes)</p>";
-
-// Step 10: Check forms.css
-echo "<p>10. css/forms.css exists: " . (file_exists('css/forms.css') ? '<b style="color:green">YES</b>' : '<b style="color:red">NO</b>') . "</p>";
-
-// Step 11: Check PHP memory/limits
-echo "<h3>Server Config</h3>";
-echo "<p>output_buffering: " . ini_get('output_buffering') . "</p>";
-echo "<p>memory_limit: " . ini_get('memory_limit') . "</p>";
-echo "<p>max_execution_time: " . ini_get('max_execution_time') . "</p>";
-echo "<p>session.save_path: " . ini_get('session.save_path') . "</p>";
-echo "<p>session.cookie_path: " . ini_get('session.cookie_path') . "</p>";
-
-echo "<hr><p>All steps passed! If index.php still shows white, the issue is in the HTML output itself.</p>";
-echo "<p><i>Delete this file after debugging!</i></p>";
-
-$conn->close();
+echo "<hr><p><i>Delete this file after debugging!</i></p>";
 ?>
