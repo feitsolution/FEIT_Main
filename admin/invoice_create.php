@@ -36,8 +36,6 @@ $customerResult = $conn->query($customerSql);
 <head>
     <?php include('header.php'); ?>
     <title>Create Invoice</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <style>
         .invoice-container {
             background: #fff;

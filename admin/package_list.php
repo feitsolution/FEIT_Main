@@ -95,8 +95,6 @@ $result = $conn->query($sql);
 <head>
     <?php include('header.php'); ?>
     <title>Package List</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/product-list.css" rel="stylesheet" />
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.min.css">

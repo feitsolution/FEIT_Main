@@ -184,8 +184,6 @@ $result = $conn->query($sql);
 <head>
     <?php include('header.php'); ?>
     <title>All Users</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/users-list.css" rel="stylesheet" />
     <!-- SweetAlert CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">

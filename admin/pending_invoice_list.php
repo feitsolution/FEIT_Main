@@ -167,8 +167,6 @@ $result = $conn->query($sql);
 <head>
     <?php include('header.php'); ?>
     <title>Pending Invoices</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/invoice-list.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>

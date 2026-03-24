@@ -83,8 +83,6 @@ $result = $conn->query($sql);
 <head>
     <?php include('header.php'); ?>
     <title>Cancel Invoices</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/invoice-list.css" rel="stylesheet" />
 </head>
 

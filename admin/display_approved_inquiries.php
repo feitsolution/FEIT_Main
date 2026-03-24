@@ -49,8 +49,6 @@ if ($count_result) {
 <head>
     <?php include('header.php'); ?>
     <title>Approved Inquiry  </title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/inquiry-list.css" rel="stylesheet" />
 </head>
 <body class="sb-nav-fixed">

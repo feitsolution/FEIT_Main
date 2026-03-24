@@ -45,8 +45,6 @@ $totalPendingInquiries = $pendingCountResult->fetch_assoc()['total_pending'];
 <head>
     <?php include('header.php'); ?>
     <title>Pending Inquiry </title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/inquiry-list.css" rel="stylesheet" />
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">

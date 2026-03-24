@@ -123,8 +123,6 @@ function hasMultipleChanges($details) {
 <head>
     <?php include('header.php'); ?>
     <title>User Activity Logs</title>
-    <!-- FAVICON -->
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/users-list.css" rel="stylesheet" />
     <style>
         .details-cell {

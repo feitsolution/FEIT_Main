@@ -96,7 +96,6 @@ if ($tableExists && $tableExists->num_rows > 0) {
 <head>
     <?php include('header.php'); ?>
     <title>Dashboard - FEIT Admin</title>
-    <link rel="icon" href="img/system/letter-f.png" type="image/png">
     <link href="css/forms.css" rel="stylesheet" />
     <style>
         body {
