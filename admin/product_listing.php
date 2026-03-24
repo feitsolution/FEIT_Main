@@ -1,4 +1,3 @@
-
 <?php
 // Start session at the very beginning
 session_start();
@@ -99,18 +98,45 @@ $totalproducts = $countResult->fetch_assoc()['total'];
 
                                         <!-- View Modal -->
                                         <div class="modal fade" id="viewModal<?= $row['id'] ?>" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
-                                            <div class="modal-dialog">
+                                            <div class="modal-dialog modal-dialog-centered">
                                                 <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="viewModalLabel">Product Details</h5>
+                                                    <div class="modal-header bg-light">
+                                                        <h5 class="modal-title" id="viewModalLabel"><i class="fas fa-box me-2"></i>Product Details</h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
-                                                        <p><strong>ID:</strong> <?= htmlspecialchars($row['id']) ?></p>
-                                                        <p><strong>Name:</strong> <?= htmlspecialchars($row['name']) ?></p>
-                                                        <p><strong>Description:</strong> <?= htmlspecialchars($row['description']) ?></p>
-                                                        <p><strong>Price:</strong> <?= number_format($row['price'], 2) ?></p>
-                                                        <p><strong>Created At:</strong> <?= htmlspecialchars($row['created_at']) ?></p>
+                                                        <div class="row g-3">
+                                                            <div class="col-md-6">
+                                                                <div class="p-3 bg-light rounded">
+                                                                    <small class="text-muted text-uppercase fw-semibold">ID</small>
+                                                                    <p class="mb-0 mt-1"><?= htmlspecialchars($row['id']) ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="p-3 bg-light rounded">
+                                                                    <small class="text-muted text-uppercase fw-semibold">Name</small>
+                                                                    <p class="mb-0 mt-1"><?= htmlspecialchars($row['name']) ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <div class="p-3 bg-light rounded">
+                                                                    <small class="text-muted text-uppercase fw-semibold">Description</small>
+                                                                    <p class="mb-0 mt-1"><?= htmlspecialchars($row['description']) ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="p-3 bg-light rounded">
+                                                                    <small class="text-muted text-uppercase fw-semibold">Price</small>
+                                                                    <p class="mb-0 mt-1"><?= number_format($row['price'], 2) ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="p-3 bg-light rounded">
+                                                                    <small class="text-muted text-uppercase fw-semibold">Created At</small>
+                                                                    <p class="mb-0 mt-1"><?= htmlspecialchars($row['created_at']) ?></p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

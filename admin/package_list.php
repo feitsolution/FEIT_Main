@@ -259,25 +259,57 @@ $result = $conn->query($sql);
 
                                             <!-- View Modal -->
                                             <div class="modal fade" id="viewModal<?= $row['id'] ?>" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
-                                                <div class="modal-dialog">
+                                                <div class="modal-dialog modal-dialog-centered">
                                                     <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title" id="viewModalLabel">Package Details</h5>
+                                                        <div class="modal-header bg-light">
+                                                            <h5 class="modal-title" id="viewModalLabel"><i class="fas fa-cube me-2"></i>Package Details</h5>
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                         </div>
                                                         <div class="modal-body">
-                                                            <p><strong>ID:</strong> <?= htmlspecialchars($row['id']) ?></p>
-                                                            <p><strong>Product:</strong> <?= htmlspecialchars($row['product_name'] ?? 'N/A') ?></p>
-                                                            <p><strong>Description:</strong> <?= htmlspecialchars($row['description']) ?></p>
-                                                            <p><strong>Max Count:</strong> <?= htmlspecialchars($row['max_count'] ?? 'No Limit') ?></p>
-                                                            <p><strong>Amount:</strong> <?= number_format($row['amount'], 2) ?> LKR</p>
-                                                            <p><strong>Status:</strong> 
-                                                                <?php if ($status == 'active'): ?>
-                                                                    <span class="badge-soft badge-soft-success">Active</span>
-                                                                <?php else: ?>
-                                                                    <span class="badge-soft badge-soft-secondary">Inactive</span>
-                                                                <?php endif; ?>
-                                                            </p>
+                                                            <div class="row g-3">
+                                                                <div class="col-md-6">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">ID</small>
+                                                                        <p class="mb-0 mt-1"><?= htmlspecialchars($row['id']) ?></p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Product</small>
+                                                                        <p class="mb-0 mt-1"><?= htmlspecialchars($row['product_name'] ?? 'N/A') ?></p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Description</small>
+                                                                        <p class="mb-0 mt-1"><?= htmlspecialchars($row['description']) ?></p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Max Count</small>
+                                                                        <p class="mb-0 mt-1"><?= htmlspecialchars($row['max_count'] ?? 'No Limit') ?></p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Amount</small>
+                                                                        <p class="mb-0 mt-1"><?= number_format($row['amount'], 2) ?> LKR</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Status</small>
+                                                                        <p class="mb-0 mt-1">
+                                                                            <?php if ($status == 'active'): ?>
+                                                                                <span class="badge-soft badge-soft-success">Active</span>
+                                                                            <?php else: ?>
+                                                                                <span class="badge-soft badge-soft-danger">Inactive</span>
+                                                                            <?php endif; ?>
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

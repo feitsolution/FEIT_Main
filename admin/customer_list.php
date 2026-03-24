@@ -290,10 +290,10 @@ $result = $conn->query($sql);
 
     <!-- View Customer Modal -->
     <div class="modal fade" id="viewCustomerModal" tabindex="-1" aria-labelledby="viewCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewCustomerModalLabel">Customer Details</h5>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="viewCustomerModalLabel"><i class="fas fa-user me-2"></i>Customer Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="viewCustomerModalBody">
@@ -375,14 +375,64 @@ $result = $conn->query($sql);
                 };
 
                 viewCustomerModalBody.innerHTML = `
-                    <p><strong>Customer ID:</strong> ${customerData.id}</p>
-                    <p><strong>Name:</strong> ${customerData.name}</p>
-                    <p><strong>Email:</strong> ${customerData.email}</p>
-                    <p><strong>Phone:</strong> ${customerData.phone}</p>
-                    <p><strong>Address:</strong> ${customerData.address}</p>
-                    <p><strong>Status:</strong> ${customerData.status}</p>
-                    <p><strong>Billing Date:</strong> ${customerData.billing !== 'Not Set' && customerData.billing ? customerData.billing + ' of the month' : 'Not Set'}</p>
-                    <p><strong>Created At:</strong> ${customerData.created}</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Customer ID</small>
+                                <p class="mb-0 mt-1">#${customerData.id}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Name</small>
+                                <p class="mb-0 mt-1">${customerData.name}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Email</small>
+                                <p class="mb-0 mt-1">${customerData.email}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Phone</small>
+                                <p class="mb-0 mt-1">${customerData.phone}</p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Address</small>
+                                <p class="mb-0 mt-1">${customerData.address}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Status</small>
+                                <p class="mb-0 mt-1">
+                                    ${customerData.status === 'Active' 
+                                        ? '<span class="badge-soft badge-soft-success">Active</span>' 
+                                        : '<span class="badge-soft badge-soft-danger">Inactive</span>'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Billing Date</small>
+                                <p class="mb-0 mt-1">
+                                    ${customerData.billing !== 'Not Set' && customerData.billing 
+                                        ? customerData.billing + ' of the month' 
+                                        : '<em class="text-muted">Not Set</em>'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Created At</small>
+                                <p class="mb-0 mt-1">${customerData.created}</p>
+                            </div>
+                        </div>
+                    </div>
                 `;
 
                 viewCustomerModal.show();

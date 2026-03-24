@@ -394,13 +394,13 @@ $result = $conn->query($sql);
 
     <!-- View User Modal -->
     <div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewUserModalLabel">User Details</h5>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="viewUserModalLabel"><i class="fas fa-user-circle me-2"></i>User Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body modal-custom-body" id="viewUserModalBody">
+                <div class="modal-body" id="viewUserModalBody">
                     <!-- Dynamic content will be inserted here -->
                 </div>
                 <div class="modal-footer">
@@ -478,13 +478,54 @@ $result = $conn->query($sql);
                 };
 
                 viewUserModalBody.innerHTML = `
-                    <p><strong>Name:</strong> ${userData.name}</p>
-                    <p><strong>Email:</strong> ${userData.email}</p>
-                    <p><strong>Mobile:</strong> ${userData.mobile}</p>
-                    <p><strong>NIC:</strong> ${userData.nic}</p>
-                    <p><strong>Status:</strong> ${userData.status}</p>
-                    <p><strong>Role:</strong> ${userData.role} (ID: ${userData.roleId})</p>
-                    <p><strong>Created At:</strong> ${userData.created}</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Name</small>
+                                <p class="mb-0 mt-1">${userData.name}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Email</small>
+                                <p class="mb-0 mt-1">${userData.email}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Mobile</small>
+                                <p class="mb-0 mt-1">${userData.mobile}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">NIC</small>
+                                <p class="mb-0 mt-1">${userData.nic}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Status</small>
+                                <p class="mb-0 mt-1">
+                                    ${userData.status === 'active' 
+                                        ? '<span class="badge-soft badge-soft-success">Active</span>' 
+                                        : '<span class="badge-soft badge-soft-danger">Inactive</span>'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Role</small>
+                                <p class="mb-0 mt-1">${userData.role} (ID: ${userData.roleId})</p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted text-uppercase fw-semibold">Created At</small>
+                                <p class="mb-0 mt-1">${userData.created}</p>
+                            </div>
+                        </div>
+                    </div>
                 `;
 
                 viewUserModal.show();
