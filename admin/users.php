@@ -210,7 +210,7 @@ $result = $conn->query($sql);
                                     <div class="position-relative flex-grow-1" style="max-width: 360px;">
                                         <i class="fas fa-search position-absolute" style="top: 50%; left: 12px; transform: translateY(-50%); color: #a0aec0; font-size: 0.85rem;"></i>
                                         <input type="text" name="search" class="form-control ps-4"
-                                            placeholder="Search users by name, email, role..."
+                                            placeholder=" Search users by name, email, role..."
                                             value="<?php echo htmlspecialchars($search); ?>">
                                     </div>
                                     <button type="submit" class="btn btn-primary btn-filter">
