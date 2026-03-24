@@ -23,7 +23,7 @@ $role_name = getRoleName($_SESSION['role_id'] ?? 2);
 <header class="pc-header">
   <div class="header-wrapper flex max-sm:px-[15px] px-[25px] grow">
     <!-- [Mobile Media Block] start -->
-    <div class="me-auto pc-mob-drp">
+    <div class="shrink-0 pc-mob-drp">
       <ul class="inline-flex *:min-h-header-height *:inline-flex *:items-center">
         <!-- ======= Menu collapse Icon ===== -->
         <li class="pc-h-item pc-sidebar-collapse max-lg:hidden lg:inline-flex">
@@ -47,7 +47,19 @@ $role_name = getRoleName($_SESSION['role_id'] ?? 2);
     </div>
 
     <!-- [Mobile Media Block end] -->
-    <div class="ms-auto">
+    <?php if (strtotime(date('Y-m-d')) >= strtotime('2026-03-24')): ?>
+    <!-- [ Suspension Marquee ] start -->
+    <div style="overflow:hidden;white-space:nowrap;flex:1;min-width:0;border-radius:4px;margin:0 10px;display:flex;align-items:center;">
+      <p style="display:inline-block;margin:0;padding:2px 0;color:#dc3545;font-weight:600;font-size:26px;animation:marquee 18s linear infinite;">
+        ⚠️ Account will be suspended after 2026-03-25. Please contact admin. ⚠️
+      </p>
+      <style>
+        @keyframes marquee { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+      </style>
+    </div>
+    <!-- [ Suspension Marquee ] end -->
+    <?php endif; ?>
+    <div class="shrink-0">
       <ul class="inline-flex *:min-h-header-height *:inline-flex *:items-center">
         <li class="dropdown pc-h-item header-user-profile">
           <a class="pc-head-link dropdown-toggle arrow-none me-0" data-pc-toggle="dropdown" href="#" role="button"
