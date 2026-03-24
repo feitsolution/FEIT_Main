@@ -326,8 +326,7 @@ $result = $conn->query($sql);
                                                                 <button type="button" class="btn btn-cancel cancel-invoice"
                                                                     data-bs-toggle="tooltip" data-bs-placement="top" title="Cancel Invoice"
                                                                     data-id="<?php echo isset($row['invoice_id']) ? $row['invoice_id'] : ''; ?>"
-                                                                    data-customer="<?php echo htmlspecialchars($customerName); ?>"
-                                                                    data-bs-toggle="modal" data-bs-target="#cancelInvoiceModal">
+                                                                    data-customer="<?php echo htmlspecialchars($customerName); ?>">
                                                                     <i class="fas fa-times-circle"></i>
                                                                 </button>
                                                             <?php endif; ?>
@@ -652,6 +651,7 @@ $result = $conn->query($sql);
                 $('#cancel_invoice_id').text(invoiceId);
                 $('#cancel_customer_name').text(customerName);
                 $('#confirm_cancel_invoice_id').val(invoiceId);
+                $('#cancelInvoiceModal').modal('show');
             });
             
             // Fade out alert messages after 5 seconds
