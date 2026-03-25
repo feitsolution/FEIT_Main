@@ -255,6 +255,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.product-desc:hover {
+    color: #2d3748;
 }
 
 /* Price */

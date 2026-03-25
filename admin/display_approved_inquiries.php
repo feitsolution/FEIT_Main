@@ -132,10 +132,25 @@ if ($count_result) {
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Initialize Bootstrap tooltips
                     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                    tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    var tooltipInstances = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl, {
+                            trigger: 'hover',
+                            delay: { show: 200, hide: 400 },
+                            animation: true,
+                            container: 'body'
+                        });
+                    });
+                    
+                    tooltipTriggerList.forEach(function(el) {
+                        el.addEventListener('mouseleave', function() {
+                            var tooltip = bootstrap.Tooltip.getInstance(el);
+                            if (tooltip) {
+                                setTimeout(function() {
+                                    tooltip.hide();
+                                }, 400);
+                            }
+                        });
                     });
                 });
             </script>

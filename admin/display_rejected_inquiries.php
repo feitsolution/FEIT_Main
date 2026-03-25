@@ -119,11 +119,12 @@ if ($count_result) {
                                     </td>
                                     <td>
                                         <div class="inquiry-action-btns d-flex gap-1">
-                                            <button type="button" class="btn btn-view"
-                                                title="View Details"
-                                                data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                            <span data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                                                <button type="button" class="btn btn-view"
+                                                    data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </span>
                                         </div>
                                     </td>
                                 </tr>
@@ -147,10 +148,27 @@ if ($count_result) {
     
     <script>
     $(document).ready(function() {
-        // Initialize tooltips
+        // Initialize tooltips with better config
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                trigger: 'hover',
+                delay: { show: 200, hide: 400 },
+                animation: true,
+                container: 'body'
+            });
+        });
+        
+        // Auto-hide on mouseleave
+        tooltipTriggerList.forEach(function(el) {
+            el.addEventListener('mouseleave', function() {
+                var tooltip = bootstrap.Tooltip.getInstance(el);
+                if (tooltip) {
+                    setTimeout(function() {
+                        tooltip.hide();
+                    }, 400);
+                }
+            });
         });
 
         // Show alert function

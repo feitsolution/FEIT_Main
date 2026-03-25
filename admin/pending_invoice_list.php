@@ -420,10 +420,10 @@ $result = $conn->query($sql);
     <!-- Modal for Viewing Invoice -->
     <div class="modal fade" id="viewInvoiceModal" tabindex="-1" aria-labelledby="viewInvoiceModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewInvoiceModalLabel">Invoice Details</h5>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="viewInvoiceModalLabel"><i class="fas fa-file-invoice me-2"></i>Invoice Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="invoiceDetails">
@@ -436,12 +436,13 @@ $result = $conn->query($sql);
 
     <!-- Modal for Marking Invoice as Paid -->
     <div class="modal fade" id="markPaidModal" tabindex="-1" aria-labelledby="markPaidModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="markPaidModalLabel">Payment
-                        Sheet</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="markPaidModalLabel">
+                        <i class="fas fa-money-bill-wave me-2"></i>Payment Sheet
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
                         aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -459,7 +460,7 @@ $result = $conn->query($sql);
                         </div>
 
                         <div class="mb-4">
-                            <label for="payment_slip" class="form-label fw-bold">
+                            <label for="payment_slip" class="form-label fw-semibold">
                                 <i class="fas fa-upload me-2"></i>Upload Payment Slip (Optional)
                             </label>
                             <input type="file" class="form-control" id="payment_slip" name="payment_slip"
@@ -476,7 +477,7 @@ $result = $conn->query($sql);
                             <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
                                 <i class="fas fa-times me-1"></i>Cancel
                             </button>
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success btn-lg px-4">
                                 <i class="fas fa-check me-1"></i>Mark as Paid
                             </button>
                         </div>
@@ -488,27 +489,33 @@ $result = $conn->query($sql);
 
     <!-- Modal for Cancel Invoice Confirmation -->
     <div class="modal fade" id="cancelInvoiceModal" tabindex="-1" aria-labelledby="cancelInvoiceModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="cancelInvoiceModalLabel">Cancel Invoice</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="cancelInvoiceModalLabel"><i class="fas fa-times-circle me-2"></i>Cancel Invoice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to cancel this invoice? This action cannot be undone.</p>
-                    <p><strong>Invoice ID: </strong><span id="cancel_invoice_id"></span></p>
-                    <p><strong>Customer: </strong><span id="cancel_customer_name"></span></p>
+                    <div class="text-center mb-3">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                    </div>
+                    <p class="text-center">Are you sure you want to cancel this invoice? This action cannot be undone.</p>
+                    <div class="p-3 bg-light rounded mt-3">
+                        <p class="mb-1"><strong>Invoice ID: </strong><span id="cancel_invoice_id"></span></p>
+                        <p class="mb-0"><strong>Customer: </strong><span id="cancel_customer_name"></span></p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <form method="post" id="cancelInvoiceForm">
                         <input type="hidden" name="invoice_id" id="confirm_cancel_invoice_id">
                         <input type="hidden" name="cancel_invoice" value="1">
-                        <!-- Add hidden fields to preserve current page state -->
                         <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
                         <input type="hidden" name="limit" value="<?php echo $limit; ?>">
                         <input type="hidden" name="page" value="<?php echo $page; ?>">
-                        <button type="submit" class="btn btn-danger">Confirm Cancel</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-times me-1"></i>Confirm Cancel
+                        </button>
                     </form>
                 </div>
             </div>

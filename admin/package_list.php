@@ -210,7 +210,7 @@ $result = $conn->query($sql);
                                                 <td><span class="product-id"><?= htmlspecialchars($row['id']) ?></span></td>
                                                 <td><span class="product-name"><?= htmlspecialchars($row['product_name'] ?? 'N/A') ?></span></td>
                                                 <td>
-                                                    <span class="product-desc" title="<?= htmlspecialchars($row['description']) ?>">
+                                                    <span class="product-desc" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= htmlspecialchars($row['description']) ?>">
                                                         <?= htmlspecialchars($row['description']) ?>
                                                     </span>
                                                 </td>
@@ -229,9 +229,11 @@ $result = $conn->query($sql);
                                                 </td>
                                                 <td>
                                                     <div class="product-action-btns d-flex gap-1">
-                                                        <button class="btn btn-view" title="View Details" data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
+                                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                                                            <button class="btn btn-view" data-bs-toggle="modal" data-bs-target="#viewModal<?= $row['id'] ?>">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </span>
 
                                                         <?php if ($canEditRecords): ?>
                                                         <a href="edit_package.php?id=<?= $row['id'] ?>" class="btn btn-edit" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Package">
@@ -409,8 +411,25 @@ $result = $conn->query($sql);
     // Initialize Bootstrap tooltips
     document.addEventListener('DOMContentLoaded', function() {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        var tooltipInstances = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                trigger: 'hover',
+                delay: { show: 200, hide: 400 },
+                animation: true,
+                container: 'body'
+            });
+        });
+        
+        // Auto-hide tooltip on mouse leave with delay
+        tooltipTriggerList.forEach(function(el) {
+            el.addEventListener('mouseleave', function() {
+                var tooltip = bootstrap.Tooltip.getInstance(el);
+                if (tooltip) {
+                    setTimeout(function() {
+                        tooltip.hide();
+                    }, 400);
+                }
+            });
         });
     });
     

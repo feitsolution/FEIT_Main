@@ -322,10 +322,10 @@ $result = $conn->query($sql);
     <!-- Modal for Viewing Invoice -->
     <div class="modal fade" id="viewInvoiceModal" tabindex="-1" aria-labelledby="viewInvoiceModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewInvoiceModalLabel">Invoice Details</h5>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="viewInvoiceModalLabel"><i class="fas fa-file-invoice me-2"></i>Invoice Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="invoiceDetails">
@@ -345,10 +345,10 @@ $result = $conn->query($sql);
 
     <!-- Modal for Marking Invoice as Paid -->
     <div class="modal fade" id="markPaidModal" tabindex="-1" aria-labelledby="markPaidModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="markPaidModalLabel"> Payment Sheet</h5>
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="markPaidModalLabel"><i class="fas fa-money-bill-wave me-2"></i>Payment Sheet</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -356,14 +356,16 @@ $result = $conn->query($sql);
                         <input type="hidden" name="invoice_id" id="invoice_id">
 
                         <div class="mb-3">
-                            <label for="payment_slip" class="form-label">Please Select Your Payment Slip (Optional)</label>
+                            <label for="payment_slip" class="form-label fw-semibold">Please Select Your Payment Slip (Optional)</label>
                             <input type="file" class="form-control" id="payment_slip" name="payment_slip"
                                 accept=".jpg,.png,.pdf">
                             <small class="form-text text-muted">Supported File formats: .JPG / .PNG / .PDF</small>
                         </div>
 
                         <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-success">Paid</button>
+                            <button type="submit" class="btn btn-success btn-lg px-5">
+                                <i class="fas fa-check-circle me-2"></i>Paid
+                            </button>
                         </div>
                     </form>
                 </div>
