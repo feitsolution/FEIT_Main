@@ -75,14 +75,8 @@ try {
         exit("Not billing day. Skipping sync.\n");
     }
 
-    // Get start date via Admin API
-    $api_res = call_admin_api('get_start_date', ['customer_id' => $target_customer_id]);
-    
-    if ($api_res['status'] !== 'success') {
-        throw new Exception("API Error (get_start_date): " . $api_res['message']);
-    }
-    
-    $start_date = $api_res['start_date'];
+    // Calculate start date 
+    $start_date = date("Y-m-$billing_date", strtotime('-1 month'));
 
     // Count orders
     $order_count_query = "SELECT COUNT(*) as total FROM order_header WHERE created_at >= ?";

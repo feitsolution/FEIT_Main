@@ -2,9 +2,8 @@
 /**
  * Admin API: Sync Order Count
  * 
- * Provides endpoints for cron to:
- * 1. Get the start date for counting orders (last invoice or customer creation).
- * 2. Process the sync (calculate suitable package, update count, and log).
+ * Provides endpoint for cron to:
+ * 1. Process the sync (calculate suitable package, update count, and log).
  */
 
 require_once 'db_connection.php'; // $conn (fe_it_db)
@@ -22,41 +21,6 @@ if (!$customer_id) {
     exit;
 }
 
-/**
- * Action: get_start_date
- * Returns the date of the latest invoice or the customer's creation date.
- */
-if ($action === 'get_start_date') {
-    // Find latest invoice in fe_it_db
-    $invoice_query = "SELECT created_at FROM invoices WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1";
-    $stmt_inv = $conn->prepare($invoice_query);
-    $stmt_inv->bind_param("i", $customer_id);
-    $stmt_inv->execute();
-    $inv_res = $stmt_inv->get_result();
-    
-    $start_date = null;
-    if ($inv_res && $row = $inv_res->fetch_assoc()) {
-        $start_date = $row['created_at'];
-    } else {
-        // Fallback to customer creation date
-        $cust_query = "SELECT created_at FROM customers WHERE customer_id = ? LIMIT 1";
-        $stmt_cust = $conn->prepare($cust_query);
-        $stmt_cust->bind_param("i", $customer_id);
-        $stmt_cust->execute();
-        $cust_res = $stmt_cust->get_result();
-        
-        if ($cust_res && $row = $cust_res->fetch_assoc()) {
-            $start_date = $row['created_at'];
-        }
-    }
-
-    if ($start_date) {
-        echo json_encode(['status' => 'success', 'start_date' => $start_date]);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Could not determine start date for customer ID ' . $customer_id]);
-    }
-    exit;
-}
 
 /**
  * Action: process_sync
