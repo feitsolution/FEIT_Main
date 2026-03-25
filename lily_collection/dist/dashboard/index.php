@@ -14,6 +14,8 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // Include database connection
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/fe_it_db_connection.php');
+
 
 /**
  * Role-Based Access Control Helper Class for Dashboard
@@ -136,27 +138,13 @@ if ($rbac->isAdmin()) {
     $stats['total_users'] = safeQuery($conn, "SELECT COUNT(*) as count FROM users");
 }
 
-// Total Customers - Only admin can see all customers, regular users see only their customers
-if ($rbac->isAdmin()) {
-    // Check if customers table exists
-    $tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_customers'] = safeQuery($conn, "SELECT COUNT(*) as count FROM customers");
-    }
-} else {
-    // For regular users, count customers from their orders only
-    $tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
-    if ($tableExists && $tableExists->num_rows > 0) {
-        $stats['total_customers'] = safeQuery($conn, 
-            "SELECT COUNT(DISTINCT c.customer_id) as count 
-             FROM customers c 
-             INNER JOIN order_header oh ON c.customer_id = oh.customer_id 
-             WHERE oh.user_id = $current_user_id"
-        );
-    }
+// Check if customers table exists
+$tableExists = $conn->query("SHOW TABLES LIKE 'customers'");
+if ($tableExists && $tableExists->num_rows > 0) {
+    $stats['total_customers'] = safeQuery($conn, "SELECT COUNT(*) as count FROM customers");
 }
 
-// Total Products
+// Total Products - All users can see total products
 $tableExists = $conn->query("SHOW TABLES LIKE 'products'");
 if ($tableExists && $tableExists->num_rows > 0) {
     $stats['total_products'] = safeQuery($conn, "SELECT COUNT(*) as count FROM products");
@@ -207,8 +195,38 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $stats['return_handover_orders'] = safeQuery($conn, $return_handover_orders_query);
 }
 
+// Check for unpaid invoices starting 2 days before due date
+$suspend_notice = null;
+$customer_id_session = $_SESSION['customer_id'] ?? 0;
 
+if ($customer_id_session > 0) {
+    // Check for unpaid invoices where today is 2 days or less before the due date
+    $sql_unpaid = "SELECT status,due_date FROM invoices 
+                  WHERE customer_id = ? 
+                  AND pay_status = 'unpaid' AND status = 'pending' 
+                  AND (CURRENT_DATE() >= DATE_SUB(due_date, INTERVAL 2 DAY))
+                  ORDER BY due_date ASC LIMIT 1";
+    $stmt_unpaid = $fe_conn->prepare($sql_unpaid);
+    if ($stmt_unpaid) {
+        $stmt_unpaid->bind_param("i", $customer_id_session);
+        $stmt_unpaid->execute();
+        $res_unpaid = $stmt_unpaid->get_result();
+        if ($res_unpaid && $res_unpaid->num_rows > 0) {
+            $unpaid_invoice = $res_unpaid->fetch_assoc();
+            $due_date_formatted = date('F d, Y', strtotime($unpaid_invoice['due_date']));
+            $current_date = date('Y-m-d');
+            
+            if ($current_date > $unpaid_invoice['due_date']) {
+                $suspend_notice = "<strong>Account Suspension Warning:</strong> Your invoice was due on " . $due_date_formatted . ". Please pay immediately to avoid account suspension.";
+            } else {
+                $suspend_notice = "<strong>Suspend account notice:</strong> Please pay your invoice before " . $due_date_formatted . " to avoid account suspension.";
+            }
+        }
+        $stmt_unpaid->close();
+    }
+}
 ?>
+
 
 <!doctype html>
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
@@ -387,6 +405,19 @@ if ($tableExists && $tableExists->num_rows > 0) {
             font-size: 0.9em;
             margin-left: 0.5rem;
         }
+
+        .suspend-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f6f6f6;
+    color: #ff0000;
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.25rem;
+    font-size: 18px;
+    border: 1px solid #f87171;
+}
     </style>
 </head>
 
@@ -421,6 +452,14 @@ if ($tableExists && $tableExists->num_rows > 0) {
                 </div>
             </div>
             <!-- [ breadcrumb ] end -->
+
+            <?php if ($suspend_notice): ?>
+            <div class="suspend-alert" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <?php echo $suspend_notice; ?>
+            </div>
+            <?php endif; ?>
+
 
             <!-- Date Info -->
             <div class="date-info">
