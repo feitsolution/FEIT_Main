@@ -17,13 +17,15 @@ $today_day = (int)date('j');
 $current_month_year = date('F Y');
 $issue_date = date('Y-m-d');
 $due_date = date('Y-m-d', strtotime('+7 days')); 
+//$due_date = date('Y-m-t'); // last day of the month
+//$due_date = date('Y-m-t', strtotime($issue_date));
 
 try {
     $query = "SELECT c.customer_id, c.name, c.email, c.product_id, c.package_id, c.order_count, cp.amount as custom_amount, p.amount as package_default_amount
               FROM customers c
               JOIN packages p ON c.package_id = p.id
               LEFT JOIN customer_packages cp ON c.customer_id = cp.customer_id AND c.package_id = cp.package_id
-              WHERE c.status = 'active' AND c.billing_date = ? AND c.product_id IS NOT NULL AND c.package_id IS NOT NULL";
+              WHERE c.status = 'Active' AND c.billing_date = ? AND c.product_id IS NOT NULL AND c.package_id IS NOT NULL";
     
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $today_day);
@@ -95,7 +97,7 @@ try {
             ) VALUES (?, ?, 0, ?, ?, ?, ?)";
             
             $stmt_item = $conn->prepare($insert_item);
-            $item_desc = "Monthly Subscription Fee for {$current_month_year} (Orders count: {$order_count})";
+            $item_desc = "Subscription Fee for {$current_month_year} \n (Orders count: {$order_count})";
             $stmt_item->bind_param(
                 "iidsss",
                 $invoice_id, $product_id, $amount, $pay_status, $status, $item_desc

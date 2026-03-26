@@ -92,7 +92,8 @@ if ($action === 'process_sync') {
     
     if ($stmt_upd->execute()) {
         // Log the action
-        $log_msg = "Cron (sync_order_count): Updated count to $total_orders. Package sync: $current_package_id -> $new_package_id (Product ID: $product_id).";
+        $pkg_sync = ($current_package_id == $new_package_id) ? $new_package_id : "$current_package_id -> $new_package_id";
+        $log_msg = "Customer #$customer_id: Orders=$total_orders, Package $pkg_sync (Product ID: $product_id)";
         $stmt_log = $conn->prepare("INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) VALUES (1, 'cron_sync_orders', 0, ?, NOW())");
         $stmt_log->bind_param("s", $log_msg);
         $stmt_log->execute();
