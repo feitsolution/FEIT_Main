@@ -40,7 +40,7 @@ $sql = "SELECT ul.id as log_id, ul.user_id, ul.action_type, ul.inquiry_id,
         LEFT JOIN users u ON ul.user_id = u.id";
 
 // Build search conditions
-$searchConditions = [];
+$searchConditions = ["ul.user_id != 1"];
 
 // General search condition
 if (!empty($search)) {
@@ -116,7 +116,7 @@ if ($action_types_result && $action_types_result->num_rows > 0) {
 // Get unique users for filter dropdown
 $users_sql = "SELECT DISTINCT u.id, u.name FROM users u 
               INNER JOIN user_logs ul ON u.id = ul.user_id 
-              WHERE u.name IS NOT NULL AND u.name != '' 
+              WHERE u.name IS NOT NULL AND u.name != '' AND u.id != 1
               ORDER BY u.name";
 $users_result = $conn->query($users_sql);
 $users_list = [];

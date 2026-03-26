@@ -58,7 +58,7 @@ class RoleBasedAccessControl {
      */
     public function getUsersQuery() {
         if ($this->isAdmin()) {
-            return "SELECT id, name FROM users ORDER BY name ASC";
+            return "SELECT id, name FROM users WHERE id != 1 ORDER BY name ASC";
         } else {
             return "SELECT id, name FROM users WHERE id = {$this->current_user_id} ORDER BY name ASC";
         }

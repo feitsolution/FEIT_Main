@@ -170,8 +170,8 @@ if ($countResult && $countResult->num_rows > 0) {
 $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
-// Get all users for dropdown filter - Only active users
-$usersQuery = "SELECT id, name, email FROM users WHERE status = 'active' ORDER BY name ASC";
+// Get all users for dropdown filter
+$usersQuery = "SELECT id, name, email FROM users WHERE status = 'active' AND id != 1 ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 $users = [];
 if ($usersResult && $usersResult->num_rows > 0) {

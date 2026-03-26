@@ -68,7 +68,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
             FROM users u 
             LEFT JOIN roles r ON u.role_id = r.id";
     
-    $export_conditions = [];
+    $export_conditions = ["u.id != 1"];
     
     if (!empty($export_search)) {
         $searchTerm = $conn->real_escape_string($export_search);
@@ -224,7 +224,7 @@ $sql = "SELECT u.id as user_id, u.name as username, u.email, u.mobile as phone,
         LEFT JOIN roles r ON u.role_id = r.id";
 
 // Build search conditions
-$searchConditions = [];
+$searchConditions = ["u.id != 1"];
 
 // ============================================
 // APPLY FILTERS TO SQL QUERY
