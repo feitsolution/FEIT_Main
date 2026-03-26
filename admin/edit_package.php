@@ -49,14 +49,15 @@ $error_message = null;
 
 // Process form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $name = $conn->real_escape_string($_POST['name']);
     $description = $conn->real_escape_string($_POST['description']);
     $max_count = isset($_POST['max_count']) && trim($_POST['max_count']) !== '' ? intval($_POST['max_count']) : null;
     $amount = floatval($_POST['amount']);
     $status = $conn->real_escape_string($_POST['status']);
     
-    $updateSql = "UPDATE packages SET description = ?, max_count = ?, amount = ?, status = ? WHERE id = ?";
+    $updateSql = "UPDATE packages SET name = ?, description = ?, max_count = ?, amount = ?, status = ? WHERE id = ?";
     $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("sidsi", $description, $max_count, $amount, $status, $package_id);
+    $stmt->bind_param("ssidsi", $name, $description, $max_count, $amount, $status, $package_id);
     
     if ($stmt->execute()) {
         $package_updated = true;
@@ -72,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $user_name = $_SESSION['username'] ?? 'Administrator';
         
         $changes = [];
+        if ($original_package['name'] != $name) $changes[] = "Name changed to $name";
         if ($original_package['description'] != $description) $changes[] = "Description changed";
         if ($original_package['max_count'] != $max_count) $changes[] = "Max count changed to " . ($max_count ?? 'No Limit');
         if ($original_package['amount'] != $amount) $changes[] = "Amount changed to $amount";
@@ -153,6 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <div class="mb-3">
                                             <label class="form-label">Product (Read-only)</label>
                                             <input type="text" class="form-control" value="<?= htmlspecialchars($package['product_name'] ?? 'N/A') ?>" readonly>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="name" class="form-label">Package Name</label>
+                                            <input type="text" class="form-control" id="name" name="name" 
+                                                   value="<?= htmlspecialchars($package['name'] ?? '') ?>" required>
                                         </div>
 
                                         <div class="mb-3">

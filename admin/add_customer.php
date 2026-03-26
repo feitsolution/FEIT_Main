@@ -893,7 +893,7 @@ $productsResult = $conn->query($productQuery);
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 50px;">Select</th>
-                                <th>Package Description</th>
+                                <th>Package Name</th>
                                 <th style="width: 150px;">Amount (Rs.)</th>
                                 <th style="width: 150px;">Max Count</th>
                             </tr>
@@ -911,8 +911,8 @@ $productsResult = $conn->query($productQuery);
                             </td>
                             <td>
                                 <label class="form-check-label d-block" for="pkg_${pkg.id}">
-                                    ${pkg.description} <br>
-                                    <small class="text-muted">Default: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
+                                    ${pkg.name || pkg.description} <br>
+                                    <small class="text-muted">Standard: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
                                 </label>
                             </td>
                             <td>

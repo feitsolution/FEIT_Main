@@ -69,6 +69,7 @@ $sql = "SELECT p.*, pr.name as product_name FROM packages p LEFT JOIN products p
 if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $searchCondition = " WHERE p.id LIKE '%$searchTerm%' OR 
+                        p.name LIKE '%$searchTerm%' OR
                         p.description LIKE '%$searchTerm%' OR 
                         pr.name LIKE '%$searchTerm%' OR
                         p.status LIKE '%$searchTerm%'";
@@ -195,6 +196,7 @@ $result = $conn->query($sql);
                                 <thead>
                                     <tr>
                                         <th>ID</th>
+                                        <th>Name</th>
                                         <th>Product</th>
                                         <th>Description</th>
                                         <th>Max Count</th>
@@ -208,6 +210,7 @@ $result = $conn->query($sql);
                                         <?php while ($row = $result->fetch_assoc()): ?>
                                             <tr>
                                                 <td><span class="product-id"><?= htmlspecialchars($row['id']) ?></span></td>
+                                                <td><span class="product-name"><?= htmlspecialchars($row['name'] ?? '') ?></span></td>
                                                 <td><span class="product-name"><?= htmlspecialchars($row['product_name'] ?? 'N/A') ?></span></td>
                                                 <td>
                                                     <span class="product-desc" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= htmlspecialchars($row['description']) ?>">
@@ -273,6 +276,12 @@ $result = $conn->query($sql);
                                                                     <div class="p-3 bg-light rounded">
                                                                         <small class="text-muted text-uppercase fw-semibold">ID</small>
                                                                         <p class="mb-0 mt-1"><?= htmlspecialchars($row['id']) ?></p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="p-3 bg-light rounded">
+                                                                        <small class="text-muted text-uppercase fw-semibold">Name</small>
+                                                                        <p class="mb-0 mt-1"><?= htmlspecialchars($row['name'] ?? '') ?></p>
                                                                     </div>
                                                                 </div>
                                                                 <div class="col-md-6">

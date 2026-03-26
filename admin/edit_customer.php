@@ -401,20 +401,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $originalPackageName = "None";
                         
                         if ($package_id) {
-                            $pStmt = $conn->prepare("SELECT description FROM packages WHERE id = ?");
+                            $pStmt = $conn->prepare("SELECT name FROM packages WHERE id = ?");
                             $pStmt->bind_param("i", $package_id);
                             $pStmt->execute();
                             $pResult = $pStmt->get_result();
-                            if ($pRow = $pResult->fetch_assoc()) $packageName = $pRow['description'];
+                            if ($pRow = $pResult->fetch_assoc()) $packageName = $pRow['name'];
                             $pStmt->close();
                         }
                         
                         if ($originalPackageId) {
-                            $pStmt = $conn->prepare("SELECT description FROM packages WHERE id = ?");
+                            $pStmt = $conn->prepare("SELECT name FROM packages WHERE id = ?");
                             $pStmt->bind_param("i", $originalPackageId);
                             $pStmt->execute();
                             $pResult = $pStmt->get_result();
-                            if ($pRow = $pResult->fetch_assoc()) $originalPackageName = $pRow['description'];
+                            if ($pRow = $pResult->fetch_assoc()) $originalPackageName = $pRow['name'];
                             $pStmt->close();
                         }
 
@@ -1395,7 +1395,7 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 50px;">Select</th>
-                                <th>Package Description</th>
+                                <th>Package Name</th>
                                 <th style="width: 150px;">Amount (Rs.)</th>
                                 <th style="width: 150px;">Max Count</th>
                             </tr>
@@ -1415,8 +1415,8 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
                             </td>
                             <td>
                                 <label class="form-check-label d-block" for="pkg_${pkg.id}">
-                                    ${pkg.description} <br>
-                                    <small class="text-muted">Default: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
+                                    ${pkg.name || pkg.description} <br>
+                                    <small class="text-muted">Standard: Rs. ${pkg.default_amount} | Max: ${default_max || 'N/A'}</small>
                                 </label>
                             </td>
                             <td>
