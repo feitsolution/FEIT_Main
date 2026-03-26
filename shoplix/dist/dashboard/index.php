@@ -195,12 +195,11 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $stats['return_handover_orders'] = safeQuery($conn, $return_handover_orders_query);
 }
 
-// Check for unpaid invoices starting 2 days before due date
+// Check for unpaid invoices 
 $suspend_notice = null;
 $customer_id_session = $_SESSION['customer_id'] ?? 0;
 
-if ($customer_id_session > 0) {
-    // Check for unpaid invoices where today is 2 days or less before the due date
+if (isset($_SESSION['customer_id'])){
     $sql_unpaid = "SELECT status,due_date FROM invoices 
                   WHERE customer_id = ? 
                   AND pay_status = 'unpaid' AND status = 'pending' 
