@@ -16,7 +16,7 @@ require_once $base_dir . '/functions.php';
 $today_day = (int)date('j');
 $current_month_year = date('F Y');
 $issue_date = date('Y-m-d');
-$due_date = date('Y-m-d', strtotime('+7 days')); 
+$due_date = date('Y-m-d', strtotime('+3 days'));
 //$due_date = date('Y-m-t'); // last day of the month
 //$due_date = date('Y-m-t', strtotime($issue_date));
 
