@@ -959,6 +959,7 @@ $productsResult = $conn->query($productQuery);
         $('#billing_date').select2({
             theme: 'bootstrap-5',
             placeholder: '-- No specific billing date --',
+            allowClear: true,
             width: '100%',
             dropdownCssClass: 'billing-dropdown',
             minimumResultsForSearch: Infinity

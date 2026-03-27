@@ -60,6 +60,7 @@ if (!in_array($status, ['Active', 'Inactive'])) {
 // Store original status for comparison
 $original_status = isset($_POST['original_status']) ? $_POST['original_status'] : '';
 $product_id = !empty($_POST['product_id']) ? intval($_POST['product_id']) : null;
+$package_id = !empty($_POST['package_id']) ? intval($_POST['package_id']) : null;
 
 // If there are validation errors, redirect back to edit page
 if (!empty($errors)) {

@@ -427,12 +427,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $activityDetails = "Customer ID #$customer_id ($name) was updated by user ID #{$_SESSION['user_id']}.{$changes}";
                     
                       // Determine initial_package_id to save
-                      // If it's already set (not empty), keep it. 
-                      // If it's empty, use the current package_id from the database as the initial one.
-                      $initialPackageIdToSave = !empty($originalInitialPackageId) ? $originalInitialPackageId : $originalPackageId;
-                      // However, if the customer NEVER had a package (it's also empty), use the new package_id.
-                      if (empty($initialPackageIdToSave)) {
-                          $initialPackageIdToSave = $package_id;
+                      // On manual edit, we update the initial_package_id to match the selected package_id.
+                      // This resets the "floor" for automated downgrades to the newly selected baseline.
+                      $initialPackageIdToSave = $package_id;
+
+                      if ($initialPackageIdToSave != $originalInitialPackageId) {
+                          $changedFields[] = "initial_package: '$originalInitialPackageId' → '$initialPackageIdToSave'";
+                          $changeDetails['initial_package_id'] = array('old' => $originalInitialPackageId, 'new' => $initialPackageIdToSave);
                       }
 
                       // Prepare SQL statement to prevent SQL injection
@@ -1477,6 +1478,7 @@ console.log(validatePhone('+947296668'));   // Should be invalid (international 
         $('#billing_date').select2({
             theme: 'bootstrap-5',
             placeholder: '-- No specific billing date --',
+            allowClear: true,
             width: '100%',
             dropdownCssClass: 'billing-dropdown',
             minimumResultsForSearch: Infinity
