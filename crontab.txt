@@ -1,0 +1,3 @@
+CRON_TZ=Asia/Colombo
+1 0 * * * curl  http://OMSadmin2-env.eba-v8avn23x.ap-southeast-1.elasticbeanstalk.com/order_management/dist/cron/sync_order_count.php
+0 5 * * * curl  http://OMSadmin2-env.eba-v8avn23x.ap-southeast-1.elasticbeanstalk.com/admin/pending_invoice_cron.php
