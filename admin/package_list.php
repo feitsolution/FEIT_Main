@@ -18,6 +18,7 @@ include 'functions.php';
 // Get current user's role_id from session
 $current_user_role = isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : 0;
 $canEditRecords = ($current_user_role === 1 || $current_user_role === 3);
+$canAddPackage = ($current_user_role === 1);
 
 // Process status toggle if submitted
 if(isset($_POST['toggle_status'])) {
@@ -143,6 +144,11 @@ $result = $conn->query($sql);
                 <br>
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4>All Packages</h4>
+                    <?php if ($canAddPackage): ?>
+                        <a href="add_package.php" class="btn-add-new d-flex align-items-center gap-2">
+                            <span class="btn-add-icon"><i class="fas fa-plus"></i></span> Add New Package
+                        </a>
+                    <?php endif; ?>
                 </div>
 
                     <div class="card product-card mb-4">

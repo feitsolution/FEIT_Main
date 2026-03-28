@@ -78,6 +78,8 @@
 
 .users-card .card-body {
     padding: 24px;
+    margin-left: -22px;
+    margin-top: -24px;
 }
 
 .users-card .section-title {
@@ -307,4 +309,22 @@
 /* SweetAlert customizations */
 .swal2-popup {
     font-size: 0.9rem !important;
+}
+
+/* Search Results Alert */
+.search-results-alert {
+    background: linear-gradient(135deg, #edf7ff 0%, #e0f0ff 100%);
+    border: 1px solid #bee3f8;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 0.89rem;
+    color: #2a4365;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(66, 153, 225, 0.08);
+    border-left: 4px solid #4299e1;
+}
+
+.search-results-alert strong {
+    color: #1a365d;
+    font-weight: 700;
 }

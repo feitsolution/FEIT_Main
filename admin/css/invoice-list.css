@@ -88,7 +88,9 @@
 }
 
 .invoice-card .card-body {
-    padding: 28px 32px;
+    padding: 24px;
+    margin-left: -22px;
+    margin-top: -24px;
 }
 
 .invoice-card .section-title {

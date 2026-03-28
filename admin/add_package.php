@@ -1,5 +1,5 @@
 <?php
-// File name: edit_package.php
+// File name: add_package.php
 session_start();
 
 // Check if user is logged in
@@ -11,8 +11,8 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
-// Only Admin and Moderator can edit packages
-if (!isset($_SESSION['role_id']) || !in_array($_SESSION['role_id'], [1, 3])) {
+// Only Admin can add packages
+if (!isset($_SESSION['role_id']) || $_SESSION['role_id'] !== 1) {
     header("Location: package_list.php");
     exit();
 }
@@ -21,73 +21,66 @@ if (!isset($_SESSION['role_id']) || !in_array($_SESSION['role_id'], [1, 3])) {
 include 'db_connection.php';
 include 'functions.php';
 
-// Check if the ID parameter exists
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header("Location: package_list.php");
-    exit();
-}
-
-$package_id = intval($_GET['id']);
-
-// Fetch the package data
-$sql = "SELECT p.*, pr.name as product_name FROM packages p LEFT JOIN products pr ON p.product_id = pr.id WHERE p.id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $package_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows == 0) {
-    header("Location: package_list.php");
-    exit();
-}
-
-$package = $result->fetch_assoc();
-$original_package = $package;
-
-$package_updated = false;
+$package_added = false;
 $error_message = null;
+
+// Fetch all active products for the dropdown
+$products = [];
+$productSql = "SELECT id, name FROM products WHERE status = 'active' ORDER BY name ASC";
+$productResult = $conn->query($productSql);
+if ($productResult) {
+    while ($row = $productResult->fetch_assoc()) {
+        $products[] = $row;
+    }
+} else {
+    $error_message = "Error fetching products: " . $conn->error;
+}
+
 
 // Process form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = $conn->real_escape_string($_POST['name']);
     $description = $conn->real_escape_string($_POST['description']);
+    $product_id = intval($_POST['product_id']);
     $max_count = isset($_POST['max_count']) && trim($_POST['max_count']) !== '' ? intval($_POST['max_count']) : null;
     $amount = floatval($_POST['amount']);
-    $status = $conn->real_escape_string($_POST['status']);
-    
-    $updateSql = "UPDATE packages SET name = ?, description = ?, max_count = ?, amount = ?, status = ? WHERE id = ?";
-    $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("ssidsi", $name, $description, $max_count, $amount, $status, $package_id);
-    
-    if ($stmt->execute()) {
-        $package_updated = true;
-        
-        // Refresh package data
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $package_id);
-        $stmt->execute();
-        $package = $stmt->get_result()->fetch_assoc();
-        
-        // Log the change
-        $user_id = $_SESSION['user_id'];
-        $user_name = $_SESSION['username'] ?? 'Administrator';
-        
-        $changes = [];
-        if ($original_package['name'] != $name) $changes[] = "Name changed to $name";
-        if ($original_package['description'] != $description) $changes[] = "Description changed";
-        if ($original_package['max_count'] != $max_count) $changes[] = "Max count changed to " . ($max_count ?? 'No Limit');
-        if ($original_package['amount'] != $amount) $changes[] = "Amount changed to $amount";
-        if ($original_package['status'] != $status) $changes[] = "Status changed to $status";
-        
-        $details = "Package ID #$package_id was updated by $user_name. " . implode(", ", $changes);
-        
-        $logQuery = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) VALUES (?, 'edit_package', 0, ?, NOW())";
-        $logStmt = $conn->prepare($logQuery);
-        $logStmt->bind_param("is", $user_id, $details);
-        $logStmt->execute();
-        $logStmt->close();
+    $status = $conn->real_escape_string($_POST['status']); // Default to 'active' or take from form
+
+    // Basic validation
+    if (empty($name) || empty($description) || empty($product_id) || !isset($amount) || empty($status)) {
+        $error_message = "All required fields must be filled.";
+    } elseif (!is_numeric($amount) || $amount <= 0) {
+        $error_message = "Amount must be a positive number.";
+    } elseif (isset($max_count) && (!is_numeric($max_count) || $max_count < 0)) {
+        $error_message = "Max Count must be a non-negative number if provided.";
     } else {
-        $error_message = "Error updating package: " . $conn->error;
+        $insertSql = "INSERT INTO packages (name, product_id, description, max_count, amount, status) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($insertSql);
+        $stmt->bind_param("sisids", $name, $product_id, $description, $max_count, $amount, $status);
+        
+        if ($stmt->execute()) {
+            $package_id = $conn->insert_id;
+            $package_added = true;
+            
+            // Log the creation
+            $user_id = $_SESSION['user_id'];
+            $user_name = $_SESSION['username'] ?? 'Administrator';
+            $details = "New package ID #$package_id ($name) was added by $user_name.";
+            
+            $logQuery = "INSERT INTO user_logs (user_id, action_type, inquiry_id, details, created_at) VALUES (?, 'add_package', 0, ?, NOW())";
+            $logStmt = $conn->prepare($logQuery);
+            $logStmt->bind_param("is", $user_id, $details);
+            $logStmt->execute();
+            $logStmt->close();
+
+            // Redirect to package list with success message
+            $_SESSION['package_success_message'] = "Package '$name' added successfully!";
+            header("Location: package_list.php");
+            exit();
+
+        } else {
+            $error_message = "Error adding package: " . $conn->error;
+        }
     }
 }
 ?>
@@ -96,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="en">
 <head>
     <?php include('header.php'); ?>
-    <title>Edit Package</title>
+    <title>Add New Package</title>
     <link href="css/forms.css" rel="stylesheet" />
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -124,6 +117,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+
+        /* Select2 Bootstrapped styling for premium UI */
+        .select2-container--bootstrap-5 .select2-selection {
+            height: calc(2.25rem + 2px);
+            line-height: 1.5;
+            min-height: 45px;
+            border: 1.5px solid #ced4da;
+            border-radius: 0.375rem;
+            background-color: #fff;
+            box-shadow: none;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            margin-top: 0.25rem;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+            top: 0.55rem;
+        }
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
     </style>
 </head>
 
@@ -134,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div id="layoutSidenav_content">
             <main>
                 <div class="container-fluid px-4">
-                    <h1 class="mt-3 fs-4">Edit Package</h1>
+                    <h1 class="mt-3 fs-4">Add New Package</h1>
                     
                     <?php if ($error_message): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -145,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     <div class="col-12">
                         <div class="premium-form-container">
-                            <form method="POST" action="edit_package.php?id=<?= $package_id ?>" id="editPackageForm">
+                            <form method="POST" action="add_package.php" id="addPackageForm">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="premium-section-header">
@@ -153,26 +167,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         </div>
                                         
                                         <div class="mb-3">
-                                            <label class="form-label">Product (Read-only)</label>
-                                            <input type="text" class="form-control" value="<?= htmlspecialchars($package['product_name'] ?? 'N/A') ?>" readonly>
+                                            <label for="product_id" class="form-label">Product</label>
+                                            <select class="form-select" id="product_id" name="product_id" required>
+                                                <option value="">Select Product</option>
+                                                <?php foreach ($products as $product): ?>
+                                                    <option value="<?= $product['id'] ?>"><?= htmlspecialchars($product['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="name" class="form-label">Package Name</label>
                                             <input type="text" class="form-control" id="name" name="name" 
-                                                   value="<?= htmlspecialchars($package['name'] ?? '') ?>" required>
+                                                   value="" required>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="description" class="form-label">Description</label>
                                             <input type="text" class="form-control" id="description" name="description" 
-                                                   value="<?= htmlspecialchars($package['description']) ?>" required>
+                                                   value="" required>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="max_count" class="form-label">Max Count</label>
                                             <input type="number" class="form-control" id="max_count" name="max_count" 
-                                                   value="<?= htmlspecialchars($package['max_count'] ?? '') ?>" min="1" placeholder="Leave empty for no limit">
+                                                   value="" min="1" placeholder="Leave empty for no limit">
                                         </div>
                                     </div>
                                     
@@ -184,14 +203,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <div class="mb-3">
                                             <label for="amount" class="form-label">Amount (LKR)</label>
                                             <input type="number" step="0.01" class="form-control" id="amount" name="amount" 
-                                                   value="<?= htmlspecialchars($package['amount']) ?>" required>
+                                                   value="" required>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="status" class="form-label">Status</label>
                                             <select class="form-select" id="status" name="status" required>
-                                                <option value="active" <?= ($package['status'] == 'active') ? 'selected' : '' ?>>Active</option>
-                                                <option value="inactive" <?= ($package['status'] == 'inactive') ? 'selected' : '' ?>>Inactive</option>
+                                                <option value="active" selected>Active</option>
+                                                <option value="inactive">Inactive</option>
                                             </select>
                                         </div>
                                     </div>
@@ -203,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             <i class="fas fa-arrow-left me-2"></i> Cancel
                                         </a>
                                         <button type="submit" class="premium-save-btn">
-                                            <i class="fas fa-save me-2"></i> Save Changes
+                                            <i class="fas fa-plus me-2"></i> Add Package
                                         </button>
                                     </div>
                                 </div>
@@ -218,8 +237,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <!-- Success Popup -->
     <div id="successPopup" class="popup-overlay">
         <div class="popup-content">
-            <h3>Package Updated Successfully!</h3>
-            <p>The package details have been saved.</p>
+            <h3>Package Added Successfully!</h3>
+            <p>The new package details have been saved.</p>
             <button class="btn btn-primary" onclick="closePopup()">Close</button>
         </div>
     </div>
@@ -231,14 +250,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         // Initialize Select2
-    $(document).ready(function() {
-        $('#status').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            minimumResultsForSearch: Infinity
+        $(document).ready(function() {
+            $('#product_id').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Select Product',
+                allowClear: true
+            });
+
+            $('#status').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                minimumResultsForSearch: Infinity,
+                placeholder: 'Select Status'
+            });
         });
-    });
-        <?php if ($package_updated): ?>
+
+        <?php if ($package_added): ?>
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('successPopup').style.display = 'flex';
         });

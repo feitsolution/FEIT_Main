@@ -2,6 +2,44 @@
    Product & Package List Premium Styles
    ============================================ */
 
+/* ---------- Add New Button ---------- */
+.btn-add-new {
+    background: linear-gradient(135deg, #4e73df 0%, #3b5ec9 100%);
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.88rem;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(78, 115, 223, 0.25);
+    border: none;
+    letter-spacing: 0.2px;
+}
+
+.btn-add-new:hover {
+    background: linear-gradient(135deg, #3b5ec9 0%, #2e4bb5 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(78, 115, 223, 0.35);
+}
+
+.btn-add-new:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(78, 115, 223, 0.2);
+}
+
+.btn-add-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
 /* ---------- Filter Bar ---------- */
 .invoice-filter-bar {
     background: linear-gradient(135deg, #f8f9fc 0%, #fff 100%);
@@ -78,6 +116,8 @@
 
 .product-card .card-body {
     padding: 24px;
+    margin-left: -22px;
+    margin-top: -24px;
 }
 
 .product-card .section-title {
@@ -377,4 +417,22 @@
 .datatable-wrapper .datatable-pagination .datatable-pagination-list-item.active .datatable-pagination-list-item-link {
     background: #4e73df;
     color: #fff;
+}
+
+/* Search Results Alert */
+.search-results-alert {
+    background: linear-gradient(135deg, #edf7ff 0%, #e0f0ff 100%);
+    border: 1px solid #bee3f8;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 0.89rem;
+    color: #2a4365;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(66, 153, 225, 0.08);
+    border-left: 4px solid #4299e1;
+}
+
+.search-results-alert strong {
+    color: #1a365d;
+    font-weight: 700;
 }

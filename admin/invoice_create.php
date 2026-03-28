@@ -46,6 +46,8 @@ $customerResult = $conn->query($customerSql);
             border: 1px solid #e2e8f0;
             padding: 24px;
             margin-bottom: 20px;
+            margin-left: 20px;
+            margin-right: 20px;
         }
 
         .form-section {
@@ -163,8 +165,8 @@ $customerResult = $conn->query($customerSql);
                         <?php unset($_SESSION['invoice_error']); ?>
                     <?php endif; ?>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-                    <h5 class="mb-0 fw-bold" style="margin-left: 10px;">Create Invoice</h5>
+                <div class="d-flex justify-content-center align-items-center mt-3 mb-3">
+                    <h5 class="mb-0 fw-bold" style="margin-left: 20px; font-size: 25px;">Create Invoice</h5>
                 </div>
                 <div class="invoice-container">
                     <form method="post" action="process_invoice.php" id="invoiceForm" target="_blank">

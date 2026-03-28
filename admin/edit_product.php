@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div id="layoutSidenav_content">
             <main>
                 <div class="container-fluid px-4">
-                    <h1 class="mt-3">Edit Product</h1>
+                    <h1 class="mt-3 fs-4">Edit Product</h1>
 
                     <?php
                     // Display error messages if any
