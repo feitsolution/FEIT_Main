@@ -1,9 +1,9 @@
 <?php
 // Database configuration
-$servername = "gator4423";
-$username = "imwijqte_db";
-$password = "imwijqte_db2025a";
-$dbname = "imwijqte_fe_it_db";
+$servername = getenv('DB_HOST');
+$username   = getenv('DB_USER');
+$password   = getenv('DB_PASS');
+$dbname     = getenv('DB_NAME_FE_IT_DB');
 
 // Create database connection
 function connectDB() {
