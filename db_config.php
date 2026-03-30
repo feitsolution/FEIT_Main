@@ -3,7 +3,7 @@
 $servername = "gator4423";
 $username = "imwijqte_db";
 $password = "imwijqte_db2025a";
-$dbname = "imwijqte_feit_db";
+$dbname = "imwijqte_fe_it_db";
 
 // Create database connection
 function connectDB() {

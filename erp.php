@@ -5,7 +5,13 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  <!-- SEO Meta Tags -->
+  <title>ERP Software Development & Integration | FE IT Solutions</title>
+  <meta name="description" content="Custom Enterprise Resource Planning (ERP) software tailored for your business. Improve efficiency, sales, and operations with our robust ERP platforms.">
+  <meta property="og:title" content="Robust ERP Development by FE IT Solutions">
+  <meta property="og:description" content="Empowering enterprises with modern, scalable, and tailored ERP architectures.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/erp.php">
 
   <?php include 'header.php'; ?>
 </head>

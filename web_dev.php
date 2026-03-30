@@ -5,7 +5,13 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  <!-- SEO Meta Tags -->
+  <title>Web Development Services in Sri Lanka | FE IT Solutions</title>
+  <meta name="description" content="Professional web development agency offering tailored, responsive, and high-performance websites for startups and enterprises.">
+  <meta property="og:title" content="Premium Web Development by FE IT Solutions">
+  <meta property="og:description" content="Let us build a stunning and highly responsive web platform for your brand.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/web_dev.php">
 
   <?php include 'header.php'; ?>
 </head>
@@ -183,11 +189,7 @@
     	<i class="lni-arrow-up"></i>
     </a>
     
-    <!-- Preloader -->
-    <div id="preloader">
-      <div class="loader" id="loader-1"></div>
-    </div>
-    <!-- End Preloader -->
+
     <?php include 'script.php'; ?>
       
   </body>

@@ -26,16 +26,8 @@
 
   <div class="container">
         <div class="contents">
-          <h2 class="head-title"> FEIT Solutions Order Management</h2>
+          <h2 class="head-title"> Order Management System</h2>
           <p class="head-wrap"> Order Management System is a smart platform that makes handling customer orders easy and efficient. It helps admins, clients, and sales teams manage everything—from creating orders, checking stock, and invoicing, to shipping, delivery, and returns. With real-time updates and smooth integration, it improves accuracy, controls inventory, and keeps customers happy. </p>
-          <div class="header-button">
-           <!--  <a rel="nofollow" href="about.html" class="btn btn-common">Learn More</a>
-            <a href="#solutions" class="btn btn-border video-popup">See our Services</a> -->
-             <div class="header-button">
-             <a href="https://www.feitsolutions.com/admin/signup.php" class="btn btn-common">Login</a>
-
-            </div>
-          </div>
       </div>
   </div>
 </div>
@@ -115,12 +107,7 @@
     	<i class="lni-arrow-up"></i>
     </a>
     
-    <!-- Preloader -->
-    <div id="preloader">
 
-      <div class="loader" id="loader-1"></div>
-    </div>
-    <!-- End Preloader -->
     <?php include 'script.php'; ?>
       
   </body>

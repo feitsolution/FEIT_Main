@@ -4,7 +4,13 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  <!-- SEO Meta Tags -->
+  <title>SEO Services | FE IT Solutions</title>
+  <meta name="description" content="Drive organic traffic and rank #1 on Google with our proven Search Engine Optimization (SEO) strategies for businesses in Sri Lanka and worldwide.">
+  <meta property="og:title" content="Expert SEO Services by FE IT Solutions">
+  <meta property="og:description" content="Increase your visibility and dominate search engine results.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/seo.php">
   <?php include 'header.php'; ?>
 </head>
 

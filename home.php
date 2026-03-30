@@ -4,7 +4,18 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  
+  <!-- SEO Meta Tags -->
+  <title>FE IT Solutions | Software Development Company in Sri Lanka</title>
+  <meta name="description" content="FE IT Solutions specializes in tailored ERP systems, website development, mobile apps, SEO, and IT consultancy services for businesses in Colombo, Sri Lanka, and globally.">
+  <meta name="keywords" content="IT Solutions Sri Lanka, ERP Software Colombo, Web Development Sri Lanka, SEO Agency Colombo, IT Consultancy, Custom Software Development">
+  
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FE IT Solutions | Premier IT & ERP Agency in Sri Lanka">
+  <meta property="og:description" content="Empowering your enterprise with tailored ERP systems, website development, and IT consultancy services.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/">
   <?php include 'header.php'; ?>
 </head>
 
@@ -18,7 +29,7 @@
   <div class="container">
     <div class="row">
       <div class="contents">
-        <h2 class="head-title">Transforming Enterprises <span class="blue-gradient">Through Strategic</span> <span class="green-gradient">Technology Solutions</span></h2>
+        <h1 class="head-title">Transforming Enterprises <span class="blue-gradient">Through Strategic</span> <span class="green-gradient">Technology Solutions</span></h1>
         <p class="head-wrap">For your unique business requirements</p>
         <div class="header-button">
           <a href="contact.php" class="btn btn-common"> Meet With Us</a>
@@ -212,13 +223,7 @@
 <!-- Go to Top Link -->
  <a href="#" class="back-to-top">
       <i class="lni-arrow-up"></i>
-    </a> -->
-
-
+    </a>
 <?php include 'script.php'; ?>
-
-
-
 </body>
-
 </html>

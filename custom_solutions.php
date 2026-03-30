@@ -29,6 +29,7 @@
     
   </head>
   <body>
+    <?php include 'loader.php'; ?>
 
     <header id="header-wrap">
       <!-- Navbar Start -->
@@ -371,11 +372,7 @@
     	<i class="lni-arrow-up"></i>
     </a>
     
-    <!-- Preloader -->
-    <div id="preloader">
-      <div class="loader" id="loader-1"></div>
-    </div>
-    <!-- End Preloader -->
+
     
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="assets/js/jquery-min.js"></script>

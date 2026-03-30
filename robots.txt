@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /assets/
+Disallow: /scripts/
+Disallow: /src/
+Disallow: /phpmailer/
+
+Sitemap: https://feitsolutions.com/sitemap.xml

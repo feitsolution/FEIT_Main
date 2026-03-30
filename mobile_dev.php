@@ -5,7 +5,13 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  <!-- SEO Meta Tags -->
+  <title>Mobile App Development Services | FE IT Solutions</title>
+  <meta name="description" content="Custom mobile application development for iOS and Android platforms. Let FE IT Solutions transform your app idea into beautifully crafted software.">
+  <meta property="og:title" content="Custom Mobile Apps by FE IT Solutions">
+  <meta property="og:description" content="Engaging, scalable, and beautifully designed iOS and Android applications.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/mobile_dev.php">
 
   <?php include 'header.php'; ?>
 </head>
@@ -220,11 +226,7 @@
     	<i class="lni-arrow-up"></i>
     </a>
     
-    <!-- Preloader -->
-    <div id="preloader">
-      <div class="loader" id="loader-1"></div>
-    </div>
-    <!-- End Preloader -->
+
     
     <?php include 'script.php'; ?>
   </body>

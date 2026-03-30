@@ -5,7 +5,13 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>FE IT Solutions</title>
+  <!-- SEO Meta Tags -->
+  <title>About Us | FE IT Solutions</title>
+  <meta name="description" content="Learn about FE IT Solutions, our mission, vision, and how we deliver cutting-edge IT consultancy and software development to businesses across the globe.">
+  <meta property="og:title" content="About FE IT Solutions">
+  <meta property="og:description" content="Discover our journey, vision, and how we empower enterprises with strategic technology solutions.">
+  <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
+  <meta property="og:url" content="https://feitsolutions.com/about.php">
 
   <?php include 'header.php'; ?>
 </head>
