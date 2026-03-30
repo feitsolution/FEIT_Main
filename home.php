@@ -7,13 +7,13 @@
   
   <!-- SEO Meta Tags -->
   <title>FE IT Solutions | Software Development Company in Sri Lanka</title>
-  <meta name="description" content="FE IT Solutions specializes in tailored ERP systems, website development, mobile apps, SEO, and IT consultancy services for businesses in Colombo, Sri Lanka, and globally.">
-  <meta name="keywords" content="IT Solutions Sri Lanka, ERP Software Colombo, Web Development Sri Lanka, SEO Agency Colombo, IT Consultancy, Custom Software Development">
+  <meta name="description" content="FE IT Solutions specializes in tailored Order Management Systems, POS Systems, Website Development, Mobile Apps, SEO, and IT consultancy services for businesses in Colombo, Sri Lanka, and globally.">
+  <meta name="keywords" content="IT Solutions Sri Lanka, Order Management Systems, POS Systems, Web Development Sri Lanka, SEO Agency Colombo, IT Consultancy, Custom Software Development">
   
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="FE IT Solutions | Premier IT & ERP Agency in Sri Lanka">
-  <meta property="og:description" content="Empowering your enterprise with tailored ERP systems, website development, and IT consultancy services.">
+  <meta property="og:title" content="FE IT Solutions | Leading Custom Software & IT Solutions Company in Sri Lanka">
+  <meta property="og:description" content="Delivering custom software, websites, mobile apps, and IT solutions to grow your business.">
   <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
   <meta property="og:url" content="https://feitsolutions.com/">
   <?php include 'header.php'; ?>
@@ -224,6 +224,12 @@
  <a href="#" class="back-to-top">
       <i class="lni-arrow-up"></i>
     </a>
+
+
 <?php include 'script.php'; ?>
+
+
+
 </body>
+
 </html>
