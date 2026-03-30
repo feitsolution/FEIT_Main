@@ -6,10 +6,8 @@
  * it generates pending invoices for customers whose billing_date matches today's day of the month.
  */
 
-// Set time zone
-date_default_timezone_set('Asia/Colombo');
-
 // Include database connection
+// Using absolute path or relative to script location
 $base_dir = __DIR__;
 require_once $base_dir . '/db_connection.php';
 require_once $base_dir . '/functions.php';
@@ -19,6 +17,8 @@ $today_day = (int)date('j');
 $current_month_year = date('F Y');
 $issue_date = date('Y-m-d');
 $due_date = date('Y-m-d', strtotime('+3 days'));
+//$due_date = date('Y-m-t'); // last day of the month
+//$due_date = date('Y-m-t', strtotime($issue_date));
 
 try {
     $query = "SELECT c.customer_id, c.name, c.email, c.product_id, c.package_id, c.order_count, cp.amount as custom_amount, p.amount as package_default_amount
@@ -50,7 +50,7 @@ try {
         // This prevents duplicate generation if the cron runs twice in one day
         $check_query = "SELECT invoice_id FROM invoices 
                        WHERE customer_id = ? 
-                       AND issue_date LIKE '" . date('Y-m') . "-%'";
+                       AND issue_date LIKE '$current_month_year-%'";
         $check_stmt = $conn->prepare($check_query);
         $check_stmt->bind_param("i", $customer_id);
         $check_stmt->execute();
@@ -113,7 +113,6 @@ try {
         } catch (Exception $e) {
             $conn->rollback();
             $error_count++;
-            echo "Error for customer {$customer_name}: " . $e->getMessage() . "\n";
         }
     }
     echo "Cron finished. Processed: $processed_count, Skipped: $skipped_count, Errors: $error_count\n";

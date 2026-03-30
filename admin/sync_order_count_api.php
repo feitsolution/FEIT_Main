@@ -30,7 +30,7 @@ if ($action === 'process_sync') {
     $total_orders = isset($_POST['total_orders']) ? (int)$_POST['total_orders'] : 0;
 
     // Fetch current info
-    $info_query = "SELECT product_id, package_id, initial_package_id, status FROM customers WHERE customer_id = ? LIMIT 1";
+    $info_query = "SELECT product_id, package_id, initial_package_id FROM customers WHERE customer_id = ? LIMIT 1";
     $stmt_info = $conn->prepare($info_query);
     $stmt_info->bind_param("i", $customer_id);
     $stmt_info->execute();
@@ -38,12 +38,6 @@ if ($action === 'process_sync') {
 
     if (!$current_info) {
         echo json_encode(['status' => 'error', 'message' => 'Customer not found']);
-        exit;
-    }
-
-    // Check if customer is Active
-    if ($current_info['status'] !== 'Active') {
-        echo json_encode(['status' => 'error', 'message' => 'Customer is not Active in Admin']);
         exit;
     }
 
@@ -114,29 +108,6 @@ if ($action === 'process_sync') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Update failed: ' . $stmt_upd->error]);
     }
-    exit;
-}
-
-/**
- * Action: check_status
- * Checks if the customer is active in Admin.
- */
-if ($action === 'check_status') {
-    $info_query = "SELECT status FROM customers WHERE customer_id = ? LIMIT 1";
-    $stmt_info = $conn->prepare($info_query);
-    $stmt_info->bind_param("i", $customer_id);
-    $stmt_info->execute();
-    $current_info = $stmt_info->get_result()->fetch_assoc();
-
-    if (!$current_info) {
-        echo json_encode(['status' => 'error', 'message' => 'Customer not found']);
-        exit;
-    }
-
-    echo json_encode([
-        'status' => 'success',
-        'customer_status' => $current_info['status']
-    ]);
     exit;
 }
 

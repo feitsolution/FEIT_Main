@@ -75,18 +75,8 @@ try {
         exit("Not billing day. Skipping sync.\n");
     }
 
-    // Check customer status in Admin before proceeding
-    $status_res = call_admin_api('check_status', ['customer_id' => $target_customer_id]);
-    if ($status_res['status'] !== 'success') {
-        throw new Exception("API Error (check_status): " . $status_res['message']);
-    }
-
-    if ($status_res['customer_status'] !== 'Active') {
-        exit("Customer is not Active in Admin. Skipping sync.\n");
-    }
-
     // Calculate start date 
-    $start_date = date('Y-m-d', mktime(0, 0, 0, (int)date('m') - 1, $billing_date, (int)date('Y')));
+    $start_date = date("Y-m-$billing_date", strtotime('-1 month'));
 
     // Count orders
     $order_count_query = "SELECT COUNT(*) as total FROM order_header WHERE created_at >= ?";

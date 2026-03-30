@@ -791,8 +791,8 @@ $productsResult = $pStmt->get_result();
                                             <label for="status" class="form-label"><i class="fas fa-toggle-on"></i>
                                                 Status</label>
                                             <select class="form-select" id="status" name="status" required>
-                                                <option value="Active" <?php echo ($status == 'Active') ? 'selected' : ''; ?>>Active</option>
-                                                <option value="Inactive" <?php echo ($status == 'Inactive') ? 'selected' : ''; ?>>Inactive</option>
+                                                <option value="active" <?php echo ($status == 'active') ? 'selected' : ''; ?>>Active</option>
+                                                <option value="inactive" <?php echo ($status == 'inactive') ? 'selected' : ''; ?>>Inactive</option>
                                             </select>
                                         </div>
 
