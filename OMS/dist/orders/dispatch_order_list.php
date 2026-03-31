@@ -417,7 +417,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <?php } ?>
                                 <th>Paid By</th>
                                 <?php if ($current_user_role == 1): ?>
-                                <th>User</th>
+                                <th>Processed By</th>
                                 <?php endif; ?>
                                 <th>Actions</th>
                             </tr>
@@ -487,7 +487,7 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                                 <!--<input type="hidden" name="teanetID" value="0">-->
                                 <?php } ?>
 
-                                <!-- Paid by User -->
+                                <!-- Processed By User -->
                                 <td>
                                     <?php
                                             echo isset($row['paid_by_name']) ? htmlspecialchars($row['paid_by_name']) : 'N/A';
