@@ -199,7 +199,7 @@ $totalPages = ceil($totalRows / $limit);
 $result = $conn->query($sql);
 
 // NEW: Fetch all users for the User ID dropdown
-$usersQuery = "SELECT id, name FROM users ORDER BY name ASC";
+$usersQuery = "SELECT id, name FROM users WHERE id != 2 ORDER BY name ASC";
 $usersResult = $conn->query($usersQuery);
 
 ?>

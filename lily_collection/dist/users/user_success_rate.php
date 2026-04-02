@@ -68,7 +68,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'success_report') {
             FROM users u 
             LEFT JOIN roles r ON u.role_id = r.id";
     
-    $export_conditions = [];
+    $export_conditions = ["u.id != 2"];
     
     if (!empty($export_search)) {
         $searchTerm = $conn->real_escape_string($export_search);

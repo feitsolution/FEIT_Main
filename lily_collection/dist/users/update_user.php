@@ -124,6 +124,11 @@ try {
         jsonResponse(false, 'Invalid user ID provided.');
     }
 
+    // ID 2: Prevent updates
+    if ($userId === 2) {
+        jsonResponse(false, 'User account is protected and cannot be modified.');
+    }
+
     // Check if user exists and get current data
     $checkStmt = $conn->prepare("SELECT id, name, email, nic, mobile, address, status, role_id FROM users WHERE id = ?");
     if (!$checkStmt) {

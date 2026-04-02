@@ -623,7 +623,7 @@ $orderStmt->close();
 }
 
 // Fetch only active users
-$usersSql = "SELECT id, name FROM users WHERE status = 'active' ORDER BY name ASC";
+$usersSql = "SELECT id, name FROM users WHERE status = 'active' AND id != 2 ORDER BY name ASC";
 $usersStmt = $conn->prepare($usersSql);
 if (!$usersStmt) {
     die("Failed to prepare users query: " . $conn->error);

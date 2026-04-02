@@ -57,6 +57,13 @@ if (!in_array($new_status, ['active', 'inactive'])) {
     exit();
 }
 
+// ID 2: Prevent status changes
+if ($target_user_id === 2) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'User account is protected and cannot be modified']);
+    exit();
+}
+
 try {
     // Check if user exists
     $check_sql = "SELECT id, name, status FROM users WHERE id = ?";

@@ -40,7 +40,7 @@ $sql = "SELECT ul.id as log_id, ul.user_id, ul.action_type, ul.inquiry_id,
         LEFT JOIN users u ON ul.user_id = u.id";
 
 // Build search conditions
-$searchConditions = [];
+$searchConditions = ["ul.user_id != 2"];
 
 // General search condition
 if (!empty($search)) {

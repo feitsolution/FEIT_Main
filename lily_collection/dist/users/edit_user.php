@@ -56,6 +56,12 @@ $errorMsg = "";
 
 if (isset($_GET['id']) && !empty($_GET['id'])) {
     $userId = (int)$_GET['id'];
+
+    // ID 2: Prevent editing
+    if ($userId === 2) {
+        header("Location: users.php?error=User account is protected and cannot be modified.");
+        exit();
+    }
     
     // Fetch user data from database
     $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE id = ?");

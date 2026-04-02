@@ -76,7 +76,7 @@ $sql = "SELECT u.id as user_id, u.name as username, u.name as full_name, u.email
         LEFT JOIN roles r ON u.role_id = r.id";
 
 // Build search conditions
-$searchConditions = [];
+$searchConditions = ["u.id != 2"];
 
 // General search condition
 if (!empty($search)) {
