@@ -243,11 +243,15 @@ if (!($is_main_admin === 1 && $role_id === 1) && !empty($tenants)) {
                         </div>
                 </form>
             </div>
-            <!-- Footer -->
-            <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/footer.php'); ?>
+        </div>
+    </div>
+    </div>
+    </div>
+    <!-- Footer -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/footer.php'); ?>
 
-            <!-- Scripts -->
-            <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/scripts.php'); ?>
+    <!-- Scripts -->
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/OMS/dist/include/scripts.php'); ?>
 
 
             <script src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js" type="text/javascript"></script>
