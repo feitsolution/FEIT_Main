@@ -17,7 +17,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header("Location: /lily_collection/dist/pages/login.php");
     exit();
 }
-
 // Include database connection
 include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/connection/db_connection.php');
 
