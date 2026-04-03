@@ -369,10 +369,6 @@
   color: white;
 }
 
-.view-btn:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.4);
-}
 
 .action-btn:active {
   transform: translateY(0) scale(0.95);
@@ -1489,6 +1485,7 @@ MODAL STYLES for view button - FIXED VERSION
   justify-content: center;
   flex-wrap: nowrap; /* Changed from wrap to nowrap */
   overflow-x: auto; /* Add horizontal scroll if needed */
+  margin-top: 8px;
 }
 .action-btn {
   padding: 6px 8px;
