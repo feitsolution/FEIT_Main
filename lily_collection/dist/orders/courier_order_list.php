@@ -154,7 +154,7 @@ $result = $conn->query($sql);
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Order Management Admin Portal - Courier Orders</title>
+    <title>Order Management Admin Portal - Courier Order List</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     
