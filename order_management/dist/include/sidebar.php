@@ -258,7 +258,9 @@ if (!function_exists('get_logo_with_fallback')) {
           </a>
           <ul class="pc-submenu">
             <li class="pc-item"><a class="pc-link" href="../leads/lead_upload.php">Lead Upload</a></li>
+            <?php if ($is_admin == 1): ?>
             <li class="pc-item"><a class="pc-link" href="../leads/lead_list.php">Lead List</a></li>
+            <?php endif; ?>
             <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">My Leads </a></li>
             <li class="pc-item"><a class="pc-link" href="../leads/city_list.php">City List</a></li>
           </ul>

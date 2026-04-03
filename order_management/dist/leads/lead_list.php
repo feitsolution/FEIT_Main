@@ -17,6 +17,12 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header("Location: /order_management/dist/pages/login.php");
     exit();
 }
+// Admin accessibility check - Lead management is for admins only (role_id 1)
+if (!isset($_SESSION['role_id']) || intval($_SESSION['role_id']) !== 1) {
+    // Redirect to dashboard or an unauthorized page
+    header("Location: /order_management/dist/dashboard/index.php");
+    exit();
+}
 
 // Include database connection
 include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/connection/db_connection.php');
@@ -244,6 +250,62 @@ if ($usersResult && $usersResult->num_rows > 0) {
     color: #666;
     margin-top: 2px;
     font-style: italic;
+}
+
+/* User Reassignment Styles */
+.user-change-btn {
+    padding: 2px 6px;
+    font-size: 10px;
+    margin-top: 5px;
+    cursor: pointer;
+    background: #f0f2f5;
+    border: 1px solid #dcdfe3;
+    border-radius: 3px;
+    color: #555;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-change-btn:hover {
+    background: #e4e6e9;
+    color: #333;
+}
+
+.user-assign-select {
+    display: none;
+    width: 100%;
+    margin-top: 5px;
+    padding: 4px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.assign-confirm-btn {
+    display: none;
+    margin-top: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.assign-cancel-btn {
+    display: none;
+    margin-top: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 4px;
 }
 </style>
 </head>
@@ -549,16 +611,38 @@ if ($usersResult && $usersResult->num_rows > 0) {
                                         </td>
                                         
                                         <!-- Enhanced User Information -->
-                                        <td class="user-info">
-                                            <?php if (isset($row['user_name']) && !empty($row['user_name'])): ?>
-                                                <div class="user-name"><?php echo htmlspecialchars($row['user_name']); ?></div>
-                                                <div class="user-id">ID: <?php echo htmlspecialchars($row['user_id']); ?></div>
-                                                <?php if (!empty($row['user_email'])): ?>
-                                                    <div class="user-email"><?php echo htmlspecialchars($row['user_email']); ?></div>
+                                        <td class="user-info" id="user-info-<?php echo htmlspecialchars($row['order_id']); ?>">
+                                                <div class="user-display">
+                                                    <?php if (isset($row['user_name']) && !empty($row['user_name'])): ?>
+                                                        <div class="user-name"><?php echo htmlspecialchars($row['user_name']); ?></div>
+                                                        <div class="user-id">ID: <?php echo htmlspecialchars($row['user_id']); ?></div>
+                                                    <?php else: ?>
+                                                        <span style="color: #999;">Unassigned</span>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php if (strtolower($row['status']) === 'pending'): ?>
+                                                        <button type="button" class="user-change-btn" onclick="toggleUserSelect('<?php echo htmlspecialchars($row['order_id']); ?>')">
+                                                            <i class="fas fa-user-edit"></i> Change
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                                
+                                                <?php if (strtolower($row['status']) === 'pending'): ?>
+                                                    <div class="user-edit-ui" style="display: none;">
+                                                        <select class="user-assign-select" id="select-user-<?php echo htmlspecialchars($row['order_id']); ?>">
+                                                            <option value="">Select User</option>
+                                                            <?php foreach ($users as $user): ?>
+                                                                <option value="<?php echo $user['id']; ?>" <?php echo (isset($row['user_id']) && $row['user_id'] == $user['id']) ? 'selected' : ''; ?>>
+                                                                    <?php echo htmlspecialchars($user['name']); ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <div class="edit-actions">
+                                                            <button type="button" class="assign-confirm-btn" onclick="updateLeadUser('<?php echo htmlspecialchars($row['order_id']); ?>')">Update</button>
+                                                            <button type="button" class="assign-cancel-btn" onclick="toggleUserSelect('<?php echo htmlspecialchars($row['order_id']); ?>')">Cancel</button>
+                                                        </div>
+                                                    </div>
                                                 <?php endif; ?>
-                                            <?php else: ?>
-                                                <span style="color: #999;">Unassigned</span>
-                                            <?php endif; ?>
                                         </td>
                                         
                                         <!-- Action Buttons -->
@@ -626,6 +710,87 @@ if ($usersResult && $usersResult->num_rows > 0) {
     <script>
     // Lead-specific JavaScript functionality
     let currentLeadId = null;
+
+    // Toggle user selection UI
+    function toggleUserSelect(orderId) {
+        const userInfoCell = document.getElementById('user-info-' + orderId);
+        const displayDiv = userInfoCell.querySelector('.user-display');
+        const editDiv = userInfoCell.querySelector('.user-edit-ui');
+        const select = userInfoCell.querySelector('.user-assign-select');
+        const confirmBtn = userInfoCell.querySelector('.assign-confirm-btn');
+        const cancelBtn = userInfoCell.querySelector('.assign-cancel-btn');
+
+        if (editDiv.style.display === 'none') {
+            displayDiv.style.display = 'none';
+            editDiv.style.display = 'block';
+            select.style.display = 'block';
+            confirmBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+        } else {
+            displayDiv.style.display = 'block';
+            editDiv.style.display = 'none';
+        }
+    }
+
+    // Update lead assigned user via AJAX
+    function updateLeadUser(orderId) {
+        const userId = document.getElementById('select-user-' + orderId).value;
+        
+        if (!userId) {
+            alert('Please select a user');
+            return;
+        }
+
+        const confirmBtn = document.querySelector(`#user-info-${orderId} .assign-confirm-btn`);
+        const originalBtnText = confirmBtn.innerText;
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = 'Updating...';
+
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('user_id', userId);
+
+        fetch('update_lead_user.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the UI
+                const userInfoCell = document.getElementById('user-info-' + orderId);
+                const userDisplayDiv = userInfoCell.querySelector('.user-display');
+                
+                // Update user name and ID text
+                userDisplayDiv.innerHTML = `
+                    <div class="user-name">${data.new_user_name}</div>
+                    <div class="user-id">ID: ${data.new_user_id}</div>
+                    <button type="button" class="user-change-btn" onclick="toggleUserSelect('${orderId}')">
+                        <i class="fas fa-user-edit"></i> Change
+                    </button>
+                `;
+                
+                // Reset UI state
+                toggleUserSelect(orderId);
+                
+                // RESET BUTTON STATE for future use
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = originalBtnText;
+                
+                // alert('Lead reassigned successfully');
+            } else {
+                alert('Error: ' + data.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = originalBtnText;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An unexpected error occurred');
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = originalBtnText;
+        });
+    }
 
     // Handle user filter selection - simplified
     function handleUserSelection() {

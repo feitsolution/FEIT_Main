@@ -268,7 +268,8 @@ function formatLogDetails($details) {
                         <thead>
                             <tr>
                                 <th>Log ID</th>
-                                <th>User Info & Action</th>
+                                <th>User Info</th>
+                                <th>Action Type</th>
                                 <th>Inquiry ID</th>
                                 <th>Details</th>
                                 <th>Date & Time</th>
@@ -286,8 +287,8 @@ function formatLogDetails($details) {
                                             </div>
                                         </td>
                                         
-                                        <!-- Combined User Info & Action -->
-                                        <td class="user-action-combined">
+                                        <!-- User Info -->
+                                        <td class="user-info-column">
                                             <div class="user-info-section">
                                                 <h6 style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: #333;">
                                                     <?php echo htmlspecialchars($row['username'] ?: 'Unknown User'); ?>
@@ -301,7 +302,11 @@ function formatLogDetails($details) {
                                                     </small>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="action-section" style="margin-top: 8px;">
+                                        </td>
+
+                                        <!-- Action Type -->
+                                        <td class="action-type-column">
+                                            <div class="action-section">
                                                 <span class="status-badge <?php 
                                                     $action = strtolower($row['action_type']);
                                                     if (strpos($action, 'create') !== false || strpos($action, 'add') !== false) {
@@ -377,7 +382,7 @@ function formatLogDetails($details) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" class="text-center" style="padding: 40px; text-align: center; color: #666;">
+                                    <td colspan="7" class="text-center" style="padding: 40px; text-align: center; color: #666;">
                                         <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
                                         No activity logs found
                                     </td>
