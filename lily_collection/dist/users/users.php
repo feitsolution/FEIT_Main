@@ -173,7 +173,7 @@ if ($role_result && $role_result->num_rows > 0) {
 <html lang="en" data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" dir="ltr" data-pc-theme="light">
 
 <head>
-    <title>Order Management Admin Portal - User Management List</title>
+    <title>Order Management Admin Portal - User Management</title>
     
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/lily_collection/dist/include/head.php'); ?>
     

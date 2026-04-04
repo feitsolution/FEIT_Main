@@ -204,6 +204,7 @@ $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
             <li class="pc-item"><a class="pc-link" href="../products/add_product.php">Add New Product</a></li>
             <li class="pc-item"><a class="pc-link" href="../products/product_list.php">All Products</a></li>
             <li class="pc-item"><a class="pc-link" href="../products/category_list.php">Category List</a></li>
+            <li class="pc-item"><a class="pc-link" href="../products/product_analysis.php">Product Analysis</a></li>
           </ul>
         </li>
 
@@ -212,11 +213,10 @@ $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
           <a href="#!" class="pc-link"><span class="pc-micon"> <i data-feather="users"></i></span><span class="pc-mtext">Leads</span><span class="pc-arrow"><i class="ti ti-chevron-right"></i></span></a>
           <ul class="pc-submenu">
             <li class="pc-item"><a class="pc-link" href="../leads/lead_upload.php">Lead Upload</a></li>
-            <?php if ($is_admin): ?>
-            <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">All Leads</a></li>
-            <?php else: ?>
-            <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">My Leads</a></li>
+            <?php if ($is_admin == 1 && $is_main_admin_tenant == 1): ?>
+            <li class="pc-item"><a class="pc-link" href="../leads/lead_list.php">All Leads</a></li>
             <?php endif; ?>
+            <li class="pc-item"><a class="pc-link" href="../leads/my_leads.php">My Leads</a></li>
             <li class="pc-item"><a class="pc-link" href="../leads/city_list.php">City List</a></li>
           </ul>
         </li>

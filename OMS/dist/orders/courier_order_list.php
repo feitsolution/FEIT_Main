@@ -498,10 +498,6 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                     <i class="fas fa-download"></i>
                     Download
                 </button>
-                <button class="modal-btn modal-btn-warning" onclick="updateOrderStatus()" id="updateStatusBtn" style="display:none;">
-                    <i class="fas fa-edit"></i>
-                    Update Status
-                </button>
             </div>
         </div>
     </div>
@@ -562,7 +558,6 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
             const modal = document.getElementById('orderModal');
             const modalContent = document.getElementById('modalContent');
             const downloadBtn = document.getElementById('downloadBtn');
-            const updateStatusBtn = document.getElementById('updateStatusBtn');
             
             // Show modal
             modal.style.display = 'flex';
@@ -576,7 +571,6 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                 </div>
             `;
             downloadBtn.style.display = 'none';
-            updateStatusBtn.style.display = 'none';
             
             // Fetch order details
             const fetchUrl = 'download_order.php?id=' + encodeURIComponent(currentOrderId);
@@ -602,7 +596,6 @@ $tenants = $tenant_result->fetch_all(MYSQLI_ASSOC);
                 }
                 modalContent.innerHTML = data;
                 downloadBtn.style.display = 'inline-flex';
-                updateStatusBtn.style.display = 'inline-flex';
             })
             .catch(error => {
                 console.error('Error loading order details:', error);
