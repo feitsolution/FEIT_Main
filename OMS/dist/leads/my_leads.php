@@ -643,8 +643,10 @@ if ($role_id === 1) {
                                         <td class="user-info" id="user-info-<?php echo htmlspecialchars($row['order_id']); ?>">
                                             <div class="user-display">
                                                 <?php if (isset($row['user_name']) && !empty($row['user_name'])): ?>
-                                                    <div class="user-name"><?php echo htmlspecialchars($row['user_name']); ?></div>
-                                                    <div class="user-id">ID: <?php echo htmlspecialchars($row['user_id']); ?></div>
+                                                    <div class="user-name">
+                                                        <?php echo htmlspecialchars($row['user_name']); ?>
+                                                        <span class="user-id">(ID: <?php echo htmlspecialchars($row['user_id']); ?>)</span>
+                                                    </div>
                                                     <?php if (!empty($row['user_email'])): ?>
                                                         <div class="user-email"><?php echo htmlspecialchars($row['user_email']); ?></div>
                                                     <?php endif; ?>
