@@ -789,7 +789,7 @@ include($_SERVER['DOCUMENT_ROOT'] . '/digital_stores/dist/include/sidebar.php');
         document.addEventListener('DOMContentLoaded', function() {
             // ========== GLOBAL VARIABLES ==========
             const allowInventory = <?= (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) ? 'true' : 'false' ?>;
-            let deliveryFee = <?php echo floatval($order['delivery_fee']); ?>;
+            let deliveryFee = <?php echo $defaultDeliveryFee; ?>;
             let isExistingCustomer = <?= $order['customer_id'] ? 'true' : 'false' ?>;
 
             const productBaseStocks = {

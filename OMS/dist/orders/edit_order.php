@@ -789,7 +789,7 @@ $deliveryFeeStmt->close();
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // ========== GLOBAL VARIABLES ==========
-            let deliveryFee = <?php echo floatval($order['delivery_fee']); ?>;
+            let deliveryFee = <?php echo $defaultDeliveryFee; ?>;
             let isExistingCustomer = <?= $order['customer_id'] ? 'true' : 'false' ?>;
 
     // ========== VALIDATION UTILITIES ==========
