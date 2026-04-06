@@ -541,6 +541,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                         </div>
                     </form>
                 </div>
+
+                <!-- Instructions Box -->
+                <div class="info-box">
+                    <h4>📋 How to Process Return Handover</h4>
+                    <ol>
+                        <li>Download and fill the CSV template with tracking numbers</li>
+                        <li>Upload the file to mark 'return complete' orders as 'return_handover'</li>
+                    </ol>
+                    <p class="mt-2"><strong>Note:</strong> Only orders with 'return complete' status will be processed.</p>
+                    <p class="mt-1"><strong>File:</strong> CSV only, max 5MB</p>
+                </div>
             </div>
         </div>
     </div>

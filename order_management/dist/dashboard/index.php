@@ -238,7 +238,8 @@ if (isset($_SESSION['customer_id'])){
     ?>
         <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+
+    <link rel="stylesheet" href="../assets/css/tailwind-utilities.css">
 
     
     <style>
@@ -444,10 +445,6 @@ if (isset($_SESSION['customer_id'])){
                             <?php endif; ?>
                         </h5>
                     </div>
-                    <ul class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="index.php">Home</a></li>
-                        <li class="breadcrumb-item"><a href="javascript: void(0)">Dashboard</a></li>
-                    </ul>
                 </div>
             </div>
             <!-- [ breadcrumb ] end -->
@@ -515,7 +512,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
     <a href="../orders/all_orders.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Total Orders</h5>
                 <i class="fas fa-file-invoice text-blue-500 text-xl"></i>
             </div>
@@ -541,7 +538,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
     <a href="../orders/pending_order_list.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Pending Orders</h5>
                 <i class="fas fa-clock text-yellow-500 text-xl"></i>
             </div>
@@ -566,7 +563,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
    <a href="../orders/dispatch_order_list.php?updated_date_from=<?= $today_date ?>&updated_date_to=<?= $today_date ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Dispatch Orders</h5>
                 <i class="fas fa-truck text-blue-500 text-xl"></i>
             </div>
@@ -591,7 +588,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
    <a href="../orders/cancel_order_list.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Canceled Orders</h5>
                 <i class="fas fa-ban text-red-500 text-xl"></i>
             </div>
@@ -616,7 +613,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
     <a href="../orders/return_complete_order_list.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Return Complete Orders</h5>
                 <i class="fas fa-undo text-purple-500 text-xl"></i>
             </div>
@@ -641,7 +638,7 @@ if (isset($_SESSION['customer_id'])){
 <div class="col-span-12 xl:col-span-4 md:col-span-6">
     <a href="../orders/return_handover_order_list.php<?= !empty($date_from) || !empty($date_to) ? '?date_from='.urlencode($date_from).'&date_to='.urlencode($date_to) : '' ?>" class="card-link">
         <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
+            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                 <h5>Return Handover Orders</h5>
                 <i class="fas fa-handshake text-orange-500 text-xl"></i>
             </div>
@@ -677,7 +674,7 @@ if (isset($_SESSION['customer_id'])){
                 <div class="col-span-12 xl:col-span-4 md:col-span-6 admin-only">
                     <a href="/order_management/dist/users/users.php" class="card-link">
                         <div class="card">
-                            <div class="card-header !pb-0 !border-b-0">
+                            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                                 <h5>Total Users</h5>
                                 <i class="fas fa-users text-purple-500 text-xl"></i>
                             </div>
@@ -702,7 +699,7 @@ if (isset($_SESSION['customer_id'])){
                 <div class="col-span-12 xl:col-span-4 md:col-span-6">
                     <a href="/order_management/dist/customers/customer_list.php" class="card-link">
                         <div class="card">
-                            <div class="card-header !pb-0 !border-b-0">
+                            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                                 <h5>Total Customers
                                     <?php if (!$rbac->isAdmin()): ?>
                                         <span class="user-specific-label"></span>
@@ -731,7 +728,7 @@ if (isset($_SESSION['customer_id'])){
                 <div class="col-span-12 xl:col-span-4 md:col-span-6">
                     <a href="/order_management/dist/products/product_list.php" class="card-link">
                         <div class="card">
-                            <div class="card-header !pb-0 !border-b-0">
+                            <div class="card-header flex items-center justify-between !pb-0 !border-b-0">
                                 <h5>Total Products</h5>
                                 <i class="fas fa-box text-teal-500 text-xl"></i>
                             </div>

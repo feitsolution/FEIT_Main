@@ -469,27 +469,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file']) && isset
                 </div>
             </div>
             <div class="main-content-wrapper">
-                <!-- Instructions Box -->
-                <div class="info-box">
-                    <h4>📋 Instructions</h4>
-                    <p><strong>How to upload tracking numbers:</strong></p>
-                    <ul>
-                        <li>Select a courier from the dropdown menu</li>
-                        <li>Download the CSV template below</li>
-                        <li>Fill in your tracking numbers in the template</li>
-                        <li>Upload the completed CSV file</li>
-                        <li>All tracking numbers will be added with 'unused' status</li>
-                    </ul>
-                    <p><strong>CSV Format Requirements:</strong></p>
-                    <ul>
-                        <li>Must have a header row with 'Tracking Number' column</li>
-                        <li>Tracking numbers must be 5-50 characters long</li>
-                        <li>Only alphanumeric characters, hyphens, and underscores allowed</li>
-                        <li>Maximum file size: 5MB</li>
-                        <li>Same tracking number can exist for different couriers, but not for the same courier</li>
-                    </ul>
-                </div>
-
                 <!-- Display import results/errors -->
                 <?php if (isset($_SESSION['import_result'])): ?>
                     <div class="alert alert-<?php echo $_SESSION['import_result']['errors'] > 0 ? 'warning' : 'success'; ?>">
@@ -580,6 +559,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file']) && isset
                             </button>
                         </div>
                     </form>
+                </div>
+
+                <!-- Instructions Box -->
+                <div class="info-box">
+                    <h4>📋 How to Upload</h4>
+                    <ol>
+                        <li>Choose the courier for these tracking numbers</li>
+                        <li>Download the CSV template and add your tracking numbers</li>
+                        <li>Select your file and click Upload</li>
+                    </ol>
+                    <p class="mt-2"><strong>File Rules:</strong></p>
+                    <ul>
+                        <li>CSV format only, max 5MB</li>
+                        <li>One tracking number per row</li>
+                        <li>Tracking numbers: 5-50 characters (letters, numbers, hyphens, underscores)</li>
+                        <li>Duplicate tracking numbers for the same courier will be rejected</li>
+                    </ul>
                 </div>
             </div>
         </div>

@@ -911,51 +911,17 @@ if ($productsResult && $productsResult->num_rows > 0) {
                                 
                         <br>
 
-
+                        <!-- Instructions Box -->
                         <div class="alert alert-info">
-                            <h4>📋 Upload Guidelines & Error Handling</h4>
-                            <ul>
-                                <li><strong>Download template first</strong> - Use the CSV template with all required columns</li>
-                                <li><strong>Required fields:</strong> Full Name, Phone Number, City, Address Line 1</li>
-                                <li><strong>Note:</strong> Product is selected from the dropdown above</li>
-                                <li><strong>Optional fields:</strong> Quantity, Phone Number 2, Email, Address Line 2, Other</li>
-                                <li><strong>Quantity Rule:</strong> Defaults to 1 if empty or 0</li>
-                                <li><strong>File requirements:</strong> CSV format only, 10MB maximum size</li>
-                                <li><strong>Select users</strong> to randomly distribute leads</li>
-                                <li><strong>Column order doesn't matter</strong> - Template can have columns in any order</li>
-                                <li><strong>Extra columns allowed</strong> - System will ignore extra columns not in template</li>
-                                <li><strong>⭐ NEW: Failed rows CSV export</strong> - If any rows fail, download a CSV with only failed rows and error reasons to fix and re-upload</li>
-                            </ul>
-                            
-                            <h5 style="margin-top: 1rem;">🔍 Customer Matching Logic:</h5>
-                            <ul>
-                                <li><strong>Existing customer check:</strong> System searches by Phone 1, Phone 2, OR Email</li>
-                                <li><strong>If ANY match found:</strong> Order created for existing customer (NO customer data update)</li>
-                                <li><strong>If NO match found:</strong> New customer created with all CSV data</li>
-                                <li><strong>Multiple orders allowed:</strong> Same customer can have multiple orders</li>
-                            </ul>
-                            
-                            <h5 style="margin-top: 1rem;">⚠️ Common Errors & Solutions:</h5>
-                            <ul>
-                                <li><strong>"Missing required CSV headers"</strong> → Download fresh template, ensure all column headers are present</li>
-                                <li><strong>"Full Name is required"</strong> → Ensure Full Name column has data</li>
-                                <li><strong>"Phone Number is required"</strong> → Ensure Phone Number column has valid phone</li>
-                                <li><strong>"Phone Number must be exactly 10 digits"</strong> → Use format: 0771234567</li>
-                                <li><strong>"Invalid email format"</strong> → Check email syntax (or use dash - for empty)</li>
-                                <li><strong>"City not found"</strong> → City name must match system database exactly</li>
-                                <li><strong>"Address Line 1 is required"</strong> → Ensure Address Line 1 has data</li>
-                            </ul>
-                            
-                            <h5 style="margin-top: 1rem;">💡 Best Practices:</h5>
-                            <ul>
-                                <li>Test with 2-3 rows first before uploading large batches</li>
-                                <li>Phone numbers: System accepts +94771234567, 94771234567, or 0771234567 formats</li>
-                                <li>Keep city names consistent with existing database entries</li>
-                                <li>Use dash (-) or leave empty for optional fields like Email</li>
-                                <li>Check error details if any rows fail - they show specific issues</li>
-                                <li>Successful rows are imported even if some rows have errors</li>
-                                <li><strong>⭐ If many rows fail:</strong> Download the failed rows CSV, fix issues in Excel, and re-upload only those rows</li>
-                            </ul>
+                            <h4>📋 How to Import Leads</h4>
+                            <ol>
+                                <li>Select a product from the dropdown</li>
+                                <li>Download and fill the CSV template</li>
+                                <li>Upload the CSV and select users to distribute leads</li>
+                            </ol>
+                            <p class="mt-2"><strong>Required fields:</strong> Full Name, Phone Number (10 digits), City, Address Line 1</p>
+                            <p><strong>File:</strong> CSV only, max 10MB</p>
+                            <p><strong>Note:</strong> Failed rows can be downloaded as CSV to fix and re-upload.</p>
                         </div>
                     </form>
                 </div>

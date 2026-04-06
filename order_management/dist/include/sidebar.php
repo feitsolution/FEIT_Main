@@ -133,12 +133,12 @@ if (!function_exists('get_logo_with_fallback')) {
         
         <li class="pc-item pc-caption">
           <label>Order Management</label>
-          <i data-feather="feather"></i>
+          <i data-feather="shopping-bag"></i>
         </li>
         
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
-            <span class="pc-micon"> <i data-feather="edit"></i></span>
+            <span class="pc-micon"> <i data-feather="shopping-cart"></i></span>
             <span class="pc-mtext">Orders Management</span>
             <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
           </a>
@@ -168,7 +168,7 @@ if (!function_exists('get_logo_with_fallback')) {
 
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
-            <span class="pc-micon"> <i data-feather="users"></i></span>
+            <span class="pc-micon"> <i data-feather="map-pin"></i></span>
             <span class="pc-mtext">Tracking Management</span>
             <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
           </a>
@@ -206,7 +206,7 @@ if (!function_exists('get_logo_with_fallback')) {
         if ($is_admin == 1): ?>
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
-            <span class="pc-micon"> <i data-feather="type"></i></span>
+            <span class="pc-micon"> <i data-feather="users"></i></span>
             <span class="pc-mtext">Users</span>
             <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
           </a>
@@ -221,7 +221,7 @@ if (!function_exists('get_logo_with_fallback')) {
         
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
-            <span class="pc-micon"> <i data-feather="feather"></i></span>
+            <span class="pc-micon"> <i data-feather="user-check"></i></span>
             <span class="pc-mtext">Customers</span>
             <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
           </a>
@@ -247,12 +247,12 @@ if (!function_exists('get_logo_with_fallback')) {
 
         <li class="pc-item pc-caption">
           <label>Lead Management</label>
-          <i data-feather="feather"></i>
+          <i data-feather="target"></i>
         </li>
         
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link">
-            <span class="pc-micon"> <i data-feather="users"></i></span>
+            <span class="pc-micon"> <i data-feather="user-plus"></i></span>
             <span class="pc-mtext">Leads</span>
             <span class="pc-arrow"><i class="ti ti-chevron-right"></i></span>
           </a>

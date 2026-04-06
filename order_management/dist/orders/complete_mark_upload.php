@@ -656,6 +656,17 @@ if (!$foundTrackingColumn) {
                         </div>
                     </form>
                 </div>
+
+                <!-- Instructions Box -->
+                <div class="info-box">
+                    <h4>📋 How to Mark Orders Complete</h4>
+                    <ol>
+                        <li>Download and fill the CSV template with tracking numbers</li>
+                        <li>Upload the file to mark delivered orders as 'done'</li>
+                    </ol>
+                    <p class="mt-2"><strong>Note:</strong> Only orders with 'delivered' status will be processed. Payment records (COD) are created automatically.</p>
+                    <p class="mt-1"><strong>File:</strong> CSV only, max 5MB</p>
+                </div>
             </div>
         </div>
     </div>
