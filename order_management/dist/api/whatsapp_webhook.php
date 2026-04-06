@@ -5,20 +5,13 @@
  */
 
 // 1. Fill in your details (I copied your access token from the webhook)
-$access_token = "EAAgeT2q3kHMBROcZC3GGsAfSCLBlFzZA2hlwp6ilJxWqQSf8IJzH8Jxvx9QnVJjCHoqGEocRTnZCaMDUXNlmU6GG4wnl0IKfMuZA5c4uGSbeukiareZAo5MdzWqkqQbwImzhSeR9HgCtB18tMD4mWgZC8vNeLltUgTtEgTH50R969wK3F93fTZC96oaoWDalG9k0zRscXYJNfyMJCwpIVUl4xpmtZC0NQtoECRRYXa7Lw2oLofziImZBxIHUghF6zpBefwsi7RysMJvKYDzftKt7KcZByF";
+$access_token = "EAAgeT2q3kHMBRIDLevqZBDofxpMfOqM3J9KEHzlAzXxdR85Vr8SPAhY6LosZCvvUu2DArbttk8iUxqauenTflWOPCMOrM4i2CRdU2To1J6ITTP4ZCNbCIpxpZBsevZBG1Id6SFt3HyeEbsZBQB6SokecAeZAmOluATHcgoySHS2Bsds943SG0nmS64K3oPnvx1pDETGaSUezmuRjNShdAr2aJgNvv3kB88OkoGX8WRdUhhMLUOOu6mjAyCWttJJZB0AZBafDZBvGceKNDJwmdGK7ul8UIF6QZDZ";
 $phone_number_id = "974652939074897";
-
-// 2. PUT THE PHONE NUMBER YOU WANT TO SEND THE TEST MESSAGE TO HERE (must include country code, NO plus sign)
-// E.g., for Sri Lanka: 94771234567
-$to_number = "94778363592"; 
-
-echo "<h3>Sending test message to $to_number...</h3>";
 
 $url = "https://graph.facebook.com/v22.0/$phone_number_id/messages";
 
 $data = [
     "messaging_product" => "whatsapp",
-    "to" => $to_number,
     "type" => "template",
     "template" => [
         "name" => "hello_world",
