@@ -52,6 +52,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
   <meta property="og:url" content="https://feitsolutions.com/contact.php">
   <?php include 'header.php'; ?>
   <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
     /* ===== Section Title ===== */
     .section-header {
       text-align: center;
@@ -60,26 +64,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
 
     .section-header .badge-label {
       display: inline-block;
-      background: #eef2ff;
-      color: #1a43bf;
+      background: #f3f4f6;
+      color: #4b5563;
       font-size: 13px;
       font-weight: 600;
       padding: 6px 18px;
-      border-radius: 50px;
-      margin-bottom: 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
     .section-header h2 {
-      font-size: 2.2rem;
+      font-size: clamp(32px, 4vw, 42px);
       font-weight: 700;
       color: #111827;
       margin-bottom: 12px;
+      letter-spacing: -0.02em;
     }
 
     .section-header p {
-      font-size: 16px;
+      font-size: 17px;
       color: #6b7280;
       max-width: 520px;
       margin: 0 auto;
@@ -88,55 +93,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
 
     /* ===== Contact Info Cards ===== */
     .contact-info-section {
-      background: #f8fafc;
-      padding: 80px 0 60px;
+      background: #f9fafb;
+      padding: 100px 0 60px;
     }
 
     .contact-card {
       background: #ffffff;
-      border: 1px solid #e5e7eb;
       border-radius: 16px;
-      padding: 32px 24px;
+      padding: 28px 24px;
       text-align: center;
       transition: all 0.3s ease;
       height: 100%;
+      border: 1px solid #e5e7eb;
     }
 
     .contact-card:hover {
-      border-color: #1a43bf;
-      transform: translateY(-6px);
-      box-shadow: 0 12px 40px rgba(26, 67, 191, 0.1);
+      border-color: #10B981;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
     }
 
     .contact-card-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 14px;
-      background: #eef2ff;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #f0fdf4;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 18px;
-      transition: all 0.3s ease;
-    }
-
-    .contact-card:hover .contact-card-icon {
-      background: #1a43bf;
+      margin: 0 auto 16px;
     }
 
     .contact-card-icon i {
-      font-size: 26px;
-      color: #1a43bf;
-      transition: all 0.3s ease;
-    }
-
-    .contact-card:hover .contact-card-icon i {
-      color: #ffffff;
+      font-size: 20px;
+      color: #10B981;
     }
 
     .contact-card h5 {
       color: #111827;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 600;
       margin-bottom: 8px;
     }
@@ -145,21 +139,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
       color: #6b7280;
       font-size: 14px;
       margin-bottom: 0;
-      line-height: 1.7;
+      line-height: 1.6;
     }
 
     /* ===== Map + Form Section ===== */
     .map-form-section {
-      background: #ffffff;
-      padding: 0 0 80px;
+      background: #f9fafb;
+      padding: 60px 0 100px;
     }
 
     .map-wrapper {
-      border-radius: 20px;
+      border-radius: 16px;
       overflow: hidden;
       height: 100%;
-      min-height: 560px;
+      min-height: 500px;
       position: relative;
+      border: 1px solid #e5e7eb;
     }
 
     .map-wrapper iframe {
@@ -176,23 +171,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     .form-wrapper {
       background: #ffffff;
       border: 1px solid #e5e7eb;
-      border-radius: 20px;
-      padding: 44px 36px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+      border-radius: 16px;
+      padding: 32px 28px;
     }
 
     .form-title {
       color: #111827;
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: 6px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .form-subtitle {
-      color: #9ca3af;
+      color: #6b7280;
       font-size: 14px;
-      margin-bottom: 30px;
-      line-height: 1.5;
+      margin-bottom: 24px;
     }
 
     .form-label {
@@ -200,30 +193,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
       font-weight: 500;
       font-size: 13px;
       margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .form-control {
       background-color: #f9fafb;
       border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 12px 16px;
+      border-radius: 8px;
+      padding: 12px 14px;
       height: auto;
       color: #111827;
       font-size: 14px;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
     }
 
     .form-control:focus {
       background-color: #ffffff;
-      border-color: #1a43bf;
-      box-shadow: 0 0 0 3px rgba(26, 67, 191, 0.1);
+      border-color: #10B981;
+      box-shadow: none;
       color: #111827;
     }
 
     .form-control::placeholder {
-      color: #b0b7c3;
+      color: #9ca3af;
     }
 
     textarea.form-control {
@@ -232,7 +223,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     }
 
     .form-field {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .required-field::after {
@@ -241,30 +232,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     }
 
     .btn-submit {
-      background: linear-gradient(45deg, #2500f5, #0fc536);
+      background: #10B981;
       color: #ffffff;
-      padding: 14px 48px;
+      padding: 14px 32px;
       border: none;
-      font-weight: 600;
-      font-size: 15px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      transition: all 0.3s ease;
-      border-radius: 30px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      border-radius: 8px;
       width: 100%;
       cursor: pointer;
     }
 
     .btn-submit:hover {
-      background: linear-gradient(45deg, #2500f5, #0fc536);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(26, 67, 191, 0.3);
+      background: #059669;
       color: #ffffff;
     }
 
     .btn-submit:disabled {
       opacity: 0.65;
-      transform: none;
       cursor: not-allowed;
     }
 
@@ -280,25 +266,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
 
     @media (max-width: 768px) {
       .form-wrapper {
-        padding: 24px 16px;
+        padding: 32px 24px;
       }
       .form-title {
         font-size: 1.5rem;
       }
       .contact-card {
-        padding: 24px 16px;
+        padding: 30px 20px;
       }
       .contact-info-section {
-        padding: 40px 0 20px;
+        padding: 60px 0 20px;
       }
       .map-form-section {
-        padding: 0 0 40px;
+        padding: 40px 0 60px;
       }
       .map-wrapper {
         min-height: 280px;
       }
       .btn-submit {
-        padding: 12px 30px;
+        padding: 14px 30px;
         font-size: 14px;
       }
     }
@@ -309,12 +295,99 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
   <header id="header-wrap">
     <?php include 'navbar.php'; ?>
 
-    <div id="hero-area" class="hero-area-bg">
-      <img src="assets/img/cc.png" alt="Hero Image" class="hero-video">
-      <div class="container">
-        <div class="contents">
-          <h2 class="head-title">Contact Us</h2>
-          <p class="head-wrap">For your unique business requirements</p>
+    <!-- Premium Contact Hero Styling -->
+    <style>
+      .contact-hero {
+        position: relative;
+        overflow: hidden;
+        height: 50vh;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        background-color: #050505;
+        font-family: 'Inter', sans-serif;
+        margin-top: 0;
+      }
+      
+      .contact-hero-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.35;
+        filter: grayscale(20%) contrast(110%);
+        z-index: 0;
+      }
+
+      .contact-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(5, 5, 5, 0.4) 0%, rgba(5, 5, 5, 0.95) 100%);
+        z-index: 1;
+      }
+
+      .contact-ambient-glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 60vw;
+        height: 60vw;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .contact-content-wrapper {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        padding: 0 24px;
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .contact-title {
+        font-size: clamp(38px, 5vw, 64px);
+        font-weight: 600;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        margin: 0 0 16px;
+        animation: fadeInUp 0.8s ease-out backwards;
+      }
+
+      .contact-subtitle {
+        font-size: clamp(17px, 2vw, 21px);
+        font-weight: 400;
+        line-height: 1.6;
+        color: #d1d5db;
+        max-width: 650px;
+        margin: 0 auto;
+        letter-spacing: -0.01em;
+        animation: fadeInUp 0.8s ease-out 0.2s backwards;
+      }
+      
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+
+    <div class="contact-hero">
+      <img src="assets/img/cc.png" alt="Hero Image" class="contact-hero-img">
+      <div class="contact-ambient-glow"></div>
+      <div class="contact-overlay"></div>
+
+      <div class="contact-content-wrapper">
+        <div class="container">
+          <h1 class="contact-title">Let's Connect</h1>
+          <p class="contact-subtitle">Get in touch with our experts to discuss your custom solutions and enterprise requirements.</p>
         </div>
       </div>
     </div>
@@ -440,7 +513,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
   </div>
 
   <a href="#" class="back-to-top">
-    <i class="lni-arrow-up"></i>
+    <i class="fas fa-chevron-up"></i>
   </a>
 
   <?php include 'script.php'; ?>

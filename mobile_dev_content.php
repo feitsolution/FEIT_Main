@@ -41,7 +41,7 @@
           </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav mr-auto w-100 justify-content-end clearfix">
-              <li class="nav-item"><a class="nav-link" href="home.php">Home</a></li>
+              <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
               <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="services.php" id="aboutDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Services</a>
@@ -344,7 +344,7 @@ if (isset($_SESSION['user_id'])) {
 
     <!-- Go to Top Link -->
     <a href="#" class="back-to-top">
-    	<i class="lni-arrow-up"></i>
+    	<i class="fas fa-chevron-up"></i>
     </a>
     
 

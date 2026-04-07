@@ -19,211 +19,177 @@
 <header id="header-wrap">
   <?php include 'navbar.php'; ?>
 
-  <!-- Hero about Start -->
-  <div id="hero-area" class="hero-area-bg">
-    <!-- <video autoplay muted loop playsinline class="hero-video" poster="assets/img/hero-poster.jpg">
-      <source data-src="assets/img/heroo.mp4" type="video/mp4">
-    </video> -->
-    <!-- <video autoplay muted loop playsinline class="hero-video">
-    <source src="assets/img/heroo.mp4" type="video/mp4">
-  </video> -->
+  <style>
+    .page-header-simple {
+      padding: 140px 0 70px;
+      background: #0a0a0a;
+      text-align: center;
+    }
+    .page-header-simple h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 12px;
+    }
+    .page-header-simple p {
+      font-size: 18px;
+      color: #9ca3af;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+  </style>
 
-  <img src="assets/img/heroo.png" alt="Hero Image" class="hero-video">
-
+  <section class="page-header-simple">
     <div class="container">
-      <div class="contents">
-        <h2 class="head-title">About Us</h2>
-        <p class="head-wrap">For your unique business requirements</p>
-        <div class="header-button">
-          <a href="contact.php" class="btn btn-common"> Meet With Us</a>
-        </div>
-
-      </div>
-
+      <h1 class="wow fadeInDown">About Us</h1>
+      <p class="wow fadeInUp" data-wow-delay="0.2s">Driving Innovation and Excellence in IT Solutions</p>
     </div>
-  </div>
-  </div>
+  </section>
   <!-- Hero about End -->
 </header>
 
-<!-- Services Section Start -->
-<section id="services" class="section-padding">
+<style>
+  /* Simple Aesthetics for About Page */
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+  }
+  
+  .section-padding {
+    padding: 80px 0;
+  }
+
+  .section-title {
+    font-size: clamp(28px, 4vw, 36px);
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 20px;
+  }
+
+  .section-subtitle {
+    font-size: 18px;
+    color: #4b5563;
+    line-height: 1.6;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .simple-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 32px;
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .simple-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .simple-card h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+  }
+
+  .simple-card p {
+    font-size: 15px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .bg-light {
+    background-color: #f2f2f2 !important;
+  }
+
+  .btn-common {
+    background: #10B981;
+    color: #ffffff !important;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-block;
+    border: none;
+  }
+
+  .btn-common:hover {
+    background: #059669;
+    transform: translateY(-1px);
+  }
+</style>
+
+<!-- About Content Start -->
+<section class="section-padding bg-white">
   <div class="container">
-    <div class="section-header text-center">
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s"> When you hire us, what you receive in simple terms
-        is a not just a technology partner for your company but a remote consultation team who will be..</h2>
-      <div class="shape wow fadeInDown" data-wow-delay="0.3s"></div>
+    <div class="row align-items-center mb-5">
+      <div class="col-lg-6 col-md-12 wow fadeInLeft" data-wow-delay="0.3s">
+        <img class="img-fluid rounded-lg" src="assets/img/about-hero.jpg" alt="About FE IT Solutions">
+      </div>
+      <div class="col-lg-6 col-md-12 wow fadeInRight" data-wow-delay="0.3s">
+        <div class="pl-lg-4">
+          <h2 class="section-title">Why Choose Us</h2>
+          <p class="mb-3">
+            At FE IT Solutions, we combine technical expertise with a deep understanding of business needs. What sets us apart is our dedication to delivering measurable results and building lasting partnerships with every client we serve.
+          </p>
+          <p class="mb-3">
+            We don't just provide solutions we become an extension of your team. From strategy to execution, we ensure transparency, quality, and a relentless focus on your success at every stage of the journey.
+          </p>
+          <a href="services.php" class="btn btn-common mt-2">See Our Services</a>
+        </div>
+      </div>
     </div>
-    <div class="row">
+
+    <div class="row g-4 mb-5">
+      <div class="col-md-6 col-lg-3">
+        <div class="simple-card wow fadeInUp" data-wow-delay="0.1s">
+          <h3>01. Discover</h3>
+          <p>We analyze your current systems, challenges, and goals to understand exactly what your business needs.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="simple-card wow fadeInUp" data-wow-delay="0.2s">
+          <h3>02. Design</h3>
+          <p>We craft tailored strategies and solution architectures that align with your objectives and budget.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="simple-card wow fadeInUp" data-wow-delay="0.3s">
+          <h3>03. Develop</h3>
+          <p>Our expert team builds, tests, and refines your solution using modern technologies and best practices.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="simple-card wow fadeInUp" data-wow-delay="0.4s">
+          <h3>04. Deliver</h3>
+          <p>We deploy, monitor, and continuously optimize your solution to ensure long-term success and growth.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row align-items-center">
+      <div class="col-lg-6 col-md-12 order-lg-2 wow fadeInRight" data-wow-delay="0.3s">
+        <img class="img-fluid rounded-lg" src="assets/img/about/img-3.jpg" alt="Growth and Value">
+      </div>
+      <div class="col-lg-6 col-md-12 order-lg-1 wow fadeInLeft" data-wow-delay="0.3s">
+        <div class="pr-lg-4">
+          <h2 class="section-title">Our Commitment to You</h2>
+          <p class="mb-3">
+            We are dedicated to your success from day one. By building strong relationships, understanding your unique challenges, and adapting to your evolving needs, we ensure every solution we deliver drives real value.
+          </p>
+          <p class="mb-0">
+            By partnering with us, you'll have access to a dedicated team of expert consultants who will guide you in making the right choices for your digital business transformation. We ensure you receive the right technology and solutions to meet your business objectives.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
-<!-- Services Section End -->
-
-<!-- About Section start -->
-<div class="about-area section-padding bg-gray">
-  <div class="container">
-    <div class="row">
-      <div class="col-lg-6 col-md-12 col-xs-12 info">
-        <div class="about-wrapper wow fadeInLeft" data-wow-delay="0.3s">
-          <div>
-            <div class="site-heading">
-              <p class="mb-3"> WHAT WE DO</p>
-            </div>
-            <div class="content">
-              <p>
-                When you hire us, what you receive in simple terms is not just a technology partner for your company,
-                but a remote consultation team who will be there to help you make the right decisions during your
-                digital business transformation. We’ll assess and analyze your current situation by digging deep into
-                your problems to identify the problem roots. So we can design solutions to entirely eliminate the cause
-                assuring that you don’t have to deal with it anymore.
-              </p>
-              <a href="services.php" class="btn btn-common mt-3"> See Our Services</a>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-6 col-md-12 col-xs-12 wow fadeInRight" data-wow-delay="0.3s">
-        <img class="img-fluid" src="assets/img/about-hero.jpg" alt="">
-      </div>
-    </div>
-  </div>
-</div>
-<!-- About Section End -->
-
-
-<!-- Features Section Start -->
-<section id="features" class="section-padding">
-  <div class="container">
-    <div class="row">
-
-      <!-- Services item -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <div class="services-item wow fadeInRight" data-wow-delay="0.3s">
-          <div class="services-content">
-            <h3 style="color: white"><a href="#">ABOUT US</a>
-            </h3>
-            <p style="color: beige;">At FE IT Solutions, we help businesses grow with technology. We specialize in ERP
-              software, website development, SEO, and IT consultancy. Our team provides custom solutions that improve
-              efficiency and ensure success, offering support from start to finish.
-
-            </p>
-
-          </div>
-        </div>
-      </div>
-      <!-- Services item -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <div class="services-item wow fadeInRight" data-wow-delay="0.9s">
-
-          <div class="services-content">
-            <h3><a href="#">OUR VISION</a></h3>
-            <p style="color: beige;">Our vision is to be a top provider of IT solutions, helping businesses innovate and
-              grow. We focus on delivering secure, scalable, and future-proof solutions while building long-lasting
-              partnerships with our clients. </p>
-          </div>
-        </div>
-      </div>
- <!-- Services item -->
- <div class="col-md-6 col-lg-4 col-xs-12">
-        <div class="services-item wow fadeInRight" data-wow-delay="0.6s">
-
-          <div class="services-content">
-            <h3><a href="#">OUR MISSION</a></h3>
-            <p style="color: beige;">Our mission is to provide smart IT solutions that help businesses improve
-              operations, grow online, and achieve lasting success. We offer tailored ERP software, website development,
-              and expert IT consultancy to deliver real value to our clients. </p>
-
-          </div>
-        </div>
-      </div>
-      
-    </div>
-  </div>
-  </div>
-</section>
-<!-- Features Section End -->
-
-
-<!-- About Section 2 start -->
-
-<div class="about-area1 section-padding bg-gray">
-
-  <div class="container">
-
-    <div class="row">
-      <div class="col-lg-6 col-md-12 col-xs-12 wow fadeInRight" data-wow-delay="0.3s">
-        <img class="img-fluid" src="assets/img/about/img-3.jpg" alt="">
-      </div>
-      <div class="col-lg-6 col-md-12 col-xs-12 info">
-        <div class="about-wrapper wow fadeInLeft" data-wow-delay="0.3s">
-          <div>
-            <div class="site-heading">
-              <h2 class="section-title">Unlock Long-Term Value and Growth</h2>
-            </div>
-            <div class="content">
-              <p>
-                Achieving long-term value and sustainable growth is at the core of every successful business strategy.
-                <br>
-                By focusing on building strong relationships with customers, continuously improving products and
-                services, and adapting to market changes, businesses can position themselves for lasting success.
-              </p>
-              <a href="#" class="btn btn-common mt-3">Read More</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-<!-- About Section 2 End -->
-
-
-
-<!-- Features Section Start -->
-<section id="features" class="section-padding">
-  <div class="container">
-    <div class="row">
-
-      <!-- Services item -->
-      <div class="col-md-6 col-lg-6 col-xs-12">
-        <div class="services-item wow fadeInRight" data-wow-delay="0.3s">
-          <div class="services-content">
-            <h3 style="color: white"><a href="#">WHAT YOU GET</a>
-            </h3>
-            <p style="color: beige;">By partnering with us, you’ll have access to a dedicated team of expert consultants
-              who will guide you in making the right choices for your digital business transformation. We ensure you
-              receive the right technology and solutions to meet your business objectives.</p>
-
-          </div>
-        </div>
-      </div>
-      <!-- Services item -->
-      <div class="col-md-6 col-lg-6 col-xs-12">
-        <div class="services-item wow fadeInRight" data-wow-delay="0.6s">
-
-          <div class="services-content">
-            <h3><a href="#">WHY CHOOSE US</a></h3>
-            <p style="color: beige;">Choose us for our unmatched proven expertise, strong dedication to delivering
-              results, and commitment to your best interests. We are passionate, professional, and transparent, always
-              prioritizing our clients' needs to ensure their goals are met.
-
-
-
-
-            </p>
-
-          </div>
-        </div>
-      </div>
-
-
-    </div>
-  </div>
-  </div>
-</section>
-<!-- Features Section End -->
+<!-- About Content End -->
 
 
 
@@ -231,7 +197,7 @@
 <?php include 'footer.php'; ?>
 <!-- Go to Top Link -->
 <a href="#" class="back-to-top">
-  <i class="lni-arrow-up"></i>
+  <i class="fas fa-chevron-up"></i>
 </a>
 
 <!-- End Preloader -->

@@ -1,63 +1,237 @@
 <!-- Footer Section Start -->
-<footer id="footer" class="footer-area">
+<style>
+  .site-footer {
+    font-family: 'Inter', sans-serif;
+    background: #111827;
+    padding: 80px 0 0;
+  }
+
+  .site-footer .footer-logo img {
+    height: 55px;
+    width: auto;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .footer-logo-wrap {
+    text-align: right;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 991px) {
+    .footer-logo-wrap {
+      text-align: left;
+      justify-content: flex-start;
+      margin-top: 16px;
+    }
+  }
+
+  .site-footer .footer-desc {
+    font-size: 13px;
+    color: #9ca3af;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .footer-socials {
+    display: flex;
+    gap: 8px;
+  }
+
+  .footer-socials a {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 14px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .footer-socials a:hover {
+    background: #10B981;
+    border-color: #10B981;
+    color: #ffffff;
+  }
+
+  .footer-col-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin-bottom: 16px;
+  }
+
+  .footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-links li {
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #9ca3af;
+  }
+
+  .footer-links a {
+    font-size: 13px;
+    color: #9ca3af;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-links a:hover {
+    color: #10B981;
+  }
+
+  .footer-contact-text {
+    font-size: 13px;
+    color: #9ca3af;
+  }
+
+  .footer-contact-text a {
+    color: #9ca3af;
+    text-decoration: none;
+  }
+
+  .footer-contact-text a:hover {
+    color: #10B981;
+  }
+
+  .footer-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    margin: 40px 0 0;
+  }
+
+  .footer-bottom {
+    padding: 18px 0;
+    text-align: center;
+  }
+
+  .footer-bottom p {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .footer-bottom-logo img {
+    height: 36px;
+    width: auto;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+
+  .footer-bottom-logo img:hover {
+    opacity: 1;
+  }
+
+  .footer-bottom .brand-accent {
+    color: #10B981;
+    font-weight: 600;
+  }
+
+  @media (max-width: 767px) {
+    .site-footer {
+      padding: 40px 0 0;
+    }
+    .site-footer .container {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+    .site-footer .footer-logo img {
+      height: 45px;
+      margin-bottom: 12px;
+    }
+    .footer-col-title {
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+    .footer-links a,
+    .footer-contact-text {
+      font-size: 12px;
+    }
+    .footer-socials {
+      justify-content: flex-start;
+    }
+    .footer-bottom {
+      text-align: center;
+    }
+    .footer-bottom p {
+      font-size: 11px;
+    }
+  }
+</style>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="row">
+
+      <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
+        <div class="footer-logo">
+          <a href="index.php"><img src="assets/img/FEIT.png" alt="FEIT Solutions"></a>
+        </div>
+        <p class="footer-desc">Empowering businesses with innovative IT solutions and digital transformation.</p>
+        <div class="footer-socials">
+          <a href="https://www.facebook.com/feitsolutions" aria-label="Facebook"><i class="lni-facebook-filled"></i></a>
+          <a href="https://www.linkedin.com/company/fe-it-solutions" aria-label="LinkedIN"><i class="lni-linkedin-filled"></i></a>
+        </div>
+      </div>
+
+      <div class="col-lg-2 col-md-6 mb-4 mb-lg-0">
+        <h4 class="footer-col-title">Company</h4>
+        <ul class="footer-links">
+          <li><a href="index.php">Home</a></li>
+          <li><a href="about.php">About</a></li>
+          <li><a href="services.php">Services</a></li>
+          <li><a href="contact.php">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+        <h4 class="footer-col-title">Contact</h4>
+        <p class="footer-contact-text">
+          Kohuwala, Sri Lanka<br>
+          <a href="tel:+94112824524">011-28 24 524</a><br>
+          <a href="mailto:info@feitsolutions.com">info@feitsolutions.com</a>
+        </p>
+      </div>
+
+      <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+        <h4 class="footer-col-title">Services</h4>
+        <ul class="footer-links">
+          <li>Cloud Services</li>
+          <li>Managed IT Support</li>
+          <li>Network & Infrastructure</li>
+          <li>Custom Software Development</li>
+          <li>Business Automation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr class="footer-divider">
+
+  <div class="footer-bottom">
     <div class="container">
-        <div class="row">
-            <!-- Brand & Social -->
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="footer-widget brand-widget">
-                    <a href="index.php" class="footer-logo">
-                        <img src="assets/img/FEIT.png" alt="FEIT Logo">
-                    </a>
-                    <p class="footer-desc">Empowering businesses with modern IT solutions and strategic technology services.</p>
-                    <div class="social-icons-footer">
-                        <a href="https://www.facebook.com/feitsolutions"><i class="lni-facebook-filled"></i></a>
-                        <a href="https://www.linkedin.com/company/fe-it-solutions"><i class="lni-linkedin-filled"></i></a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Quick Links -->
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="footer-widget">
-                    <h3 class="footer-title">Quick Links</h3>
-                    <ul class="footer-links-list">
-                        <li><a href="erp.php">ERP Software</a></li>
-                        <li><a href="mobile_dev.php">Mobile Apps</a></li>
-                        <li><a href="web_dev.php">Web Development</a></li>
-                        <li><a href="seo.php">SEO Services</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Contact Info -->
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="footer-widget">
-                    <h3 class="footer-title">Contact Us</h3>
-                    <ul class="contact-list-footer">
-                        <li><i class="lni-map-marker"></i> No: 04, Wijayamangalarama Road, Kohuwala</li>
-                        <li><i class="lni-phone-handset"></i> 011-28 24 524 | +94 76 020 9157</li>
-                        <li><i class="lni-envelope"></i> info@feitsolutions.com</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div> 
-
-    <div id="copyright">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-12 text-center">
-                    <p class="copyright-text">© <?php echo date('Y'); ?> <span class="brand-text">FEIT SOLUTIONS</span>. All Rights Reserved.</p>
-                </div>
-            </div>
-        </div>
-    </div>   
-</footer> 
+      <p>&copy; <?php echo date('Y'); ?> <span class="brand-accent">FEIT Solutions</span>. All Rights Reserved.</p>
+    </div>
+  </div>
+</footer>
 
 <!-- WhatsApp Floating Button -->
 <div class="whatsapp-float-container">
     <div class="whatsapp-pulse"></div>
-    <a href="https://wa.me/94760209157?text=Hello!%20I'm%20interested%20in%20your%20services%20and%20would%20like%20to%20know%20more." 
+    <a href="https://wa.me/94767345224?text=Hello!%20I'm%20interested%20in%20your%20services%20and%20would%20like%20to%20know%20more." 
        target="_blank" 
        class="whatsapp-button">
         <div class="wa-notification"></div>
