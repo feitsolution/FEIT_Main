@@ -451,7 +451,7 @@
   <header id="header-wrap">
     <?php include 'navbar.php'; ?>
     <div class="services-hero">
-      <img src="assets/img/order-management.jpg" alt="Order Management System" class="services-hero-img">
+      <img src="assets/img/pr.png" alt="Order Management System" class="services-hero-img">
       <div class="services-ambient-glow"></div>
       <div class="services-overlay"></div>
       <div class="services-content-wrapper">
