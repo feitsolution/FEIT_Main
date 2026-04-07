@@ -16,6 +16,31 @@
     <changefreq>monthly</changefreq>
   </url>
   <url>
+    <loc>https://feitsolutions.com/erp.php</loc>
+    <priority>0.80</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://feitsolutions.com/web_dev.php</loc>
+    <priority>0.80</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://feitsolutions.com/mobile_dev.php</loc>
+    <priority>0.80</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://feitsolutions.com/seo.php</loc>
+    <priority>0.80</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://feitsolutions.com/consultancy.php</loc>
+    <priority>0.80</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
     <loc>https://feitsolutions.com/courier_management.php</loc>
     <priority>0.70</priority>
     <changefreq>monthly</changefreq>
@@ -26,38 +51,13 @@
     <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://feitsolutions.com/cloud-services.php</loc>
-    <priority>0.80</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://feitsolutions.com/managed-it-support.php</loc>
-    <priority>0.80</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://feitsolutions.com/network-infrastructure.php</loc>
-    <priority>0.80</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://feitsolutions.com/custom-software.php</loc>
-    <priority>0.80</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://feitsolutions.com/security-solutions.php</loc>
-    <priority>0.80</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://feitsolutions.com/products.php</loc>
-    <priority>0.70</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
     <loc>https://feitsolutions.com/contact.php</loc>
     <priority>0.60</priority>
     <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://feitsolutions.com/blog.php</loc>
+    <priority>0.90</priority>
+    <changefreq>daily</changefreq>
   </url>
 </urlset>
