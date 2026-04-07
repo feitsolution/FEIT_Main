@@ -8,6 +8,19 @@
     (function() {
         const loader = document.getElementById('site-loader');
         
+        // Determine if we are on the homepage
+        const path = window.location.pathname;
+        const isHome = path.endsWith('index.php') || path.endsWith('/') || path === '';
+        const hasSeenLoader = sessionStorage.getItem('hasSeenLoader');
+
+        if (!isHome || hasSeenLoader) {
+            if (loader) loader.remove();
+            return;
+        }
+
+        // Mark as seen for this session
+        sessionStorage.setItem('hasSeenLoader', 'true');
+
         function hideLoader() {
             if (!loader) return;
             

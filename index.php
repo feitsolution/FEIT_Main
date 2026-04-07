@@ -12,8 +12,8 @@
   
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="FE IT Solutions | Premier IT & ERP Agency in Sri Lanka">
-  <meta property="og:description" content="Empowering your enterprise with tailored ERP systems, website development, and IT consultancy services.">
+  <meta property="og:title" content="FE IT Solutions | Software Development Company in Sri Lanka">
+  <meta property="og:description" content="FE IT Solutions is a leading software development company in Sri Lanka, offering a comprehensive range of IT services.">
   <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
   <meta property="og:url" content="https://feitsolutions.com/">
   <?php include 'header.php'; ?>
