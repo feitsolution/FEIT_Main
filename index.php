@@ -7,13 +7,13 @@
   
   <!-- SEO Meta Tags -->
   <title>FE IT Solutions | Software Development Company in Sri Lanka</title>
-  <meta name="description" content="FE IT Solutions specializes in tailored ERP systems, website development, mobile apps, SEO, and IT consultancy services for businesses in Colombo, Sri Lanka, and globally.">
-  <meta name="keywords" content="IT Solutions Sri Lanka, ERP Software Colombo, Web Development Sri Lanka, SEO Agency Colombo, IT Consultancy, Custom Software Development">
+  <meta name="description" content="FE IT Solutions is a leading software development company in Sri Lanka, offering a comprehensive range of IT services.">
+  <meta name="keywords" content="IT Solutions Sri Lanka, ERP Software Colombo, Web Development Sri Lanka IT Consultancy, Custom Software Development">
   
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="FE IT Solutions | Premier IT & ERP Agency in Sri Lanka">
-  <meta property="og:description" content="Empowering your enterprise with tailored ERP systems, website development, and IT consultancy services.">
+  <meta property="og:title" content="FE IT Solutions | Software Development Company in Sri Lanka">
+  <meta property="og:description" content="FE IT Solutions is a leading software development company in Sri Lanka, offering a comprehensive range of IT services.">
   <meta property="og:image" content="https://feitsolutions.com/assets/img/FEIT.png">
   <meta property="og:url" content="https://feitsolutions.com/">
   <?php include 'header.php'; ?>
