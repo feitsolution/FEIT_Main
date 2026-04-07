@@ -65,8 +65,47 @@ if (!function_exists('get_logo_with_fallback')) {
 
 <nav class="pc-sidebar">
   <div class="navbar-wrapper">
-    <div class="m-header flex items-center py-4 px-6 h-header-height">
-      <a href="../dashboard/index.php" class="b-brand flex items-center gap-3">
+    <style>
+      .m-header.branding-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 1.5rem;
+        min-height: 90px;
+        height: auto;
+      }
+      .b-brand.branding-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
+        text-decoration: none;
+      }
+      .brand-logo-img {
+        max-height: 60px;
+        width: auto;
+      }
+      /* .brand-company-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+      } */
+
+        .brand-company-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.15); /* transparent */
+            backdrop-filter: blur(6px);            /* glass effect */
+            border: 1px solid rgba(255,255,255,0.3);
+            display: inline-block;
+        }
+    </style>
+       <div class="m-header branding-header">
+       <a href="../dashboard/index.php" class="b-brand branding-link">
         
         <?php
         // Fetch branding info from database
@@ -86,9 +125,6 @@ if (!function_exists('get_logo_with_fallback')) {
             echo "-->\n";
         }
         
-        // Fallback SVG placeholder if no logo in database
-        $fallback_svg = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDA3YmZmIi8+Cjx0ZXh0IHg9IjIwIiB5PSIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPC9zdmc+';
-        
         // Sanitize output for security
         $safe_company_name = htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8');
         
@@ -98,19 +134,12 @@ if (!function_exists('get_logo_with_fallback')) {
         ?>
           <img src="<?php echo $safe_logo_url; ?>" 
             alt="<?php echo $safe_company_name; ?> logo" 
-            class="img-fluid logo logo-lg" 
-            style="max-height: 40px; margin-right: 10px;" 
-            onerror="this.onerror=null; this.src='<?php echo $fallback_svg; ?>';" />
-        <?php else: ?>
-          <!-- No logo in database, showing fallback -->
-          <img src="<?php echo $fallback_svg; ?>" 
-            alt="<?php echo $safe_company_name; ?> logo" 
-            class="img-fluid logo logo-lg" 
-            style="max-height: 40px; margin-right: 10px;" />
+            class="img-fluid logo logo-lg brand-logo-img" 
+            onerror="this.style.display='none'; document.getElementById('sidebar-company-name').style.display='inline-block';" />
         <?php endif; ?>
         
         <!-- Company Name -->
-        <span class="text-lg font-semibold  dark:text-white">
+        <span id="sidebar-company-name" class="brand-company-name dark:text-white" <?php echo $logo_url ? 'style="display:none;"' : ''; ?>>
           <?php echo $safe_company_name; ?>
         </span>
       </a>
