@@ -408,18 +408,21 @@
     flex-shrink: 0;
   }
 
-  .mobile-services-toggle {
+  .mobile-services-toggle, .mobile-products-toggle {
     cursor: pointer;
     position: relative;
   }
 
-  .mobile-services-toggle .toggle-arrow {
+  .mobile-nav-link .toggle-arrow {
     margin-left: auto;
     font-size: 11px;
     transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .mobile-services-toggle.expanded .toggle-arrow {
+  .mobile-nav-link.expanded .toggle-arrow {
     transform: rotate(180deg);
   }
 </style>
@@ -448,26 +451,35 @@
       <span class="nav-icon"><i class="fas fa-info-circle"></i></span>
       About
     </a>
-    <a href="services.php" class="mobile-nav-link mobile-services-toggle <?php echo ($current_page == 'services.php' || $current_page == 'cloud-services.php' || $current_page == 'managed-it-support.php' || $current_page == 'network-infrastructure.php' || $current_page == 'custom-software.php' || $current_page == 'security-solutions.php') ? 'active-link' : ''; ?>">
+    <?php 
+      $is_services_active = ($current_page == 'services.php' || $current_page == 'cloud-services.php' || $current_page == 'managed-it-support.php' || $current_page == 'network-infrastructure.php' || $current_page == 'custom-software.php' || $current_page == 'security-solutions.php');
+      $is_services_expanded = ($current_page == 'cloud-services.php' || $current_page == 'managed-it-support.php' || $current_page == 'network-infrastructure.php' || $current_page == 'custom-software.php' || $current_page == 'security-solutions.php');
+    ?>
+    <a href="services.php" class="mobile-nav-link mobile-services-toggle <?php echo $is_services_active ? 'active-link' : ''; ?> <?php echo $is_services_expanded ? 'expanded' : ''; ?>">
       <span class="nav-icon"><i class="fas fa-cogs"></i></span>
       Services
       <span class="toggle-arrow"><i class="fas fa-chevron-down"></i></span>
     </a>
-    <div class="mobile-submenu <?php echo ($current_page == 'cloud-services.php' || $current_page == 'managed-it-support.php' || $current_page == 'network-infrastructure.php' || $current_page == 'custom-software.php' || $current_page == 'security-solutions.php') ? 'expanded' : ''; ?>">
-      <a href="cloud-services.php" class="<?php echo ($current_page == 'cloud-services.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Cloud Services</a>
-      <a href="managed-it-support.php" class="<?php echo ($current_page == 'managed-it-support.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Managed IT Support</a>
-      <a href="network-infrastructure.php" class="<?php echo ($current_page == 'network-infrastructure.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Network & Infrastructure</a>
-      <a href="custom-software.php" class="<?php echo ($current_page == 'custom-software.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Custom Software</a>
-      <a href="security-solutions.php" class="<?php echo ($current_page == 'security-solutions.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Security Solutions</a>
+    <div class="mobile-submenu <?php echo $is_services_expanded ? 'expanded' : ''; ?>">
+      <a href="cloud-services.php" class="<?php echo ($current_page == 'cloud-services.php') ? 'active-link' : ''; ?>">Cloud Services</a>
+      <a href="managed-it-support.php" class="<?php echo ($current_page == 'managed-it-support.php') ? 'active-link' : ''; ?>">Managed IT Support</a>
+      <a href="network-infrastructure.php" class="<?php echo ($current_page == 'network-infrastructure.php') ? 'active-link' : ''; ?>">Network & Infrastructure</a>
+      <a href="custom-software.php" class="<?php echo ($current_page == 'custom-software.php') ? 'active-link' : ''; ?>">Custom Software</a>
+      <a href="security-solutions.php" class="<?php echo ($current_page == 'security-solutions.php') ? 'active-link' : ''; ?>">Security Solutions</a>
     </div>
-    <a href="products.php" class="mobile-nav-link mobile-products-toggle <?php echo ($current_page == 'products.php' || $current_page == 'courier_management.php' || $current_page == 'order_management.php') ? 'active-link' : ''; ?>">
+
+    <?php 
+      $is_products_active = ($current_page == 'products.php' || $current_page == 'courier_management.php' || $current_page == 'order_management.php');
+      $is_products_expanded = ($current_page == 'courier_management.php' || $current_page == 'order_management.php');
+    ?>
+    <a href="products.php" class="mobile-nav-link mobile-products-toggle <?php echo $is_products_active ? 'active-link' : ''; ?> <?php echo $is_products_expanded ? 'expanded' : ''; ?>">
       <span class="nav-icon"><i class="fas fa-box-open"></i></span>
       Products
       <span class="toggle-arrow"><i class="fas fa-chevron-down"></i></span>
     </a>
-    <div class="mobile-submenu <?php echo ($current_page == 'courier_management.php' || $current_page == 'order_management.php') ? 'expanded' : ''; ?>">
-      <a href="courier_management.php" class="<?php echo ($current_page == 'courier_management.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Courier Management</a>
-      <a href="order_management.php" class="<?php echo ($current_page == 'order_management.php') ? 'active-link' : ''; ?>"><span class="sub-dot"></span>Order Management</a>
+    <div class="mobile-submenu <?php echo $is_products_expanded ? 'expanded' : ''; ?>">
+      <a href="courier_management.php" class="<?php echo ($current_page == 'courier_management.php') ? 'active-link' : ''; ?>">Courier Management</a>
+      <a href="order_management.php" class="<?php echo ($current_page == 'order_management.php') ? 'active-link' : ''; ?>">Order Management</a>
     </div>
     <div class="mobile-nav-divider"></div>
     <a href="contact.php" class="mobile-nav-link <?php echo ($current_page == 'contact.php') ? 'active-link' : ''; ?>">
