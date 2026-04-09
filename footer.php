@@ -178,7 +178,7 @@
 
       <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
         <div class="footer-logo">
-          <a href="index.php"><img src="assets/img/FEIT.png" alt="FEIT Solutions"></a>
+          <a href="index.php"><img src="assets/img/feitw-01.png" alt="FEIT Solutions"></a>
         </div>
         <p class="footer-desc">Empowering businesses with innovative IT solutions and digital transformation.</p>
         <div class="footer-socials">

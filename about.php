@@ -20,29 +20,98 @@
   <?php include 'navbar.php'; ?>
 
   <style>
+    /* Hero Styling */
     .page-header-simple {
-      padding: 140px 0 70px;
-      background: #0a0a0a;
+      position: relative;
+      overflow: hidden;
+      height: 50vh;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      background-color: #050505;
+      font-family: 'Inter', sans-serif;
+      margin-top: 0;
+    }
+
+    .page-header-simple-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.35;
+      filter: grayscale(20%) contrast(110%);
+      z-index: 0;
+    }
+
+    .page-header-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(5, 5, 5, 0.4) 0%, rgba(5, 5, 5, 0.95) 100%);
+      z-index: 1;
+    }
+
+    .page-header-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60vw;
+      height: 60vw;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .page-header-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      padding: 0 24px;
+      margin-top: 40px;
       text-align: center;
     }
+
     .page-header-simple h1 {
-      font-size: clamp(32px, 5vw, 48px);
-      font-weight: 700;
+      font-size: clamp(38px, 5vw, 64px);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
       color: #ffffff;
-      margin-bottom: 12px;
+      margin: 0 0 16px;
+      animation: fadeInUp 0.8s ease-out backwards;
     }
+
     .page-header-simple p {
-      font-size: 18px;
-      color: #9ca3af;
-      max-width: 600px;
+      font-size: clamp(17px, 2vw, 21px);
+      font-weight: 400;
+      line-height: 1.6;
+      color: #d1d5db;
+      max-width: 750px;
       margin: 0 auto;
+      letter-spacing: -0.01em;
+      animation: fadeInUp 0.8s ease-out 0.2s backwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 
   <section class="page-header-simple">
-    <div class="container">
-      <h1 class="wow fadeInDown">About Us</h1>
-      <p class="wow fadeInUp" data-wow-delay="0.2s">Driving Innovation and Excellence in IT Solutions</p>
+    <img src="assets/img/pr.png" alt="About FE IT Solutions" class="page-header-simple-img">
+    <div class="page-header-glow"></div>
+    <div class="page-header-overlay"></div>
+    <div class="page-header-content">
+      <div class="container">
+        <h1 class="wow fadeInDown">About Us</h1>
+        <p class="wow fadeInUp" data-wow-delay="0.2s">Driving Innovation and Excellence in IT Solutions</p>
+      </div>
     </div>
   </section>
   <!-- Hero about End -->

@@ -254,6 +254,9 @@
       transform: translateX(5px);
       box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
     }
+    .why-choose-section .row > div {
+      margin-bottom: 20px;
+    }
     .why-choose-card {
       background: #ffffff;
       border: 1px solid #e5e7eb;
@@ -298,6 +301,9 @@
     .features-section {
       background-color: #ffffff;
       padding: 100px 0;
+    }
+    .features-section .row > div {
+      margin-bottom: 30px;
     }
     .feature-item {
       background: #ffffff;
@@ -401,7 +407,7 @@
     }
     #product-gallery .owl-nav {
       position: absolute;
-      top: 50%;
+      top: 40%;
       width: 100%;
       left: 0;
       display: flex !important;

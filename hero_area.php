@@ -252,7 +252,7 @@
         
         <div class="hero-buttons">
           <a href="contact.php" class="btn-premium btn-primary-elegance">Meet With Us</a>
-          <a href="#services" class="btn-premium btn-secondary-elegance">Explore Capabilities</a>
+          <a href="services.php" class="btn-premium btn-secondary-elegance">Explore Capabilities</a>
         </div>
       </div>
     </div>
