@@ -57,16 +57,12 @@
   }
 
   .premium-nav .navbar-brand img {
-    height: 54px;
-    width: auto;
-    object-fit: contain;
-    filter: brightness(1.15) contrast(1.1) drop-shadow(0 2px 10px rgba(0,0,0,0.2));
-    image-rendering: -webkit-optimize-contrast;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 44px;
+    transition: all 0.3s ease;
   }
 
   .premium-nav.top-nav-collapse .navbar-brand img {
-    height: 46px;
+    height: 44px;
   }
 
   /* ===== Hamburger Button ===== */
@@ -167,8 +163,7 @@
   }
 
   .mobile-nav-header img {
-    height: 48px;
-    filter: brightness(1.15) contrast(1.1) drop-shadow(0 2px 8px rgba(0,0,0,0.2));
+    height: 30px;
   }
 
   .mobile-nav-close {
@@ -438,7 +433,7 @@
 <!-- Mobile Off-Canvas Panel -->
 <div class="mobile-nav-panel" id="mobilePanel">
   <div class="mobile-nav-header">
-    <a href="index.php"><img src="assets/img/feitw-01.png" alt="FEIT Solutions"></a>
+    <a href="index.php"><img src="assets/img/FEIT.png" alt="FEIT Solutions"></a>
     <div class="mobile-nav-close" id="mobileClose">
       <i class="fas fa-times"></i>
     </div>
@@ -499,7 +494,7 @@
 <nav class="navbar navbar-expand-lg fixed-top scrolling-navbar premium-nav">
   <div class="container-fluid px-3 px-lg-5">
     <a href="index.php" class="navbar-brand">
-      <img src="assets/img/feitw-01.png" alt="FEIT">
+      <img src="assets/img/FEIT.png" alt="FEIT">
     </a>
 
     <!-- Mobile Hamburger -->

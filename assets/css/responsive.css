@@ -1,16 +1,16 @@
 /* only small desktops */
 @media (min-width: 992px) and (max-width: 1199px) {
   #hero-area .contents .head-title {
-    font-size: 32px;
+    font-size: 40px;
   }
   .services-item .services-content h3 a {
-    font-size: 13px;
+    font-size: 14px;
   }
   .title-hl {
-    font-size: 24px;
+    font-size: 30px;
   }
   .why .content h3 {
-    font-size: 24px;
+    font-size: 30px;
   }
   .team-item .contetn {
     padding: 15px 20px;
@@ -20,45 +20,45 @@
 /* tablets */
 @media (max-width: 991px) {
   .section-title {
-    font-size: 24px;
+    font-size: 30px;
     margin-bottom: 30px;
   }
   .services-item .services-content h3 a {
-    font-size: 13px;
+    font-size: 14px;
   }
   .services-item {
     margin-bottom: 20px;
   }
   #pricing-table .title h3 {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 
 /* only small tablets */
 @media (min-width: 768px) and (max-width: 991px) {
   .section-title {
-    font-size: 22px;
+    font-size: 26px;
     margin-bottom: 30px;
   }
   .services-item .services-content h3 a {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   #about .sec-title h3 {
-    font-size: 24px;
-    line-height: 36px;
+    font-size: 30px;
+    line-height: 42px;
   }
   .title-hl {
-    font-size: 24px;
+    font-size: 30px;
   }
   .text-wrapper {
     padding: 60px 30px;
   }
   .why .content h3 {
-    font-size: 24px;
+    font-size: 30px;
   }
   #pricing-table .title h3 {
-    font-size: 13px;
+    font-size: 14px;
   }
   .skill-area img {
     margin-bottom: 30px;
@@ -67,19 +67,19 @@
     margin-bottom: 30px;
   }
   .experience h4 {
-    font-size: 16px;
+    font-size: 18px;
   }
   .testimonial-item {
     padding: 10px;
   }
   .testimonial-item .content h2 {
-    font-size: 14px;
+    font-size: 15px;
   }
   .slider-center img {
     padding: 40px 60px;
   }
   .subscribes h4 {
-    font-size: 24px;
+    font-size: 30px;
   }
   .footer-area .footer-titel {
     margin-top: 30px;
@@ -96,7 +96,7 @@
     padding: 60px 0;
   }
   .section-title {
-    font-size: 18px;
+    font-size: 22px;
     margin-bottom: 30px;
   }
 
@@ -122,12 +122,12 @@
     display: none;
   }
   #hero-area .contents .head-title {
-    font-size: 18px;
-    line-height: 30px;
+    font-size: 22px;
+    line-height: 36px;
     margin-bottom: 15px;
   }
   #hero-area .contents p {
-    font-size: 13px;
+    font-size: 14px;
   }
   #hero-area {
     padding: 120px 0 80px;
@@ -139,8 +139,8 @@
     padding: 60px 15px;
   }
   #about .sec-title h3 {
-    font-size: 18px;
-    line-height: 30px;
+    font-size: 22px;
+    line-height: 36px;
   }
   .about-area img {
     margin-top: 30px;
@@ -155,7 +155,7 @@
     width: 50%;
   }
   #cta h4 {
-    font-size: 18px;
+    font-size: 22px;
   }
   #cta .text-right {
     float: left !important;
@@ -181,7 +181,7 @@
     margin: 20px 0;
   }
   .contact-form-area h2 {
-    font-size: 13px;
+    font-size: 14px;
   }
   .copyright .float-right {
     float: left !important;

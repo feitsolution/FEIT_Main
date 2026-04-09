@@ -54,7 +54,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #ffffff;
     }
 
     /* ===== Section Title ===== */
@@ -63,59 +62,65 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
       margin-bottom: 50px;
     }
 
-    .premium-label {
+    .section-header .badge-label {
       display: inline-block;
-      padding: 6px 16px;
       background: #f3f4f6;
       color: #4b5563;
       font-size: 13px;
       font-weight: 600;
+      padding: 6px 18px;
       border-radius: 100px;
-      letter-spacing: 0.5px;
       margin-bottom: 24px;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
-    .section-title {
+    .section-header h2 {
       font-size: clamp(32px, 4vw, 42px);
       font-weight: 700;
-      letter-spacing: -0.02em;
       color: #111827;
-      margin-bottom: 24px;
-      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
     }
-    /* ===== Contact Section ===== */
-    .contact-section {
-      padding: 80px 0;
-      background: #f9fafb;
+
+    .section-header p {
+      font-size: 17px;
+      color: #6b7280;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
     }
 
     /* ===== Contact Info Cards ===== */
+    .contact-info-section {
+      background: #f9fafb;
+      padding: 100px 0 60px;
+    }
+
     .contact-card {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 24px 20px;
+      border-radius: 16px;
+      padding: 28px 24px;
       text-align: center;
+      transition: all 0.3s ease;
       height: 100%;
       border: 1px solid #e5e7eb;
-      transition: all 0.3s ease;
     }
 
     .contact-card:hover {
       border-color: #10B981;
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
     }
 
     .contact-card-icon {
       width: 48px;
       height: 48px;
-      border-radius: 10px;
+      border-radius: 12px;
       background: #f0fdf4;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px;
+      margin: 0 auto 16px;
     }
 
     .contact-card-icon i {
@@ -125,21 +130,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
 
     .contact-card h5 {
       color: #111827;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .contact-card p {
       color: #6b7280;
-      font-size: 13px;
+      font-size: 14px;
       margin-bottom: 0;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
-    /* ===== Map ===== */
+    /* ===== Map + Form Section ===== */
+    .map-form-section {
+      background: #f9fafb;
+      padding: 60px 0 100px;
+    }
+
     .map-wrapper {
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
       height: 100%;
       min-height: 500px;
@@ -158,13 +168,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
       bottom: 0;
     }
 
-    /* ===== Form ===== */
     .form-wrapper {
       background: #ffffff;
       border: 1px solid #e5e7eb;
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 32px 28px;
-      height: 100%;
     }
 
     .form-title {
@@ -188,10 +196,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     }
 
     .form-control {
-      background-color: #ffffff;
+      background-color: #f9fafb;
       border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 14px 16px;
+      border-radius: 8px;
+      padding: 12px 14px;
       height: auto;
       color: #111827;
       font-size: 14px;
@@ -226,21 +234,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     .btn-submit {
       background: #10B981;
       color: #ffffff;
-      padding: 16px 32px;
+      padding: 14px 32px;
       border: none;
-      font-weight: 600;
-      font-size: 15px;
-      transition: all 0.3s ease;
-      border-radius: 10px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      border-radius: 8px;
       width: 100%;
       cursor: pointer;
-      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.15);
     }
 
     .btn-submit:hover {
       background: #059669;
-      transform: translateY(-2px);
-      box-shadow: 0 15px 30px rgba(16, 185, 129, 0.2);
       color: #ffffff;
     }
 
@@ -252,21 +257,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     /* ===== Responsive ===== */
     @media (max-width: 991px) {
       .map-wrapper {
-        min-height: 400px;
+        min-height: 380px;
+      }
+      .section-header h2 {
+        font-size: 1.8rem;
       }
     }
 
     @media (max-width: 768px) {
-      .contact-section {
-        padding: 60px 0;
-      }
-      
       .form-wrapper {
-        padding: 28px 24px;
+        padding: 32px 24px;
       }
-      
+      .form-title {
+        font-size: 1.5rem;
+      }
+      .contact-card {
+        padding: 30px 20px;
+      }
+      .contact-info-section {
+        padding: 60px 0 20px;
+      }
+      .map-form-section {
+        padding: 40px 0 60px;
+      }
       .map-wrapper {
-        min-height: 300px;
+        min-height: 280px;
+      }
+      .btn-submit {
+        padding: 14px 30px;
+        font-size: 14px;
       }
     }
   </style>
@@ -319,7 +338,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
         width: 60vw;
         height: 60vw;
         transform: translate(-50%, -50%);
-        background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
         z-index: 1;
         pointer-events: none;
       }
@@ -374,13 +393,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
     </div>
   </header>
 
-  <!-- Map + Form + Contact Info Section -->
-  <section class="contact-section">
+  <!-- Contact Info Cards -->
+  <section class="contact-info-section">
     <div class="container">
-      <!-- Contact Info Cards -->
-    <div class="row g-4 mb-5">
+      <div class="row g-4">
         <div class="col-lg-3 col-md-6">
-          <div class="contact-card wow fadeInUp" data-wow-delay="0.1s">
+          <div class="contact-card">
             <div class="contact-card-icon">
               <i class="lni lni-map-marker"></i>
             </div>
@@ -389,7 +407,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
           </div>
         </div>
         <div class="col-lg-3 col-md-6">
-          <div class="contact-card wow fadeInUp" data-wow-delay="0.2s">
+          <div class="contact-card">
             <div class="contact-card-icon">
               <i class="lni lni-phone"></i>
             </div>
@@ -398,7 +416,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
           </div>
         </div>
         <div class="col-lg-3 col-md-6">
-          <div class="contact-card wow fadeInUp" data-wow-delay="0.3s">
+          <div class="contact-card">
             <div class="contact-card-icon">
               <i class="lni lni-envelope"></i>
             </div>
@@ -407,7 +425,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
           </div>
         </div>
         <div class="col-lg-3 col-md-6">
-          <div class="contact-card wow fadeInUp" data-wow-delay="0.4s">
+          <div class="contact-card">
             <div class="contact-card-icon">
               <i class="lni lni-timer"></i>
             </div>
@@ -416,22 +434,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
           </div>
         </div>
       </div>
-      
-      <!-- Map + Form -->
-      <div class="row g-4">
-        <div class="col-lg-6">
+    </div>
+  </section>
+
+  <!-- Map + Form -->
+  <section class="map-form-section">
+    <div class="container">
+      <div class="row g-4 align-items-stretch">
+        <div class="col-lg-6 order-2 order-lg-1">
           <div class="map-wrapper">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3961.213870136491!2d79.8854542!3d6.864954799999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ae25a5079323159%3A0xe8b0ef6875ebadd6!2s4%20Wijayamangalarama%20Rd%2C%20Colombo!5e0!3m2!1sen!2slk!4v1741080735236!5m2!1sen!2slk"
-              frameborder="0" 
-              allowfullscreen="" 
-              loading="lazy" 
-              referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
+              frameborder="0" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
           </div>
         </div>
-        <div class="col-lg-6">
-          <div class="form-wrapper wow fadeInRight" data-wow-delay="0.3s">
+        <div class="col-lg-6 order-1 order-lg-2">
+          <div class="form-wrapper">
             <h3 class="form-title">Send a Message</h3>
             <p class="form-subtitle">Fill out the form and we'll get back to you within 24 hours.</p>
 
@@ -440,30 +458,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SERVER['HTTP_X_REQUESTED_WIT
                 <div class="col-md-6">
                   <div class="form-field">
                     <label for="first-name" class="form-label required-field">First Name</label>
-                    <input type="text" class="form-control" id="first-name" name="first-name" placeholder="Your First Name" required>
+                    <input type="text" class="form-control" id="first-name" name="first-name" placeholder="John" required>
                   </div>
                 </div>
                 <div class="col-md-6">
                   <div class="form-field">
                     <label for="last-name" class="form-label required-field">Last Name</label>
-                    <input type="text" class="form-control" id="last-name" name="last-name" placeholder="Your Last Name" required>
+                    <input type="text" class="form-control" id="last-name" name="last-name" placeholder="Doe" required>
                   </div>
                 </div>
               </div>
 
               <div class="form-field">
                 <label for="email" class="form-label required-field">Business Email</label>
-                <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required>
+                <input type="email" class="form-control" id="email" name="email" placeholder="john@company.com" required>
               </div>
 
               <div class="form-field">
                 <label for="company" class="form-label">Company</label>
-                <input type="text" class="form-control" id="company" name="company" placeholder="Your Company Name (Optional)">
+                <input type="text" class="form-control" id="company" name="company" placeholder="Your company name">
               </div>
 
               <div class="form-field">
                 <label for="mesage" class="form-label required-field">Message</label>
-                <textarea class="form-control" id="mesage" name="mesage" placeholder="How can we help you?" required></textarea>
+                <textarea class="form-control" id="mesage" name="mesage" placeholder="Tell us about your project..." required></textarea>
               </div>
 
               <button type="submit" id="submitBtn" class="btn btn-submit">Send Message</button>

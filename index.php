@@ -51,7 +51,7 @@
   }
   
   .section-padding {
-    padding: 50px 0;
+    padding: 100px 0;
   }
 
   /* Section Title Labels */
@@ -69,7 +69,7 @@
   }
 
   .section-title {
-    font-size: clamp(24px, 3vw, 36px);
+    font-size: clamp(32px, 4vw, 48px);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #111827;
@@ -78,10 +78,6 @@
   }
 
   /* Core Services Cards */
-  #services .row > div {
-    margin-bottom: 30px;
-  }
-  
   .services-item {
     background: #ffffff;
     border: 1px solid #f3f4f6;
@@ -121,7 +117,7 @@
 
   .services-content h3 a {
     color: #111827;
-    font-size: 17px;
+    font-size: 20px;
     font-weight: 600;
     text-decoration: none;
     transition: color 0.3s;
@@ -133,7 +129,7 @@
 
   .services-content p {
     color: #6b7280;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
     margin-top: 12px;
   }
@@ -155,11 +151,11 @@
 
   /* About Area */
   .bg-gray {
-    background-color: #f5f5f5 !important;
+    background-color: #f9fafb !important;
   }
 
   .about-area .content p {
-    font-size: 15px;
+    font-size: 17px;
     line-height: 1.7;
     color: #4b5563;
   }
@@ -172,10 +168,10 @@
   .btn-common {
     background: #10B981;
     color: #ffffff !important;
-    padding: 10px 24px;
+    padding: 12px 28px;
     border-radius: 100px;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 15px;
     transition: all 0.3s;
     border: none;
     display: inline-block;
@@ -232,64 +228,70 @@
 
   .box-item .text h4 {
     color: #ffffff !important;
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 600;
     margin-bottom: 10px;
   }
 
   .box-item .text p {
     color: #9ca3af;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
   }
-  /* Portfolio Section Styles */
-  .portfolio-section {
-    background: #ffffff;
-  }
-  
-  .portfolio-item {
-    padding: 60px 0;
-    overflow: hidden;
-  }
-  
-  .portfolio-content {
-    padding: 20px;
-  }
-  
-  .portfolio-content h3 {
-    font-size: 26px;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 20px;
-  }
-
-  .portfolio-content p {
-    font-size: 15px;
-    color: #6b7280;
-    line-height: 1.7;
-    margin-bottom: 30px;
-  }
-  
-  .portfolio-image img {
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-    transition: transform 0.5s ease;
-  }
-  
-  .portfolio-item:hover .portfolio-image img {
-    transform: scale(1.02);
-  }
-
-  .portfolio-badge {
-    color: #10B981;
-    font-weight: 700;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-    display: block;
-  }
 </style>
+
+<!-- Services Section Start -->
+<section id="services" class="section-padding">
+  <div class="container">
+    <div class="section-header text-center mb-5">
+      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">We Offer All Kinds of Premium IT Solutions</h2>
+    </div>
+    <div class="row g-4">
+      <!-- Services item -->
+      <div class="col-md-6 col-lg-4 col-xs-12">
+        <div class="services-item wow fadeInRight" data-wow-delay="0.3s">
+          <div class="icon">
+            <i class="lni-cog"></i>
+          </div>
+          <div class="services-content">
+            <h3><a href="#"> Customized Solutions for Your Business</a></h3>
+            <p>We focus on delivering tailored solutions designed to meet your specific business needs. </p>
+            
+          </div>
+        </div>
+      </div>
+      <!-- Services item -->
+      <div class="col-md-6 col-lg-4 col-xs-12">
+        <div class="services-item wow fadeInRight" data-wow-delay="0.6s">
+          <div class="icon">
+            <i class="lni-stats-up"></i>
+          </div>
+          <div class="services-content">
+            <h3><a href="#">Future-Ready and Dependable Systems</a></h3>
+            <p>Our systems are built to grow with your business, ensuring scalability and reliability every step of the
+              way. </p>
+            
+          </div>
+        </div>
+      </div>
+      <!-- Services item -->
+      <div class="col-md-6 col-lg-4 col-xs-12">
+        <div class="services-item wow fadeInRight" data-wow-delay="0.9s">
+          <div class="icon">
+            <i class="lni-users"></i>
+          </div>
+          <div class="services-content">
+            <h3><a href="#">Excellence in Every Strategic Endeavor</a></h3>
+            <p>With a client-focused approach, we strive to achieve outstanding results and exceed expectations. </p>
+            
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!-- Services Section End -->
 
 <!-- About Section start -->
 <div class="about-area section-padding bg-gray">
@@ -315,212 +317,16 @@
         </div>
       </div>
       <div class="col-lg-6 col-md-12 col-xs-12 wow fadeInRight" data-wow-delay="0.3s">
-         <img class="img-fluid" src="assets/img/about/service.jpg" alt="FE IT Solutions Team working on digital transformation">
+         <img class="img-fluid" src="assets/img/about/service.jpg" alt="">
       </div>
       
     </div>
   </div>
 </div>
 <!-- About Section End -->
-  
-<!-- Portfolio Section Start -->
-<section id="portfolio" class="portfolio-section section-padding">
-  <div class="container">
-    <div class="section-header text-center mb-5">
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">Explore FE IT Solution's New Software Innovations</h2>
-    </div>
-
-    <!-- Courier Management -->
-    <div class="row align-items-center portfolio-item">
-      <div class="col-lg-6 col-md-12 wow fadeInLeft" data-wow-delay="0.3s">
-        <div class="portfolio-image">
-          <img src="assets/img/cm.png" class="img-fluid" alt="Courier Management System">
-        </div>
-      </div>
-      <div class="col-lg-6 col-md-12 wow fadeInRight" data-wow-delay="0.3s">
-        <div class="portfolio-content pl-lg-5">
-          <span class="portfolio-badge">Logistics & Distribution</span>
-          <h3>Courier Management System</h3>
-          <p>A comprehensive end-to-end solution for courier and logistics companies. Features include real-time tracking, automated dispatch, manifests generation, and detailed reporting to optimize every stage of delivery.</p>
-          <a href="courier_management.php" class="btn btn-common">View Details</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Order Management -->
-    <div class="row align-items-center portfolio-item flex-row-reverse">
-      <div class="col-lg-6 col-md-12 wow fadeInRight" data-wow-delay="0.3s">
-        <div class="portfolio-image">
-          <img src="assets/img/oms.png" class="img-fluid" alt="Order Management System">
-        </div>
-      </div>
-      <div class="col-lg-6 col-md-12 wow fadeInLeft" data-wow-delay="0.3s">
-        <div class="portfolio-content pr-lg-5">
-          <span class="portfolio-badge">E-commerce & Operations</span>
-          <h3>Order Management System (OMS)</h3>
-          <p>Streamline your e-commerce operations with our advanced OMS. Centralize orders from multiple channels, manage inventory in real-time, and automate the fulfillment process to deliver a superior customer experience.</p>
-          <a href="order_management.php" class="btn btn-common">View Details</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- Portfolio Section End -->
-
-<!-- Services Section Start -->
-<section id="services" class="section-padding bg-gray">
-  <div class="container">
-    <div class="section-header text-center mb-5">
-      <span class="premium-label">Our Expertise</span>
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">Comprehensive IT Solutions for Modern Enterprises</h2>
-    </div>
-    <div class="row g-4">
-      <!-- ERP & Business Automation -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="erp.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.2s">
-            <div class="icon">
-              <i class="lni-grid-alt"></i>
-            </div>
-            <div class="services-content">
-              <h3>Custom ERP Systems</h3>
-              <p>Streamline your business operations with tailored ERP solutions designed for efficiency and scalability.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-      <!-- Custom Software Development -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="custom-software.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.3s">
-            <div class="icon">
-              <i class="lni-code"></i>
-            </div>
-            <div class="services-content">
-              <h3>Software Development</h3>
-              <p>Besproke software solutions architecture that solves complex business challenges with modern tech.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-      <!-- Cloud & Infrastructure -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="cloud-services.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.4s">
-            <div class="icon">
-              <i class="lni-cloud"></i>
-            </div>
-            <div class="services-content">
-              <h3>Cloud Solutions</h3>
-              <p>Accelerate your digital journey with secure, scalable, and high-performance cloud infrastructure.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-      <!-- Network & Cabling -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="network-infrastructure.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.5s">
-            <div class="icon">
-              <i class="lni-layers"></i>
-            </div>
-            <div class="services-content">
-              <h3>Network Infrastructure</h3>
-              <p>Robust networking and structured cabling solutions to ensure seamless connectivity for your enterprise.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <!-- POS Systems -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="pos.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.6s">
-            <div class="icon">
-              <i class="lni-cart"></i>
-            </div>
-            <div class="services-content">
-              <h3>POS Systems</h3>
-              <p>Modern point-of-sale solutions designed to streamline retail operations and inventory management.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <!-- Managed IT Support -->
-      <div class="col-md-6 col-lg-4 col-xs-12">
-        <a href="managed-it-support.php" class="text-decoration-none">
-          <div class="services-item wow fadeInRight" data-wow-delay="0.7s">
-            <div class="icon">
-              <i class="lni-support"></i>
-            </div>
-            <div class="services-content">
-              <h3>Managed IT Support</h3>
-              <p>24/7 proactive monitoring and expert support to keep your business systems running smoothly.</p>
-            </div>
-          </div>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- Services Section End -->
-
-<!-- Process Section Start -->
-<section id="process" class="section-padding">
-  <div class="container">
-    <div class="section-header text-center mb-5">
-      <span class="premium-label">Our Workflow</span>
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">How We Deliver Excellence</h2>
-    </div>
-    <div class="row text-center">
-      <!-- Step 1 -->
-      <div class="col-lg-3 col-md-6 col-xs-12 mb-4">
-        <div class="process-box wow fadeInUp" data-wow-delay="0.2s">
-          <div class="icon mx-auto mb-4" style="width: 70px; height: 70px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #10B981; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            <i class="lni-search"></i>
-          </div>
-          <h4>01. Discovery</h4>
-          <p class="mt-3">We deep dive into your business requirements to understand your core challenges and goals.</p>
-        </div>
-      </div>
-      <!-- Step 2 -->
-      <div class="col-lg-3 col-md-6 col-xs-12 mb-4">
-        <div class="process-box wow fadeInUp" data-wow-delay="0.4s">
-          <div class="icon mx-auto mb-4" style="width: 70px; height: 70px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #10B981; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            <i class="lni-target"></i>
-          </div>
-          <h4>02. Strategy</h4>
-          <p class="mt-3">Architecting a scalable roadmap and technology stack tailored for your long-term success.</p>
-        </div>
-      </div>
-      <!-- Step 3 -->
-      <div class="col-lg-3 col-md-6 col-xs-12 mb-4">
-        <div class="process-box wow fadeInUp" data-wow-delay="0.6s">
-          <div class="icon mx-auto mb-4" style="width: 70px; height: 70px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #10B981; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            <i class="lni-code"></i>
-          </div>
-          <h4>03. Execution</h4>
-          <p class="mt-3">Agile development and meticulous engineering bringing your digital solutions to life.</p>
-        </div>
-      </div>
-      <!-- Step 4 -->
-      <div class="col-lg-3 col-md-6 col-xs-12 mb-4">
-        <div class="process-box wow fadeInUp" data-wow-delay="0.8s">
-          <div class="icon mx-auto mb-4" style="width: 70px; height: 70px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #10B981; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            <i class="lni-rocket"></i>
-          </div>
-          <h4>04. Optimization</h4>
-          <p class="mt-3">Continuous monitoring, feedback loops, and optimization for peak performance.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- Process Section End -->
 
 <!-- Features Section Start -->
-<!-- <section id="features" class="section-padding">
+<section id="features" class="section-padding">
   <div class="container">
     <div class="section-header text-center mb-5">
       <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">Empowering Innovation through Expertise</h2>
@@ -560,7 +366,7 @@
       </div>
       <div class="col-lg-4 col-md-12 col-sm-12 col-xs-12">
         <div class="show-box wow fadeInUp" data-wow-delay="0.3s">
-          <img src="assets/img/feature/intro-mobile3.png" alt="Product interface overview on mobile">
+          <img src="assets/img/feature/intro-mobile3.png" alt="">
         </div>
       </div>
       <div class="col-lg-4 col-md-12 col-sm-12 col-xs-12">
@@ -596,201 +402,25 @@
       </div>
     </div>
   </div>
-</section> -->
+</section>
 <!-- Features Section End -->
 
-<!-- Testimonials Section Start -->
-<section id="testimonials-area" class="section-padding" style="background: #0a0a0a; color: #ffffff;">
-  <div class="container">
-    <div class="section-header text-center mb-5">
-      <span class="premium-label" style="background: rgba(255, 255, 255, 0.05); color: #9ca3af;">Success Stories</span>
-      <h2 class="section-title text-white wow fadeInDown" data-wow-delay="0.3s">What Our Partners Say</h2>
-    </div>
-    <div class="row justify-content-center">
-      <div class="col-lg-10">
-        <style>
-          #testimonialCarousel .carousel-indicators .active { opacity: 1 !important; transform: scale(1.2); }
-          #testimonialCarousel .carousel-indicators li { transition: all 0.3s ease; cursor: pointer; }
-        </style>
-        <div id="testimonialCarousel" class="carousel slide wow fadeInUp" data-ride="carousel" data-interval="4000" data-wow-delay="0.6s">
-          <!-- Indicators -->
-          <ol class="carousel-indicators" style="bottom: -40px;">
-            <li data-target="#testimonialCarousel" data-slide-to="0" class="active" style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; opacity: 0.4; border: none; margin: 0 6px;"></li>
-            <li data-target="#testimonialCarousel" data-slide-to="1" style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; opacity: 0.4; border: none; margin: 0 6px;"></li>
-            <li data-target="#testimonialCarousel" data-slide-to="2" style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; opacity: 0.4; border: none; margin: 0 6px;"></li>
-            <li data-target="#testimonialCarousel" data-slide-to="3" style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; opacity: 0.4; border: none; margin: 0 6px;"></li>
-            <li data-target="#testimonialCarousel" data-slide-to="4" style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; opacity: 0.4; border: none; margin: 0 6px;"></li>
-          </ol>
 
-          <!-- Wrapper for slides -->
-          <div class="carousel-inner">
-            <!-- Item 1 - Order Management System -->
-            <div class="carousel-item active text-center p-4">
-              <div class="quote-icon mb-4" style="font-size: 24px; color: #10B981;">
-                <i class="fas fa-quote-left"></i>
-              </div>
-              <p style="font-size: 16px; line-height: 1.8; color: #d1d5db; font-style: italic; margin-bottom: 30px;">
-                "The Order Management System from FE IT Solutions has completely transformed how we handle multi-channel sales. We can now track orders in real-time across all platforms, manage inventory seamlessly, and our fulfillment process is 3x faster. Our customers are happier than ever!"
-              </p>
-              <div class="author-info">
-                <h5 style="color: #ffffff; font-weight: 700; margin-bottom: 5px;">Ruwan Fernando</h5>
-                <span style="color: #10B981; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Managing Director, QuickShop Lanka</span>
-              </div>
-            </div>
-
-            <!-- Item 2 - Custom ERP System -->
-            <div class="carousel-item text-center p-4">
-              <div class="quote-icon mb-4" style="font-size: 24px; color: #10B981;">
-                <i class="fas fa-quote-left"></i>
-              </div>
-              <p style="font-size: 16px; line-height: 1.8; color: #d1d5db; font-style: italic; margin-bottom: 30px;">
-                "FE IT Solutions built a custom ERP system that perfectly fits our manufacturing workflows. From procurement to production tracking and financial reporting, everything is now centralized and automated. The ROI we've seen in just six months is incredible."
-              </p>
-              <div class="author-info">
-                <h5 style="color: #ffffff; font-weight: 700; margin-bottom: 5px;">Dilshan Rathnayake</h5>
-                <span style="color: #10B981; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">COO, Ceylon Manufacturing Corp</span>
-              </div>
-            </div>
-
-            <!-- Item 3 - Cloud Solutions -->
-            <div class="carousel-item text-center p-4">
-              <div class="quote-icon mb-4" style="font-size: 24px; color: #10B981;">
-                <i class="fas fa-quote-left"></i>
-              </div>
-              <p style="font-size: 16px; line-height: 1.8; color: #d1d5db; font-style: italic; margin-bottom: 30px;">
-                "Migrating to the cloud with FE IT Solutions was seamless. They designed a scalable, secure cloud infrastructure that reduced our operational costs by 40% while improving system performance. Their team handled everything from planning to execution flawlessly."
-              </p>
-              <div class="author-info">
-                <h5 style="color: #ffffff; font-weight: 700; margin-bottom: 5px;">Sanjeewa Bandara</h5>
-                <span style="color: #10B981; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">CTO, TechVentures Pvt Ltd</span>
-              </div>
-            </div>
-
-            <!-- Item 4 - Managed IT Support -->
-            <div class="carousel-item text-center p-4">
-              <div class="quote-icon mb-4" style="font-size: 24px; color: #10B981;">
-                <i class="fas fa-quote-left"></i>
-              </div>
-              <p style="font-size: 16px; line-height: 1.8; color: #d1d5db; font-style: italic; margin-bottom: 30px;">
-                "With FE IT Solutions' 24/7 managed IT support, we no longer worry about system downtime or security vulnerabilities. Their proactive monitoring catches issues before they become problems. It's like having a dedicated IT team that never sleeps."
-              </p>
-              <div class="author-info">
-                <h5 style="color: #ffffff; font-weight: 700; margin-bottom: 5px;">Kavindi Jayasinghe</h5>
-                <span style="color: #10B981; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Operations Manager, Island Retail Group</span>
-              </div>
-            </div>
-
-            <!-- Item 5 - Network Infrastructure -->
-            <div class="carousel-item text-center p-4">
-              <div class="quote-icon mb-4" style="font-size: 24px; color: #10B981;">
-                <i class="fas fa-quote-left"></i>
-              </div>
-              <p style="font-size: 16px; line-height: 1.8; color: #d1d5db; font-style: italic; margin-bottom: 30px;">
-                "FE IT Solutions redesigned our entire network infrastructure from structured cabling to enterprise Wi-Fi. The connectivity across our three-floor office is flawless, and the security measures they implemented give us complete peace of mind. Highly professional team!"
-              </p>
-              <div class="author-info">
-                <h5 style="color: #ffffff; font-weight: 700; margin-bottom: 5px;">Pradeep Wijesinghe</h5>
-                <span style="color: #10B981; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Director, Global Trading Partners</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Controls -->
-          <a class="carousel-control-prev" href="#testimonialCarousel" role="button" data-slide="prev" style="width: 50px;">
-            <i class="fas fa-chevron-left" style="color: #10B981; font-size: 24px;"></i>
-            <span class="sr-only">Previous</span>
-          </a>
-          <a class="carousel-control-next" href="#testimonialCarousel" role="button" data-slide="next" style="width: 50px;">
-            <i class="fas fa-chevron-right" style="color: #10B981; font-size: 24px;"></i>
-            <span class="sr-only">Next</span>
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- Testimonials Section End -->
-
-<!-- FAQ Section Start -->
-<section id="faq" class="section-padding bg-white">
-  <div class="container">
-    <div class="section-header text-center mb-5">
-      <span class="premium-label">Common Questions</span>
-      <h2 class="section-title wow fadeInDown" data-wow-delay="0.3s">Everything You Need to Know</h2>
-    </div>
-    <div class="row justify-content-center">
-      <div class="col-lg-10">
-        <div class="accordion" id="faqAccordion">
-          <!-- Question 1 -->
-          <div class="card border-0 mb-3 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-white p-0 border-0" id="headingOne">
-              <button class="btn btn-block text-left p-4 d-flex align-items-center justify-content-between" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne" style="font-weight: 600; font-size: 14px; color: #111827; background: transparent; border: none; box-shadow: none;">
-                What types of industries do you specialize in?
-                <i class="lni-chevron-down"></i>
-              </button>
-            </div>
-            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#faqAccordion">
-              <div class="card-body p-4 pt-0 text-muted" style="line-height: 1.7;">
-                While we serve various sectors, we have deep expertise in Logistics, E-commerce, Manufacturing, and Enterprise Operations through our custom Order Management, Courier Management and POS systems.
-              </div>
-            </div>
-          </div>
-          <!-- Question 2 -->
-          <div class="card border-0 mb-3 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-white p-0 border-0" id="headingTwo">
-              <button class="btn btn-block text-left p-4 d-flex align-items-center justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo" style="font-weight: 600; font-size: 14px; color: #111827; background: transparent; border: none; box-shadow: none;">
-                Do you offer long-term post-deployment support?
-                <i class="lni-chevron-down"></i>
-              </button>
-            </div>
-            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#faqAccordion">
-              <div class="card-body p-4 pt-0 text-muted" style="line-height: 1.7;">
-                Yes, we provide 24/7 managed IT support and maintenance services to ensure your systems remain secure, updated, and high-performing after the initial launch.
-              </div>
-            </div>
-          </div>
-          <!-- Question 3 -->
-          <div class="card border-0 mb-3 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-white p-0 border-0" id="headingThree">
-              <button class="btn btn-block text-left p-4 d-flex align-items-center justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree" style="font-weight: 600; font-size: 14px; color: #111827; background: transparent; border: none; box-shadow: none;">
-                What is included in your Managed IT Support services?
-                <i class="lni-chevron-down"></i>
-              </button>
-            </div>
-            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#faqAccordion">
-              <div class="card-body p-4 pt-0 text-muted" style="line-height: 1.7;">
-                Our Managed IT Support provides 24/7 proactive monitoring, rapid issue resolution, system updates, and robust security management. We act as your extended IT department to ensure your business operations run uninterrupted.
-              </div>
-            </div>
-          </div>
-          <!-- Question 4 -->
-          <div class="card border-0 mb-3 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-white p-0 border-0" id="headingFour">
-              <button class="btn btn-block text-left p-4 d-flex align-items-center justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour" style="font-weight: 600; font-size: 14px; color: #111827; background: transparent; border: none; box-shadow: none;">
-                Do you offer solutions for new office setups or network upgrades?
-                <i class="lni-chevron-down"></i>
-              </button>
-            </div>
-            <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#faqAccordion">
-              <div class="card-body p-4 pt-0 text-muted" style="line-height: 1.7;">
-                Yes, we specialize in complete Network & Infrastructure solutions. From structured cabling and secure Wi-Fi deployment to router/switch configuration and scalable network design, we keep your enterprise securely connected.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- FAQ Section End -->
-<?php include 'stack.php'; ?>
 <?php include 'call_action.php'; ?>
+<?php include 'stack.php'; ?>
+<br>
 <?php include 'footer.php'; ?>
 
 <!-- Go to Top Link -->
-<a href="#" class="back-to-top">
-  <i class="fas fa-chevron-up"></i>
-</a>
+ <a href="#" class="back-to-top">
+      <i class="fas fa-chevron-up"></i>
+    </a>
+
+
 <?php include 'script.php'; ?>
+
+
+
 </body>
+
 </html>

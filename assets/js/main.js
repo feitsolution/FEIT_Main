@@ -64,9 +64,8 @@
         center: true,
         margin: 15,
         slideSpeed: 1000,
-        autoplay: true,
-        autoplayTimeout: 4000,
-        autoplayHoverPause: true,
+        stopOnHover: true,
+        autoPlay: true,
         responsiveClass: true,
         responsiveRefreshRate: true,
         responsive : {
@@ -74,16 +73,16 @@
                 items: 1
             },
             768 : {
-                items: 1
+                items: 2
             },
             960 : {
-                items: 1
+                items: 3
             },
             1200 : {
-                items: 1
+                items: 3
             },
             1920 : {
-                items: 1
+                items: 3
             }
         }
       });  

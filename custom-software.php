@@ -12,88 +12,27 @@
       background-color: #ffffff;
       color: #111827;
     }
-    /* Hero Styling */
     .services-hero {
-      position: relative;
-      overflow: hidden;
-      height: 50vh;
-      min-height: 400px;
-      display: flex;
-      align-items: center;
+      padding: 120px 0 80px;
       background-color: #050505;
-      font-family: 'Inter', sans-serif;
-      margin-top: 0;
-    }
-
-    .services-hero-img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.35;
-      filter: grayscale(20%) contrast(110%);
-      z-index: 0;
-    }
-
-    .services-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle at center, rgba(5, 5, 5, 0.4) 0%, rgba(5, 5, 5, 0.95) 100%);
-      z-index: 1;
-    }
-
-    .services-ambient-glow {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 60vw;
-      height: 60vw;
-      transform: translate(-50%, -50%);
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .services-content-wrapper {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      padding: 0 24px;
-      margin-top: 40px;
       text-align: center;
     }
-
     .services-title {
-      font-size: clamp(38px, 5vw, 64px);
+      font-size: clamp(36px, 5vw, 56px);
       font-weight: 600;
       line-height: 1.1;
       letter-spacing: -0.02em;
       color: #ffffff;
       margin: 0 0 16px;
-      animation: fadeInUp 0.8s ease-out backwards;
     }
-
     .services-subtitle {
-      font-size: clamp(17px, 2vw, 21px);
+      font-size: clamp(16px, 2vw, 20px);
       font-weight: 400;
       line-height: 1.6;
-      color: #d1d5db;
-      max-width: 750px;
+      color: #9ca3af;
+      max-width: 600px;
       margin: 0 auto;
-      letter-spacing: -0.01em;
-      animation: fadeInUp 0.8s ease-out 0.2s backwards;
     }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     .breadcrumb-nav {
       margin-bottom: 24px;
     }
@@ -191,21 +130,16 @@
   <header id="header-wrap">
     <?php include 'navbar.php'; ?>
     <div class="services-hero">
-      <img src="assets/img/custom-development.jpg" alt="Custom Software Development" class="services-hero-img">
-      <div class="services-ambient-glow"></div>
-      <div class="services-overlay"></div>
-      <div class="services-content-wrapper">
-        <div class="container">
-          <div class="breadcrumb-nav">
-            <a href="index.php">Home</a>
-            <span class="separator">/</span>
-            <a href="services.php">Services</a>
-            <span class="separator">/</span>
-            <span class="current">Custom Software Development</span>
-          </div>
-          <h1 class="services-title">Custom Software Development</h1>
-          <p class="services-subtitle">Tailored software solutions built for your unique business processes and operational requirements.</p>
+      <div class="container">
+        <div class="breadcrumb-nav">
+          <a href="index.php">Home</a>
+          <span class="separator">/</span>
+          <a href="services.php">Services</a>
+          <span class="separator">/</span>
+          <span class="current">Custom Software Development</span>
         </div>
+        <h1 class="services-title">Custom Software Development</h1>
+        <p class="services-subtitle">Tailored software solutions built for your unique business processes and operational requirements.</p>
       </div>
     </div>
   </header>
