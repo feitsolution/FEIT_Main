@@ -5,7 +5,7 @@ html {
 
 body {
   background: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   font-family: 'PT Sans', sans-serif;
   -webkit-box-sizing: border-box;
@@ -13,14 +13,14 @@ body {
   box-sizing: border-box;
   -webkit-font-smoothing: subpixel-antialiased;
   color: #040505;
-  line-height: 25px;
+  line-height: 22px;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
-  font-size: 34px;
+  font-size: 28px;
   color: #222222;
   font-weight: 700;
 }
@@ -44,7 +44,7 @@ p {
   font-weight: 400;
   font-family: 'Open Sans', sans-serif;
   margin: 0px;
-  font-size: 17px;
+  font-size: 15px;
 }
 
 ul, ol {
@@ -72,7 +72,7 @@ a:not([href]):not([tabindex]) {
 }
 
 .section-title-h {
-  font-size: 30px;
+  font-size: 26px;
   color: #5d35f0b0;
   display: inline-block;
   font-weight: 700;
@@ -1031,9 +1031,9 @@ hr {
 
 #hero-area .contents .head-title {
   color: #cce0e1;
-  font-size: 54px;
+  font-size: 42px;
   font-weight: 700;
-  line-height: 60px;
+  line-height: 50px;
   margin-bottom: 10px;
   
   /*width: 600px;               /* Set the width of the box */
@@ -1080,9 +1080,9 @@ hr {
 
 #hero .contents .head-title {
   color: #ffffff;
-  font-size: 42px;
+  font-size: 34px;
   font-weight: 700;
-  line-height: 60px;
+  line-height: 50px;
   margin-bottom: 100px;
 }
 
@@ -1144,9 +1144,9 @@ hr {
 
 #hero-cl .contents .head-title {
   color: #ffffff;
-  font-size: 42px;
+  font-size: 34px;
   font-weight: 700;
-  line-height: 60px;
+  line-height: 50px;
   margin-bottom: 10px;
 }
 #hero-cl .contents .head-wrap {
@@ -1276,9 +1276,9 @@ hr {
 
 #hero-area-contact .contents .head-title {
   color: #ffffff;
-  font-size: 42px;
+  font-size: 34px;
   font-weight: 700;
-  line-height: 60px;
+  line-height: 50px;
   margin-bottom: 10px;
   /*width: 600px;               /* Set the width of the box */
   /*height: 180px;              /* Set the height of the box */
@@ -1351,9 +1351,9 @@ hr {
 
 #hero-company .contents .head-co {
   color: #ffffff;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 60px;
+  line-height: 40px;
   margin-bottom: 10px;
 
   /*width: 600px;               /* Set the width of the box */
@@ -1437,8 +1437,8 @@ hr {
 
 #pricing .table .icon-box i {
   color: #F63854;
-  line-height: 80px;
-  font-size: 30px;
+  line-height: 60px;
+  font-size: 24px;
   -webkit-transition: all .3s linear;
   -moz-transition: all .3s linear;
   -ms-transition: all .3s linear;
@@ -1452,7 +1452,7 @@ hr {
 }
 
 #pricing .table .pricing-header .price-value {
-  font-size: 24px;
+  font-size: 20px;
   color: #F63854;
   position: relative;
   text-align: center;
@@ -1587,7 +1587,7 @@ hr {
 }
 
 .testimonial-item .info .indicator {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   color: #0b283b;
 }
@@ -2550,7 +2550,7 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 40px;
-  padding: 60px 20px;
+  padding: 20px 20px;
 }
 
 .slide-content {
@@ -2573,21 +2573,21 @@ button:hover {
 }
 
 .category {
-  font-size: 18px;
+  font-size: 16px;
   color: #e0e0e0;
   margin-bottom: 20px;
   font-weight: 500;
 }
 
 .title {
-  font-size: 48px;
+  font-size: 36px;
   font-weight: 700;
   margin-bottom: 24px;
   line-height: 1.2;
 }
 
 .description {
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.6;
   margin-bottom: 32px;
   color: rgba(255, 255, 255, 0.9);
@@ -2710,7 +2710,7 @@ button:hover {
 }
 
 .category {
-  font-size: 24px; /* Adjust size as needed */
+  font-size: 20px; /* Adjust size as needed */
   font-weight: bold;
   margin-bottom: 10px; /* Space between text and image */
 }
@@ -2825,14 +2825,14 @@ button:hover {
 
 .feature-box h3 {
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 15px;
   font-weight: bold;
 }
 
 .feature-box p {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
