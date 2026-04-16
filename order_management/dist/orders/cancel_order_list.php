@@ -299,6 +299,7 @@ $usersResult = $conn->query($usersQuery);
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" id="main-style-link" />
     <style>
 .print-btn {
     background-color: #28a745;
@@ -609,6 +610,114 @@ $usersResult = $conn->query($usersQuery);
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
 
     <script>
+        // Toast Message System
+        class ToastManager {
+            constructor() {
+                this.createContainer();
+            }
+
+            createContainer() {
+                if (!document.getElementById('toast-container')) {
+                    const container = document.createElement('div');
+                    container.id = 'toast-container';
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                }
+            }
+
+            show(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = this.createToast(message, type);
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toast);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+                
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Information'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="toast-icon ${icons[type] || icons.info}"></i>
+                        <span>${titles[type] || titles.info}</span>
+                        <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+                
+                return toast;
+            }
+
+            remove(toast) {
+                if (toast && toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }
+
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 6000) {
+                return this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 5000) {
+                return this.show(message, 'info', duration);
+            }
+        }
+
+        // Initialize toast manager
+        const toastManager = new ToastManager();
+
+        // Check for session messages on load
+        window.addEventListener('DOMContentLoaded', () => {
+            <?php if (isset($_SESSION['success'])): ?>
+                toastManager.success("<?php echo addslashes(htmlspecialchars($_SESSION['success'])); ?>");
+                <?php unset($_SESSION['success']); ?>
+            <?php endif; ?>
+            
+            <?php if (isset($_SESSION['error'])): ?>
+                toastManager.error("<?php echo addslashes(htmlspecialchars($_SESSION['error'])); ?>");
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
+        });
+
         /**
          * JavaScript functionality for cancel order management
          * SIMPLIFIED: Using centralized RBAC approach
@@ -647,7 +756,7 @@ $usersResult = $conn->query($usersQuery);
         // Enhanced openOrderModal function
         function openOrderModal(orderId, interface = null) {
             if (!orderId || orderId.trim() === '') {
-                alert('Order ID is required to view order details.');
+                toastManager.error('Order ID is required to view order details.');
                 return;
             }
             
@@ -761,7 +870,7 @@ $usersResult = $conn->query($usersQuery);
         function viewPaymentSlip() {
             // Check if payment slip exists
             if (!currentPaymentSlip || currentPaymentSlip.trim() === '') {
-                alert('This order has no payment slip.');
+                toastManager.warning('This order has no payment slip.');
                 return;
             }
             
@@ -793,7 +902,7 @@ $usersResult = $conn->query($usersQuery);
         // Download order 
         function downloadOrder() {
             if (!currentOrderId) {
-                alert('No order selected for download.');
+                toastManager.error('No order selected for download.');
                 return;
             }
             
@@ -807,7 +916,7 @@ $usersResult = $conn->query($usersQuery);
         // Restore order 
         function restoreOrder(orderId) {
             if (!orderId) {
-                alert('No order selected for restore.');
+                toastManager.error('No order selected for restore.');
                 return;
             }
             
@@ -822,15 +931,17 @@ $usersResult = $conn->query($usersQuery);
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Order restored successfully.');
-                        location.reload();
+                        toastManager.success('Order restored successfully.');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
-                        alert('Error: ' + data.message);
+                        toastManager.error('Error: ' + data.message);
                     }
                 })
                 .catch(error => {
                     console.error('Error restoring order:', error);
-                    alert('An error occurred while restoring the order.');
+                    toastManager.error('An error occurred while restoring the order.');
                 });
             }
         }
@@ -882,7 +993,7 @@ $usersResult = $conn->query($usersQuery);
         // Print order function
         function printOrder(orderId) {
             if (!orderId || orderId.trim() === '') {
-                alert('Order ID is required to print order.');
+                toastManager.error('Order ID is required to print order.');
                 return;
             }
             

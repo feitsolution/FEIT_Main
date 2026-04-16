@@ -154,13 +154,30 @@ try {
     // Get tracking numbers (waybill IDs)
     $orderCount = count($orderIds);
     // This part is correct in your PHP
-$stmt = $conn->prepare("SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' ORDER BY id ASC LIMIT ?");
+    $stmt = $conn->prepare("SELECT tracking_id FROM tracking WHERE courier_id = ? AND status = 'unused' ORDER BY id ASC LIMIT ?");
     $stmt->bind_param("ii", $carrierId, $orderCount);
     $stmt->execute();
     $tracking = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     
+    if (count($tracking) === 0) {
+        throw new Exception("No unused tracking numbers available for this courier");
+    }
+    
+    $failedOrders = [];
     if (count($tracking) < $orderCount) {
-        throw new Exception("Need $orderCount tracking numbers, only " . count($tracking) . " available");
+        $availableCount = count($tracking);
+        $skippedOrderIds = array_slice($orderIds, $availableCount);
+        $orderIds = array_slice($orderIds, 0, $availableCount);
+        
+        foreach ($skippedOrderIds as $skippedId) {
+            $failedOrders[] = [
+                'order_id' => $skippedId,
+                'tracking_number' => 'N/A',
+                'error' => 'Insufficient tracking numbers available'
+            ];
+            logAction($conn, $userId, 'api_existing_dispatch_failed', $skippedId,
+                "Order $skippedId skipped - Insufficient unused tracking numbers");
+        }
     }
     
     // Get orders
@@ -175,13 +192,24 @@ $stmt = $conn->prepare("SELECT tracking_id FROM tracking WHERE courier_id = ? AN
     $stmt->bind_param(str_repeat('i', count($orderIds)), ...$orderIds);
     $stmt->execute();
     $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
     if (empty($orders)) throw new Exception('No valid pending orders found');
+    
+    // Ensure orders are processed in the same sequence as provided in $orderIds
+    $orderedResults = [];
+    $orderMap = [];
+    foreach ($orders as $order) {
+        $orderMap[$order['order_id']] = $order;
+    }
+    foreach ($orderIds as $id) {
+        if (isset($orderMap[$id])) {
+            $orderedResults[] = $orderMap[$id];
+        }
+    }
+    $orders = $orderedResults;
     
     // Process orders
     $conn->autocommit(false);
     $successCount = 0;
-    $failedOrders = [];
     $processedOrders = [];
     
     foreach ($orders as $index => $order) {

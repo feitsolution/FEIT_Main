@@ -218,6 +218,7 @@ $result = $conn->query($sql);
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" id="main-style-link" />
     <style>
 .print-btn {
     background-color: #28a745;
@@ -265,26 +266,6 @@ $result = $conn->query($sql);
                 <div class="page-block">
                     <div class="page-header-title" style="display: flex; align-items: center;justify-content: space-between;">
                         <h5 class="mb-0 font-medium">Pending Orders</h5>
-                        
-                        <!-- Alert Messages (Compact & Inline) -->
-                        <?php
-                        if (isset($_SESSION['order_success'])) {
-                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
-                                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
-                                    ' . htmlspecialchars($_SESSION['order_success']) . '
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
-                                  </div>';
-                            unset($_SESSION['order_success']);
-                        }
-                        if (isset($_SESSION['order_error'])) {
-                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert" style="padding: 2px 10px; margin: 0; font-size: 12px; display: inline-flex; align-items: center; border-radius: 20px;">
-                                    <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i>
-                                    ' . htmlspecialchars($_SESSION['order_error']) . '
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 4px 8px; position: static; margin-left: 8px; box-shadow: none; font-size: 10px;"></button>
-                                  </div>';
-                            unset($_SESSION['order_error']);
-                        }
-                        ?>
                     </div>
                 </div>
             </div>
@@ -665,6 +646,114 @@ $result = $conn->query($sql);
  <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/condition_update_modal.php'); ?>
 
 <script>
+        // Toast Message System
+        class ToastManager {
+            constructor() {
+                this.createContainer();
+            }
+
+            createContainer() {
+                if (!document.getElementById('toast-container')) {
+                    const container = document.createElement('div');
+                    container.id = 'toast-container';
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                }
+            }
+
+            show(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = this.createToast(message, type);
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toast);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+                
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Information'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="toast-icon ${icons[type] || icons.info}"></i>
+                        <span>${titles[type] || titles.info}</span>
+                        <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+                
+                return toast;
+            }
+
+            remove(toast) {
+                if (toast && toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }
+
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 6000) {
+                return this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 5000) {
+                return this.show(message, 'info', duration);
+            }
+        }
+
+        // Initialize toast manager
+        const toastManager = new ToastManager();
+
+        // Check for session messages on load
+        window.addEventListener('DOMContentLoaded', () => {
+            <?php if (isset($_SESSION['order_success'])): ?>
+                toastManager.success("<?php echo addslashes(htmlspecialchars($_SESSION['order_success'])); ?>");
+                <?php unset($_SESSION['order_success']); ?>
+            <?php endif; ?>
+            
+            <?php if (isset($_SESSION['order_error'])): ?>
+                toastManager.error("<?php echo addslashes(htmlspecialchars($_SESSION['order_error'])); ?>");
+                <?php unset($_SESSION['order_error']); ?>
+            <?php endif; ?>
+        });
+
         /**
          * JavaScript functionality for pending order management
          */
@@ -717,7 +806,7 @@ $result = $conn->query($sql);
             
             // Validate that a condition is selected
             if (!formData.get('condition')) {
-                alert('Please select a condition');
+                toastManager.warning('Please select a condition');
                 return;
             }
 
@@ -732,15 +821,17 @@ $result = $conn->query($sql);
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Success Rate updated successfully');
-                    location.reload(); 
+                    toastManager.success('Success Rate updated successfully');
+                    setTimeout(() => {
+                        location.reload(); 
+                    }, 1500);
                 } else {
-                    alert('Error: ' + data.message);
+                    toastManager.error('Error: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the condition');
+                toastManager.error('An error occurred while updating the condition');
             })
             .finally(() => {
                 saveBtn.disabled = false;
@@ -752,7 +843,7 @@ $result = $conn->query($sql);
 // MODIFIED: Enhanced openOrderModal function
 function openOrderModal(orderId, interface = null) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to view order details.');
+        toastManager.error('Order ID is required to view order details.');
         return;
     }
     
@@ -866,7 +957,7 @@ function checkPaymentSlipAvailability() {
 function viewPaymentSlip() {
     // Check if payment slip exists
     if (!currentPaymentSlip || currentPaymentSlip.trim() === '') {
-        alert('This order has no payment slip.');
+        toastManager.warning('This order has no payment slip.');
         return;
     }
     
@@ -898,7 +989,7 @@ function closeOrderModal() {
 // Download order 
 function downloadOrder() {
     if (!currentOrderId) {
-        alert('No order selected for download.');
+        toastManager.error('No order selected for download.');
         return;
     }
     
@@ -948,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mark as Paid Modal Functionality
 function markAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to mark as paid.');
+        toastManager.error('Order ID is required to mark as paid.');
         return;
     }
     
@@ -971,7 +1062,7 @@ function markAsPaid(orderId) {
 // Mark as Unpaid function
 function unmarkAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to Mark as Unpaid.');
+        toastManager.error('Order ID is required to Mark as Unpaid.');
         return;
     }
 
@@ -999,10 +1090,12 @@ function unmarkAsPaid(orderId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Order marked as unpaid successfully!');
-            window.location.reload();
+            toastManager.success('Order marked as unpaid successfully!');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+            toastManager.error('Error: ' + (data.message || 'Failed to unmark order as paid'));
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-undo"></i>';
@@ -1010,7 +1103,7 @@ function unmarkAsPaid(orderId) {
         }
     })
     .catch(error => {
-        alert('Network error. Please try again.');
+        toastManager.error('Network error. Please try again.');
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-undo"></i>';
@@ -1041,7 +1134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (file) {
             // Validate file size (2MB limit)
             if (file.size > 2 * 1024 * 1024) {
-                alert('File size must be less than 2MB');
+                toastManager.warning('File size must be less than 2MB');
                 fileInput.value = '';
                 fileInfo.style.display = 'none';
                 return;
@@ -1050,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
             if (!allowedTypes.includes(file.type)) {
-                alert('Please select a valid file format (JPG, JPEG, PNG, PDF)');
+                toastManager.warning('Please select a valid file format (JPG, JPEG, PNG, PDF)');
                 fileInput.value = '';
                 fileInfo.style.display = 'none';
                 return;
@@ -1108,17 +1201,19 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Order marked as paid successfully!');
+            toastManager.success('Order marked as paid successfully!');
             closePaidModal();
             // Reload the page to reflect changes
-            window.location.reload();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            alert('Error: ' + (data.message || 'Failed to mark order as paid'));
+            toastManager.error('Error: ' + (data.message || 'Failed to mark order as paid'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while processing the payment. Please try again.');
+        toastManager.error('An error occurred while processing the payment. Please try again.');
     })
     .finally(() => {
         // Reset button state
@@ -1148,7 +1243,7 @@ document.addEventListener('keydown', function(e) {
 // Open Dispatch Modal
 function openDispatchModal(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to dispatch order.');
+        toastManager.error('Order ID is required to dispatch order.');
         return;
     }
     
@@ -1269,7 +1364,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const dispatchNotes = document.getElementById('dispatch_notes').value;
             
             if (!orderId || !carrier) {
-                alert('Please select a courier service before dispatching');
+                toastManager.warning('Please select a courier service before dispatching');
                 return;
             }
             
@@ -1302,18 +1397,20 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    alert('Order dispatched successfully!' + 
+                    toastManager.success('Order dispatched successfully!' + 
                           (data.tracking_number ? ' Tracking number: ' + data.tracking_number : ''));
                     closeDispatchModal();
                     // Reload the page to reflect changes
-                    window.location.reload();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to dispatch order'));
+                    toastManager.error('Error: ' + (data.message || 'Failed to dispatch order'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while dispatching the order. Please try again.');
+                toastManager.error('An error occurred while dispatching the order. Please try again.');
             })
             .finally(() => {
                 // Reset button state
@@ -1419,7 +1516,7 @@ let currentExistingNoAnswerReason = '';
  */
 function openAnswerModal(orderId, callLogStatus, existingAnswerReason = '', existingNoAnswerReason = '') {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to update call status.');
+        toastManager.error('Order ID is required to update call status.');
         return;
     }
     
@@ -1560,12 +1657,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Validation
             if (!orderId) {
-                alert('Order ID is missing');
+                toastManager.error('Order ID is missing');
                 return;
             }
             
             if (selectedCallLog !== '1' && selectedCallLog !== '0') {
-                alert('Please select a call status (Answer or No Answer)');
+                toastManager.warning('Please select a call status (Answer or No Answer)');
                 return;
             }
             
@@ -1601,17 +1698,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     const statusText = (selectedCallLog == 1) ? 'answered' : 'no answer';
-                    alert(`Order marked as ${statusText} successfully!`);
+                    toastManager.success(`Order marked as ${statusText} successfully!`);
                     closeAnswerModal();
                     // Reload the page to reflect changes
-                    window.location.reload();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to update call status'));
+                    toastManager.error('Error: ' + (data.message || 'Failed to update call status'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating call status. Please try again.');
+                toastManager.error('An error occurred while updating call status. Please try again.');
             })
             .finally(() => {
                 // Reset button state
@@ -1681,7 +1780,7 @@ let currentCancelOrderId = null;
  */
 function openCancelModal(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to cancel order.');
+        toastManager.error('Order ID is required to cancel order.');
         return;
     }
     
@@ -1728,7 +1827,7 @@ function confirmCancelOrder() {
     
     // Validation
     if (!currentCancelOrderId) {
-        alert('No order selected for cancellation.');
+        toastManager.error('No order selected for cancellation.');
         return;
     }
 
@@ -1762,17 +1861,19 @@ function confirmCancelOrder() {
     })
     .then(data => {
         if (data.success) {
-            alert('Order cancelled successfully!');
+            toastManager.success('Order cancelled successfully!');
             closeCancelModal();
             // Reload the page to reflect changes
-            window.location.reload();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            alert('Error: ' + (data.message || 'Failed to cancel order'));
+            toastManager.error('Error: ' + (data.message || 'Failed to cancel order'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while cancelling the order. Please try again.');
+        toastManager.error('An error occurred while cancelling the order. Please try again.');
     })
     .finally(() => {
         // Reset button state
@@ -1983,7 +2084,7 @@ function bulkMarkAsDispatched() {
     const selectedOrders = document.querySelectorAll('.order-checkbox:checked');
     
     if (selectedOrders.length === 0) {
-        alert('Please select at least one order to dispatch.');
+        toastManager.warning('Please select at least one order to dispatch.');
         return;
     }
     
@@ -2151,12 +2252,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('bulk-dispatch-submit-btn');
             
             if (!carrier) {
-                alert('Please select a courier service before dispatching');
+                toastManager.warning('Please select a courier service before dispatching');
                 return;
             }
             
             if (selectedOrdersForBulkDispatch.length === 0) {
-                alert('No orders selected for dispatch');
+                toastManager.warning('No orders selected for dispatch');
                 return;
             }
             
@@ -2189,19 +2290,21 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    alert(`Successfully dispatched ${data.dispatched_count} orders!` + 
+                    toastManager.success(`Successfully dispatched ${data.dispatched_count} orders!` + 
                           (data.tracking_numbers ? ' Tracking numbers assigned.' : ''));
                     closeBulkDispatchModal();
                     clearBulkSelection();
                     // Reload the page to reflect changes
-                    window.location.reload();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to dispatch orders'));
+                    toastManager.error('Error: ' + (data.message || 'Failed to dispatch orders'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while dispatching orders. Please try again.');
+                toastManager.error('An error occurred while dispatching orders. Please try again.');
             })
             .finally(() => {
                 // Reset button state
@@ -2326,7 +2429,7 @@ function updateBulkSelection() {
 // Print order function
 function printOrder(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to print order.');
+        toastManager.error('Order ID is required to print order.');
         return;
     }
     
@@ -2351,7 +2454,7 @@ function openApiDispatchModal() {
     const selectedOrders = document.querySelectorAll('.order-checkbox:checked');
     
     if (selectedOrders.length === 0) {
-        alert('Please select at least one order to dispatch.');
+        toastManager.warning('Please select at least one order to dispatch.');
         return;
     }
     
@@ -2378,7 +2481,7 @@ function openApiDispatchModal() {
     const selectedOrders = document.querySelectorAll('.order-checkbox:checked');
     
     if (selectedOrders.length === 0) {
-        alert('Please select at least one order to dispatch via API.');
+        toastManager.warning('Please select at least one order to dispatch via API.');
         return;
     }
     
@@ -2455,93 +2558,115 @@ function updateApiSelectedOrdersList() {
 function fetchApiTrackingNumbers(courierId) {
     const trackingDisplay = document.getElementById('api_tracking_numbers_display');
     const submitBtn = document.getElementById('api-dispatch-submit-btn');
-    const selectedCount = document.querySelectorAll('.order-checkbox:checked').length;
-    
+    const selectedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
+    const selectedCount = selectedCheckboxes.length;
+
     console.log('Fetching tracking numbers for courier:', courierId, 'Count:', selectedCount);
-    
+
     if (!courierId) {
         trackingDisplay.innerHTML = '<span class="text-muted">Select a courier to see available tracking numbers</span>';
         submitBtn.disabled = true;
         return;
     }
-    
+
     if (selectedCount === 0) {
         trackingDisplay.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>No orders selected</span>';
         submitBtn.disabled = true;
         return;
     }
-    
+
+    // Collect order ID + customer name from each selected checkbox row
+    const selectedOrders = Array.from(selectedCheckboxes).map(checkbox => {
+        const row = checkbox.closest('tr');
+        const orderId = checkbox.value;
+        const customerCell = row ? row.querySelector('td.customer-name') : null;
+        const customerName = customerCell ? customerCell.textContent.trim().split('\n')[0].trim() : '';
+        return { orderId, customerName };
+    });
+
     // Show loading state
     trackingDisplay.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Loading tracking numbers...</span>';
     submitBtn.disabled = true;
-    
-    // Fetch tracking numbers from PHP endpoint
+
     fetch(`get_api_tracking_numbers.php?courier_id=${courierId}&count=${selectedCount}`, {
         method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
     })
     .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
     })
     .then(data => {
         console.log('API Response:', data);
-        
-        if (data.status === 'success') {
-            let trackingHtml = '';
-            
-            if (data.tracking_numbers.length >= selectedCount) {
-                trackingHtml = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Available tracking numbers: <strong>${data.tracking_numbers.length}</strong></span>`;
-                
-                trackingHtml += `<div class="tracking-numbers-preview mt-2" style="max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">`;
-                data.tracking_numbers.slice(0, selectedCount).forEach((trackingNumber, index) => {
-                    trackingHtml += `<div class="tracking-item" style="padding: 2px 0; font-family: monospace;">${index + 1}. <strong>${trackingNumber}</strong></div>`;
-                });
-                trackingHtml += `</div>`;
-                
-                if (data.available_count > selectedCount) {
-                    trackingHtml += `<small class="d-block text-muted mt-1">${data.available_count} total tracking numbers available</small>`;
-                }
-                
-                submitBtn.disabled = false;
-            } else {
-                trackingHtml = `<div class="alert alert-warning mt-2">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>Insufficient tracking numbers!</strong><br>
-                    Only <strong>${data.tracking_numbers.length}</strong> tracking numbers available, 
-                    but <strong>${selectedCount}</strong> orders selected.
-                </div>`;
-                
-                if (data.tracking_numbers.length > 0) {
-                    trackingHtml += `<div class="tracking-numbers-preview mt-2" style="max-height: 150px; overflow-y: auto; background: #fff3cd; padding: 10px; border-radius: 4px;">`;
-                    trackingHtml += `<small class="text-muted">Available tracking numbers:</small>`;
-                    data.tracking_numbers.forEach((trackingNumber, index) => {
-                        trackingHtml += `<div class="tracking-item" style="padding: 2px 0; font-family: monospace;">${index + 1}. <strong>${trackingNumber}</strong></div>`;
-                    });
-                    trackingHtml += `</div>`;
-                }
-                
-                submitBtn.disabled = true;
-            }
-            
-            trackingDisplay.innerHTML = trackingHtml;
-        } else {
-            trackingDisplay.innerHTML = 
+
+        const trackingNumbers = data.tracking_numbers || [];
+        const availableCount = trackingNumbers.length;
+
+        // No tracking numbers at all — block dispatch
+        if (data.status === 'error' || availableCount === 0) {
+            trackingDisplay.innerHTML =
                 `<div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle me-1"></i>
-                    <strong>Error:</strong> ${data.message}
+                    <strong>Error:</strong> ${data.message || 'No tracking numbers available for this courier.'}
                 </div>`;
             submitBtn.disabled = true;
+            return;
         }
+
+        // Build paired table rows
+        let rowsHtml = '';
+        selectedOrders.forEach((order, index) => {
+            const trackingNumber = trackingNumbers[index] || null;
+            if (trackingNumber) {
+                rowsHtml += `
+                    <tr>
+                        <td style="padding:4px 8px;">${index + 1}</td>
+                        <td style="padding:4px 8px;font-weight:600;">${order.orderId}</td>
+                        <td style="padding:4px 8px;">${order.customerName}</td>
+                        <td style="padding:4px 8px;font-family:monospace;color:#155724;"><strong>${trackingNumber}</strong></td>
+                    </tr>`;
+            } else {
+                rowsHtml += `
+                    <tr style="background:#fff3cd;">
+                        <td style="padding:4px 8px;">${index + 1}</td>
+                        <td style="padding:4px 8px;font-weight:600;">${order.orderId}</td>
+                        <td style="padding:4px 8px;">${order.customerName}</td>
+                        <td style="padding:4px 8px;color:#856404;"><i class="fas fa-exclamation-triangle me-1"></i>No tracking number — will be skipped</td>
+                    </tr>`;
+            }
+        });
+
+        const isSufficient = availableCount >= selectedCount;
+        const headerBg   = isSufficient ? '#d4edda' : '#fff3cd';
+        const headerIcon = isSufficient ? '<i class="fas fa-check-circle me-1"></i>' : '<i class="fas fa-exclamation-triangle me-1"></i>';
+        const headerText = isSufficient
+            ? `<strong>${availableCount}</strong> tracking numbers available — all ${selectedCount} orders will be dispatched`
+            : `Only <strong>${availableCount}</strong> of ${selectedCount} selected orders will be dispatched (insufficient tracking numbers)`;
+
+        trackingDisplay.innerHTML = `
+            <div style="background:${headerBg};padding:8px 10px;border-radius:4px 4px 0 0;font-size:13px;">
+                ${headerIcon}${headerText}
+            </div>
+            <div style="max-height:220px;overflow-y:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #dee2e6;">
+                    <thead>
+                        <tr style="background:#f1f3f5;border-bottom:2px solid #dee2e6;">
+                            <th style="padding:5px 8px;">#</th>
+                            <th style="padding:5px 8px;">Order ID</th>
+                            <th style="padding:5px 8px;">Customer</th>
+                            <th style="padding:5px 8px;">Tracking Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>`;
+
+        // Allow dispatch as long as at least one order can be dispatched
+        submitBtn.disabled = false;
     })
     .catch(error => {
         console.error('Error fetching tracking numbers:', error);
-        trackingDisplay.innerHTML = 
+        trackingDisplay.innerHTML =
             `<div class="alert alert-danger">
                 <i class="fas fa-exclamation-triangle me-1"></i>
                 <strong>Network Error:</strong> Could not load tracking numbers. Please check your connection and try again.
@@ -2699,17 +2824,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Validation
             if (!carrier) {
-                alert('Please select an API courier service');
+                toastManager.warning('Please select an API courier service');
                 return;
             }
             
             if (!dispatchType) {
-                alert('Please select a dispatch type');
+                toastManager.warning('Please select a dispatch type');
                 return;
             }
             
             if (selectedOrders.length === 0) {
-                alert('No orders selected for dispatch');
+                toastManager.warning('No orders selected for dispatch');
                 return;
             }
             
@@ -2718,7 +2843,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const trackingDisplay = document.getElementById('api_tracking_numbers_display');
                 if (trackingDisplay.textContent.includes('No tracking numbers available') || 
                     trackingDisplay.textContent.includes('Select a courier')) {
-                    alert('Please ensure you have enough tracking numbers available');
+                    toastManager.error('Please ensure you have enough tracking numbers available');
                     return;
                 }
             }
@@ -2792,18 +2917,20 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 console.log('Response data:', data);
                 if (data.success) {
-                    alert(`Successfully processed ${data.processed_count || selectedOrders.length} orders via API!`);
+                    toastManager.success(`Successfully processed ${data.processed_count || selectedOrders.length} orders via API!`);
                     closeApiDispatchModal();
                     clearBulkSelection();
                     // Reload the page to reflect changes
-                    window.location.reload();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to process orders via API'));
+                    toastManager.error('Error: ' + (data.message || 'Failed to process orders via API'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing orders via API. Please try again.');
+                toastManager.error('An error occurred while processing orders via API. Please try again.');
             })
             .finally(() => {
                 // Reset button state

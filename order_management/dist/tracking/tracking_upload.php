@@ -39,14 +39,7 @@ function validateTrackingNumber($trackingNumber) {
     // Remove extra spaces
     $cleanTracking = trim($trackingNumber);
     
-    // Check tracking number length (adjust as needed for your system)
-    if (strlen($cleanTracking) < 5) {
-        return ['valid' => false, 'message' => 'Tracking number must be at least 5 characters'];
-    }
-    
-    if (strlen($cleanTracking) > 50) {
-        return ['valid' => false, 'message' => 'Tracking number cannot exceed 50 characters'];
-    }
+    // Tracking number length checks have been removed
     
     // Check for valid characters (alphanumeric, hyphens, underscores)
     if (!preg_match('/^[a-zA-Z0-9\-_]+$/', $cleanTracking)) {
@@ -573,7 +566,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file']) && isset
                     <ul>
                         <li>CSV format only, max 5MB</li>
                         <li>One tracking number per row</li>
-                        <li>Tracking numbers: 5-50 characters (letters, numbers, hyphens, underscores)</li>
                         <li>Duplicate tracking numbers for the same courier will be rejected</li>
                     </ul>
                 </div>
