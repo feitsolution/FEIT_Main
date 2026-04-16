@@ -366,8 +366,9 @@ if ($role_result && $role_result->num_rows > 0) {
                                                         data-user-id="<?= $row['user_id'] ?>"
                                                         data-current-status="<?= $row['status'] ?>"
                                                         data-user-name="<?= htmlspecialchars($row['username']) ?>"
-                                                        title="<?= $row['status'] == 'active' ? 'Deactivate User' : 'Activate User' ?>"
-                                                        data-action="<?= $row['status'] == 'active' ? 'deactivate' : 'activate' ?>">
+                                                        title="<?= ($row['user_id'] == $_SESSION['user_id']) ? 'You cannot deactivate your own account' : ($row['status'] == 'active' ? 'Deactivate User' : 'Activate User') ?>"
+                                                        data-action="<?= $row['status'] == 'active' ? 'deactivate' : 'activate' ?>"
+                                                        <?= ($row['user_id'] == $_SESSION['user_id']) ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' ?>>
                                                     <i class="fas <?= $row['status'] == 'active' ? 'fa-user-times' : 'fa-user-check' ?>"></i>
                                                 </button>
                                             </div>

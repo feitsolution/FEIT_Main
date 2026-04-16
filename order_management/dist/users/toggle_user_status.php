@@ -64,6 +64,13 @@ if ($target_user_id === 1) {
     exit();
 }
 
+// Prevent self-deactivation
+if ($target_user_id === $current_user_id && $new_status === 'inactive') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'You cannot deactivate your own account']);
+    exit();
+}
+
 try {
     // Check if user exists
     $check_sql = "SELECT id, name, status FROM users WHERE id = ?";

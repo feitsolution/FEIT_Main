@@ -338,10 +338,16 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
                                     <label for="status" class="form-label">
                                         <i class="fas fa-toggle-on"></i> Status<span class="required">*</span>
                                     </label>
-                                    <select class="form-select" id="status" name="status" required>
+                                    <select class="form-select" id="status" name="status" required <?php echo ($userId === $_SESSION['user_id']) ? 'disabled' : ''; ?>>
                                         <option value="active" <?php echo (($user_data['status'] ?? '') === 'active' || ($user_data['status'] ?? '') === 'Active') ? 'selected' : ''; ?>>Active</option>
                                         <option value="inactive" <?php echo (($user_data['status'] ?? '') === 'inactive' || ($user_data['status'] ?? '') === 'Inactive') ? 'selected' : ''; ?>>Inactive</option>
                                     </select>
+                                    <?php if ($userId === $_SESSION['user_id']): ?>
+                                        <input type="hidden" name="status" value="<?php echo htmlspecialchars($user_data['status']); ?>">
+                                        <div class="form-text text-muted" style="font-size: 11px; margin-top: 4px; color: #6c757d;">
+                                            <i class="fas fa-info-circle me-1"></i>You cannot deactivate your own account.
+                                        </div>
+                                    <?php endif; ?>
                                     <div class="error-feedback" id="status-error"></div>
                                 </div>
                             </div>

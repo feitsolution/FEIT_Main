@@ -153,6 +153,11 @@ try {
     $address = trim($_POST['address'] ?? '');
     $status = strtolower($_POST['status'] ?? 'active');
     $role = $_POST['role'] ?? '';
+
+    // Prevent self-deactivation
+    if ($userId === $currentUserId && $status === 'inactive') {
+        jsonResponse(false, 'You cannot deactivate your own account.');
+    }
     
     // Convert role to role_id
     $role_mapping = [
