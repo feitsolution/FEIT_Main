@@ -753,7 +753,7 @@ function getStatusInfo($is_default) {
                 overlay.id = 'loading-overlay';
                 overlay.className = 'loading-overlay';
                 overlay.innerHTML = `
-                    <div class="loading-spinner-container">
+                    <div class="loading-spinner">
                         <div class="spinner"></div>
                         <span id="loading-message">${message}</span>
                     </div>

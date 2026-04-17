@@ -1776,7 +1776,7 @@ MODAL STYLES for view button - FIXED VERSION
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 2px solid currentColor;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   border-top-color: transparent;
   animation: spin 1s ease-in-out infinite;
