@@ -167,8 +167,6 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
     $defaultDeliveryFee = floatval($row['delivery_fee']);
 }
 
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php');
-include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php');
 ?>
 
 <!doctype html>
@@ -269,6 +267,8 @@ include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'
 
 <body>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/loader.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/navbar.php'); ?>
+    <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/sidebar.php'); ?>
 
     <div class="pc-container">
         <div class="pc-content">
