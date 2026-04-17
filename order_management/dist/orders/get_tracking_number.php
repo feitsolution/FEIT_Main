@@ -71,7 +71,7 @@ try {
     // Get the next available tracking number (oldest unused one)
     $tracking_sql = "SELECT tracking_id FROM tracking 
                      WHERE courier_id = ? AND status = 'unused' 
-                     ORDER BY created_at ASC 
+                     ORDER BY id ASC 
                      LIMIT 1";
     $tracking_stmt = $conn->prepare($tracking_sql);
     $tracking_stmt->bind_param("i", $courier_id);

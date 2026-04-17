@@ -94,7 +94,7 @@ try {
     // Get unused tracking numbers for the selected courier - ORDER BY tracking_id ASC for numerical order
     $tracking_query = "SELECT tracking_id FROM tracking 
                        WHERE courier_id = ? AND status = 'unused' 
-                       ORDER BY CAST(tracking_id AS UNSIGNED) ASC 
+                       ORDER BY id ASC 
                        LIMIT ?";
     
     $tracking_stmt = $conn->prepare($tracking_query);

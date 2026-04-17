@@ -39,7 +39,7 @@ try {
     // Get unused tracking numbers for the specified courier (limit to requested count)
     $tracking_query = "SELECT tracking_id FROM tracking 
         WHERE courier_id = ? AND status = 'unused' 
-        ORDER BY tracking_id ASC 
+        ORDER BY id ASC 
         LIMIT ?";
     
     $stmt = $conn->prepare($tracking_query);

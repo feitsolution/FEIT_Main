@@ -205,8 +205,25 @@ try {
     $tracking = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
+    if (count($tracking) === 0) {
+        throw new Exception("No unused tracking numbers available for this courier");
+    }
+    
+    $failedOrders = [];
     if (count($tracking) < $orderCount) {
-        throw new Exception("Insufficient tracking numbers: need $orderCount, only " . count($tracking) . " available");
+        $availableCount = count($tracking);
+        $skippedOrderIds = array_slice($orderIds, $availableCount);
+        $orderIds = array_slice($orderIds, 0, $availableCount);
+        
+        foreach ($skippedOrderIds as $skippedId) {
+            $failedOrders[] = [
+                'order_id' => $skippedId,
+                'tracking_number' => 'N/A',
+                'error' => 'Insufficient tracking numbers available'
+            ];
+            logAction($conn, $userId, 'api_existing_dispatch_failed', $skippedId,
+                "Order $skippedId skipped - Insufficient unused tracking numbers");
+        }
     }
 
     // Fetch orders with city/state
@@ -240,9 +257,21 @@ try {
         throw new Exception('No valid pending orders found with city/state data.');
     }
 
+    // Ensure orders are processed in the same sequence as provided in $orderIds
+    $orderedResults = [];
+    $orderMap = [];
+    foreach ($orders as $order) {
+        $orderMap[$order['order_id']] = $order;
+    }
+    foreach ($orderIds as $id) {
+        if (isset($orderMap[$id])) {
+            $orderedResults[] = $orderMap[$id];
+        }
+    }
+    $orders = $orderedResults;
+
     $conn->autocommit(false);
     $successCount = 0;
-    $failedOrders = [];
     $processedOrders = [];
 
     foreach ($orders as $index => $order) {

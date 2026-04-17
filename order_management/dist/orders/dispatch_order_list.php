@@ -216,6 +216,7 @@ $usersResult = $conn->query($usersQuery);
     <!-- Stylesheets -->
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" id="main-style-link" />
     <style>
 .print-btn {
     background-color: #28a745;
@@ -353,7 +354,7 @@ $usersResult = $conn->query($usersQuery);
                                 <th>Total Amount</th>
                                 <th>Pay Status</th>
                                 <th>Tracking Number</th>
-                                <th>Paid by</th>
+                                <th>Processed By</th>
                                  <?php if ($current_user_role == 1): ?>
                                     <th>User</th>
                                 <?php endif; ?>
@@ -416,7 +417,7 @@ $usersResult = $conn->query($usersQuery);
                                             ?>
                                         </td>
                                         
-                                        <!-- Paid by User -->
+                                        <!-- Processed By User -->
                                         <td>
                                             <?php
                                             echo isset($row['paid_by_name']) ? htmlspecialchars($row['paid_by_name']) : 'N/A';
@@ -544,6 +545,114 @@ $usersResult = $conn->query($usersQuery);
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
 
 <script>
+        // Toast Message System
+        class ToastManager {
+            constructor() {
+                this.createContainer();
+            }
+
+            createContainer() {
+                if (!document.getElementById('toast-container')) {
+                    const container = document.createElement('div');
+                    container.id = 'toast-container';
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                }
+            }
+
+            show(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = this.createToast(message, type);
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toast);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+                
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Information'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="toast-icon ${icons[type] || icons.info}"></i>
+                        <span>${titles[type] || titles.info}</span>
+                        <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+                
+                return toast;
+            }
+
+            remove(toast) {
+                if (toast && toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }
+
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 6000) {
+                return this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 5000) {
+                return this.show(message, 'info', duration);
+            }
+        }
+
+        // Initialize toast manager
+        const toastManager = new ToastManager();
+
+        // Check for session messages on load
+        window.addEventListener('DOMContentLoaded', () => {
+            <?php if (isset($_SESSION['success'])): ?>
+                toastManager.success("<?php echo addslashes(htmlspecialchars($_SESSION['success'])); ?>");
+                <?php unset($_SESSION['success']); ?>
+            <?php endif; ?>
+            
+            <?php if (isset($_SESSION['error'])): ?>
+                toastManager.error("<?php echo addslashes(htmlspecialchars($_SESSION['error'])); ?>");
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
+        });
+
     /**
  * JavaScript functionality for dispatched order management
  * Enhanced with Mark as Paid and Cancel Order functionality
@@ -580,7 +689,7 @@ function clearFilters() {
 // MODIFIED: Enhanced openOrderModal function
 function openOrderModal(orderId, interface = null) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to view order details.');
+        toastManager.error('Order ID is required to view order details.');
         return;
     }
     
@@ -694,7 +803,7 @@ function checkPaymentSlipAvailability() {
 function viewPaymentSlip() {
     // Check if payment slip exists
     if (!currentPaymentSlip || currentPaymentSlip.trim() === '') {
-        alert('This order has no payment slip.');
+        toastManager.warning('This order has no payment slip.');
         return;
     }
     
@@ -726,7 +835,7 @@ function closeOrderModal() {
 // Download order 
 function downloadOrder() {
     if (!currentOrderId) {
-        alert('No order selected for download.');
+        toastManager.error('No order selected for download.');
         return;
     }
     
@@ -780,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Mark as Paid Modal Functionality
 function markAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to mark as paid.');
+        toastManager.error('Order ID is required to mark as paid.');
         return;
     }
     
@@ -803,7 +912,7 @@ function markAsPaid(orderId) {
 // Mark as Unpaid function
 function unmarkAsPaid(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to Mark as Unpaid.');
+        toastManager.error('Order ID is required to Mark as Unpaid.');
         return;
     }
 
@@ -831,10 +940,12 @@ function unmarkAsPaid(orderId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Order marked as unpaid successfully!');
-            window.location.reload();
+            toastManager.success('Order marked as unpaid successfully!');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            alert('Error: ' + (data.message || 'Failed to unmark order as paid'));
+            toastManager.error('Error: ' + (data.message || 'Failed to unmark order as paid'));
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-undo"></i>';
@@ -842,7 +953,7 @@ function unmarkAsPaid(orderId) {
         }
     })
     .catch(error => {
-        alert('Network error. Please try again.');
+        toastManager.error('Network error. Please try again.');
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-undo"></i>';
@@ -890,7 +1001,7 @@ let currentCancelOrderId = null;
  */
 function openCancelModal(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to cancel order.');
+        toastManager.error('Order ID is required to cancel order.');
         return;
     }
     
@@ -937,7 +1048,7 @@ function confirmCancelOrder() {
     
     // Validation
     if (!currentCancelOrderId) {
-        alert('No order selected for cancellation.');
+        toastManager.error('No order selected for cancellation.');
         return;
     }
     
@@ -972,17 +1083,19 @@ function confirmCancelOrder() {
     })
     .then(data => {
         if (data.success) {
-            alert('Order cancelled successfully!');
+            toastManager.success('Order cancelled successfully!');
             closeCancelModal();
             // Reload the page to reflect changes
-            window.location.reload();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            alert('Error: ' + (data.message || 'Failed to cancel order'));
+            toastManager.error('Error: ' + (data.message || 'Failed to cancel order'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while cancelling the order. Please try again.');
+        toastManager.error('An error occurred while cancelling the order. Please try again.');
     })
     .finally(() => {
         // Reset button state
@@ -1052,7 +1165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file) {
                 // Validate file size (2MB limit)
                 if (file.size > 2 * 1024 * 1024) {
-                    alert('File size must be less than 2MB');
+                    toastManager.warning('File size must be less than 2MB');
                     fileInput.value = '';
                     fileInfo.style.display = 'none';
                     return;
@@ -1061,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Validate file type
                 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
                 if (!allowedTypes.includes(file.type)) {
-                    alert('Please select a valid file format (JPG, JPEG, PNG, PDF)');
+                    toastManager.warning('Please select a valid file format (JPG, JPEG, PNG, PDF)');
                     fileInput.value = '';
                     fileInfo.style.display = 'none';
                     return;
@@ -1105,17 +1218,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Order marked as paid successfully!');
+                    toastManager.success('Order marked as paid successfully!');
                     closePaidModal();
                     // Reload the page to reflect changes
-                    window.location.reload();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to mark order as paid'));
+                    toastManager.error('Error: ' + (data.message || 'Failed to mark order as paid'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing the payment. Please try again.');
+                toastManager.error('An error occurred while processing the payment. Please try again.');
             })
             .finally(() => {
                 // Reset button state
@@ -1193,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Print order function
 function printOrder(orderId) {
     if (!orderId || orderId.trim() === '') {
-        alert('Order ID is required to print order.');
+        toastManager.error('Order ID is required to print order.');
         return;
     }
     
