@@ -442,11 +442,11 @@
         }
 
         /* Form Styles */
-        .api-modal .form-group {
+        .form-group {
             margin-bottom: 18px;
         }
 
-        .api-modal .form-label {
+        .form-label {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -456,17 +456,17 @@
             font-size: 0.875rem;
         }
 
-        .api-modal .form-label i {
+        .form-label i {
             color: #6b7280;
             font-size: 0.9rem;
         }
 
-        .api-modal .required {
+        .required {
             color: #dc2626;
             margin-left: 4px;
         }
 
-        .api-modal .form-control {
+        .form-control {
             width: 100%;
             padding: 10px 12px;
             border: 2px solid #e5e7eb;
@@ -477,17 +477,17 @@
             color: #1f2937;
         }
 
-        .api-modal .form-control:focus {
+        .form-control:focus {
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        .api-modal .form-control::placeholder {
+        .form-control::placeholder {
             color: #9ca3af;
         }
 
-        .api-modal .form-select {
+        .form-select {
             width: 100%;
             padding: 10px 12px;
             border: 2px solid #e5e7eb;
@@ -499,18 +499,18 @@
             cursor: pointer;
         }
 
-        .api-modal .form-select:focus {
+        .form-select:focus {
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         /* Password Input Group */
-        .api-modal .password-input-group {
+        .password-input-group {
             position: relative;
         }
 
-        .api-modal .password-toggle {
+        .password-toggle {
             position: absolute;
             right: 10px;
             top: 50%;
@@ -524,16 +524,16 @@
             transition: color 0.2s ease;
         }
 
-        .api-modal .password-toggle:hover {
+        .password-toggle:hover {
             color: #374151;
         }
 
-        .api-modal .password-input-group .form-control {
+        .password-input-group .form-control {
             padding-right: 40px;
         }
 
         /* Form Hints */
-        .api-modal .form-hint {
+        .form-hint {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -542,20 +542,20 @@
             color: #6b7280;
         }
 
-        .api-modal .form-hint i {
+        .form-hint i {
             font-size: 0.75rem;
             color: #9ca3af;
         }
 
         /* Error Feedback */
-        .api-modal .error-feedback {
+        .error-feedback {
             color: #dc2626;
             font-size: 0.75rem;
             margin-top: 4px;
             display: none;
         }
 
-        .api-modal .error-feedback.show {
+        .error-feedback.show {
             display: block;
         }
 
@@ -571,7 +571,7 @@
             flex-shrink: 0;
         }
 
-        .api-modal .btn {
+        .btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -585,23 +585,23 @@
             text-decoration: none;
         }
 
-        .api-modal .btn-secondary {
+        .btn-secondary {
             background: #6c757d;
             color: #ffffff;
             border: 1px solid #d1d5db;
         }
 
-        .api-modal .btn-secondary:hover {
+        .btn-secondary:hover {
             background:rgb(67 79 89 / var(--tw-bg-opacity));
             transform: translateY(-1px);
         }
 
-        .api-modal .btn-primary {
+        .btn-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
         }
 
-        .api-modal .btn-primary:hover {
+        .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.4);
         }
@@ -648,7 +648,7 @@
                 padding: 16px 20px;
             }
         }
-        .api-modal .form-group label {
+        .form-group label {
     font-weight: 500;
     color: #374151;
     margin-bottom: 8px;
@@ -656,7 +656,7 @@
     text-transform: uppercase;
     letter-spacing: 0.025em;
 }
-.api-modal .form-group input, .api-modal .form-group select {
+.form-group input, .form-group select {
     padding: 3px 11px;
     border: 1.4px solid #e2e8f0;
     border-radius: 8px;
@@ -665,3 +665,8 @@
     background: white;
     color: #1e293b;
 }
+
+
+
+
+

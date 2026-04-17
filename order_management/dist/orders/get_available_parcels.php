@@ -77,7 +77,7 @@ try {
                    FROM tracking t
                    INNER JOIN couriers c ON t.courier_id = c.courier_id
                    WHERE t.courier_id = ? AND t.status = 'unused'
-                   ORDER BY t.id ASC
+                   ORDER BY t.created_at ASC
                    LIMIT 50";
     
     $parcelsStmt = $conn->prepare($parcelsSql);
