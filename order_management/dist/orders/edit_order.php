@@ -21,73 +21,9 @@ function logUserAction($conn, $user_id, $action_type, $inquiry_id, $details = nu
     return $stmt->execute();
 }
 
-// Function to check courier and tracking status
-function checkCourierStatus($conn) {
-    $status = [
-        'has_courier' => false,
-        'courier_type' => null,
-        'courier_name' => '',
-        'has_tracking' => false,
-        'tracking_count' => 0,
-        'warning_message' => '',
-        'error_message' => '',
-        'info_message' => ''
-    ];
-  
-    // Get default courier - Updated to include status 3 (Existing API Parcel)
-    $courierSql = "SELECT courier_id, courier_name, api_key, client_id, is_default, status 
-                   FROM couriers 
-                   WHERE is_default IN (1, 2, 3) AND status = 'active' 
-                   ORDER BY is_default ASC 
-                   LIMIT 1";
-    $courierResult = $conn->query($courierSql);
-    
-    if ($courierResult && $courierResult->num_rows > 0) {
-        $courier = $courierResult->fetch_assoc();
-        $status['has_courier'] = true;
-        $status['courier_type'] = $courier['is_default'];
-        $status['courier_name'] = $courier['courier_name'];
-        
-        if ($courier['is_default'] == 1) {
-            // Internal tracking system - check for unused tracking numbers
-            $trackingSql = "SELECT COUNT(*) as unused_count 
-                           FROM tracking 
-                           WHERE courier_id = ? AND status = 'unused'";
-            $trackingStmt = $conn->prepare($trackingSql);
-            $trackingStmt->bind_param("i", $courier['courier_id']);
-            $trackingStmt->execute();
-            $trackingResult = $trackingStmt->get_result();
-            
-            if ($trackingResult) {
-                $trackingData = $trackingResult->fetch_assoc();
-                $status['tracking_count'] = $trackingData['unused_count'];
-                
-                if ($status['tracking_count'] > 0) {
-                    $status['has_tracking'] = true;
-                }
-            }
-        } else if ($courier['is_default'] == 2) {
-            // FDE API system
-            $status['has_tracking'] = true; // API generates tracking numbers
-            if (empty($courier['api_key'])) {
-                $status['warning_message'] = "Warning: {$courier['courier_name']} API key is missing. Orders may not get tracking numbers automatically.";
-            }
-        } else if ($courier['is_default'] == 3) {
-            // Existing API Parcel system
-            $status['has_tracking'] = true; // API integration available
-            if (empty($courier['api_key'])) {
-                $status['warning_message'] = "Warning: {$courier['courier_name']} API key is missing. Existing API integration may not function properly.";
-            }
-        }
-    } else {
-        $status['info_message'] = "No default courier selected. ";
-    }
-    
-    return $status;
-}
 
-// Check courier status
-$courierStatus = checkCourierStatus($conn);
+
+
 
 // Get Order ID from URL
 $order_id = isset($_GET['id']) ? trim($_GET['id']) : '';
@@ -337,76 +273,10 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
                                     unset($_SESSION['order_info']);
                                 }
 
-                                // Display courier status messages
-                                if (!empty($courierStatus['error_message'])) {
-                                    echo '<div class="alert alert-error">
-                                            <div>
-                                                <span class="alert-icon">❌</span>
-                                                <span>' . htmlspecialchars($courierStatus['error_message']) . '</span>
-                                            </div>
-                                            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
-                                          </div>';
-                                }
 
-                                if (!empty($courierStatus['warning_message'])) {
-                                    echo '<div class="alert alert-warning">
-                                            <div>
-                                                <span class="alert-icon">⚠️</span>
-                                                <span>' . htmlspecialchars($courierStatus['warning_message']) . '</span>
-                                            </div>
-                                            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
-                                          </div>';
-                                }
-
-                                // Display info messages for courier status
-                                if (!empty($courierStatus['info_message'])) {
-                                    echo '<div class="alert alert-info">
-                                            <div>
-                                                <span class="alert-icon">ℹ️</span>
-                                                <span>' . htmlspecialchars($courierStatus['info_message']) . '</span>
-                                            </div>
-                                            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
-                                          </div>';
-                                }
                                 ?>
 
-                                <!-- Courier Status Information Card -->
-                                <?php if ($courierStatus['has_courier']): ?>
-                                <div class="courier-status-card">
-                                    <div style="font-size: 11px;">
-                                        <?php if ($courierStatus['courier_type'] == 1): ?>
-                                            <div>
-                                                <span class="status-indicator <?php echo $courierStatus['has_tracking'] ? 'status-active' : 'status-warning'; ?>"></span>
-                                                <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (Internal Tracking)
-                                            </div>
-                                            <div style="margin-top: 5px;">
-                                                <strong>Available Tracking Numbers:</strong> 
-                                                <?php if ($courierStatus['has_tracking']): ?>
-                                                    <span style="color: #28a745;"><?php echo $courierStatus['tracking_count']; ?> unused numbers</span>
-                                                <?php else: ?>
-                                                    <span style="color: #dc3545;">0 unused numbers - Orders will be pending</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php elseif ($courierStatus['courier_type'] == 2): ?>
-                                            <div>
-                                                <span class="status-indicator status-active"></span>
-                                                <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (API Parcel Courier)
-                                            </div>
-                                            <div style="margin-top: 5px;">
-                                                <strong>Info:</strong> <span style="color: #28a745;">Automatic tracking number generation</span>
-                                            </div>
-                                        <?php elseif ($courierStatus['courier_type'] == 3): ?>
-                                            <div>
-                                                <span class="status-indicator status-api"></span>
-                                                <strong>Courier:</strong> <?php echo htmlspecialchars($courierStatus['courier_name']); ?> (Existing API Parcel)
-                                            </div>
-                                            <div style="margin-top: 5px;">
-                                                <strong>Info:</strong> <span style="color: #17a2b8;">Integrated with existing API parcel system</span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
+
                             </div>
                         </div>
 
