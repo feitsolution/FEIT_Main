@@ -274,6 +274,14 @@ try {
                 ];
                 
             } else {
+                // Mark used if FDE side it's already used
+                if (isset($result['status_code']) && $result['status_code'] == 202) {
+                    $stmtUpdateTracking = $conn->prepare("UPDATE tracking SET status='used', updated_at=NOW() WHERE tracking_id=? AND courier_id=?");
+                    $stmtUpdateTracking->bind_param("si", $trackingNumber, $carrierId);
+                    $stmtUpdateTracking->execute();
+                    $stmtUpdateTracking->close();
+                }
+
                 $failedOrders[] = [
                     'order_id' => $orderId,
                     'tracking_number' => $trackingNumber,
@@ -296,10 +304,10 @@ try {
                 "Order $orderId exception - Error: {$e->getMessage()}");
         }
     }
-    
-    // Commit or rollback
+
+    $conn->commit();
+
     if ($successCount > 0) {
-        $conn->commit();
         $trackingList = implode(', ', array_column($processedOrders, 'tracking_number'));
         $details = "Bulk dispatch: $successCount/" . count($orderIds) . " orders dispatched, Tracking: $trackingList";
         
@@ -310,7 +318,6 @@ try {
         
         logAction($conn, $userId, 'bulk_api_existing_dispatch', 0, $details);
     } else {
-        $conn->rollback();
         $errorList = array_map(fn($f) => "Order {$f['order_id']}: {$f['error']}", $failedOrders);
         logAction($conn, $userId, 'bulk_api_existing_dispatch_failed', 0, 
             "Bulk dispatch failed: All " . count($orderIds) . " orders failed. Errors: " . implode('; ', $errorList));
