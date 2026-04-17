@@ -1182,7 +1182,7 @@ document.getElementById('markPaidForm').addEventListener('submit', function(e) {
     const submitBtn = document.getElementById('submitPaidBtn');
     
     // Show loading state
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+    submitBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
     submitBtn.disabled = true;
     
     // Create FormData object
