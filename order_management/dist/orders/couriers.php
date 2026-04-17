@@ -148,8 +148,20 @@ function getStatusInfo($is_default) {
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/message.css" id="main-style-link" />
     <style>
-        
-        </style>
+        .clean-overlay-content {
+            color: white; 
+            font-size: 1.2rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            flex-direction: column;
+        }
+        .clean-overlay-spinner {
+            width: 40px !important; 
+            height: 40px !important; 
+            border-top-color: white !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -753,8 +765,8 @@ function getStatusInfo($is_default) {
                 overlay.id = 'loading-overlay';
                 overlay.className = 'loading-overlay';
                 overlay.innerHTML = `
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
+                    <div class="clean-overlay-content">
+                        <span class="spinner clean-overlay-spinner"></span>
                         <span id="loading-message">${message}</span>
                     </div>
                 `;
@@ -1070,7 +1082,9 @@ function handleApiFormSubmit(event) {
     const formData = new FormData(form);
     
     // Show loading state
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<span class="spinner inline-spinner me-2"></span> Saving...';
     submitBtn.disabled = true;
     
     // Submit to update_api.php
@@ -1181,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
         
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        btn.innerHTML = '<span class="spinner inline-spinner me-2"></span> Downloading...';
         btn.disabled = true;
         
         try {
@@ -1343,7 +1357,7 @@ document.getElementById("returnFeeForm").addEventListener("submit", function(e) 
     const submitBtn = document.getElementById("saveReturnFeeBtn");
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.innerHTML = '<span class="spinner inline-spinner me-2"></span> Saving...';
 
     const formData = new FormData(this);
 

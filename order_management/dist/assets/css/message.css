@@ -137,6 +137,13 @@
             100% { transform: rotate(360deg); }
         }
 
+        .btn .spinner, .inline-spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid currentColor;
+            display: inline-block;
+            vertical-align: text-bottom;
+        }
+
         /* Disable dropdown during loading */
         .courier-status-dropdown:disabled {
             opacity: 0.6;
