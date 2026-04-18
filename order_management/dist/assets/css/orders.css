@@ -2658,6 +2658,15 @@ MODAL STYLES for view button - FIXED VERSION
   background: #545b62;
 }
 
+.bulk-assign-btn {
+  background: #28a745;
+  color: white;
+}
+
+.bulk-assign-btn:hover {
+  background: #218838;
+}
+
 /* Checkbox Styles */
 .order-checkbox,
 #selectAll {

@@ -151,6 +151,7 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" />
 
     <style>
         .product-category {
@@ -623,6 +624,99 @@ $result = $conn->query($sql);
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 
     <script>
+        class ToastManager {
+            constructor() {
+                this.createContainer();
+            }
+
+            createContainer() {
+                if (!document.getElementById('toast-container')) {
+                    const container = document.createElement('div');
+                    container.id = 'toast-container';
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                }
+            }
+
+            show(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = this.createToast(message, type);
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toast);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+                
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Information'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="toast-icon ${icons[type] || icons.info}"></i>
+                        <span>${titles[type] || titles.info}</span>
+                        <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+                
+                return toast;
+            }
+
+            remove(toast) {
+                if (toast && toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }
+
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 6000) {
+                return this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 5000) {
+                return this.show(message, 'info', duration);
+            }
+        }
+
+        const toastManager = new ToastManager();
+
         function clearFilters() {
             window.location.href = 'product_list.php';
         }
@@ -778,7 +872,7 @@ $result = $conn->query($sql);
                     if (selectedOperation && selectedOperation.value === 'decrease') {
                         // Check if stock is 0 - can't decrease from 0
                         if (currentStockValue <= 0) {
-                            alert('Cannot decrease stock. Current stock is already 0.');
+                            toastManager.warning('Cannot decrease stock. Current stock is already 0.');
                             this.value = 1;
                             // Switch back to increase
                             document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
@@ -798,7 +892,7 @@ $result = $conn->query($sql);
                     if (this.value === 'decrease') {
                         // Check if stock is 0 - can't decrease from 0
                         if (currentStockValue <= 0) {
-                            alert('Cannot decrease stock. Current stock is already 0.');
+                            toastManager.warning('Cannot decrease stock. Current stock is already 0.');
                             // Switch back to increase
                             document.querySelector('input[name="stock_operation"][value="increase"]').checked = true;
                             return;
@@ -819,13 +913,13 @@ $result = $conn->query($sql);
 
         function updateProductStock(productId, operation, adjustmentValue) {
             if (adjustmentValue === '' || isNaN(adjustmentValue) || parseInt(adjustmentValue) <= 0) {
-                alert('Please enter a valid quantity greater than 0.');
+                toastManager.warning('Please enter a valid quantity greater than 0.');
                 return;
             }
 
             // Check if trying to decrease when stock is 0
             if (operation === 'decrease' && currentStockValue <= 0) {
-                alert('Cannot decrease stock. Current stock is already 0.');
+                toastManager.warning('Cannot decrease stock. Current stock is already 0.');
                 return;
             }
 
@@ -849,15 +943,15 @@ $result = $conn->query($sql);
             .then(data => {
                 if (data.success) {
                     closeStockUpdateModal();
-                    alert('Stock updated successfully!');
-                    location.reload(); // Simplest way to reflect all changes including threshold icons
+                    toastManager.success('Stock updated successfully!');
+                    setTimeout(() => { location.reload(); }, 1500); // Simplest way to reflect all changes including threshold icons
                 } else {
-                    alert('Error updating stock: ' + data.message);
+                    toastManager.error('Error updating stock: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the stock.');
+                toastManager.error('An error occurred while updating the stock.');
             })
             .finally(() => {
                 btn.textContent = originalText;
@@ -912,17 +1006,17 @@ $result = $conn->query($sql);
                     closeConfirmationModal();
                     
                     // Show success message
-                    alert('Product status updated successfully!');
+                    toastManager.success('Product status updated successfully!');
                     
                     // Reload page to reflect changes
-                    location.reload();
+                    setTimeout(() => { location.reload(); }, 1500);
                 } else {
-                    alert('Error updating product status: ' + data.message);
+                    toastManager.error('Error updating product status: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the product status.');
+                toastManager.error('An error occurred while updating the product status.');
             });
         }
 
@@ -934,14 +1028,14 @@ $result = $conn->query($sql);
             if (priceFromInput && priceToInput) {
                 priceFromInput.addEventListener('change', function() {
                     if (this.value && priceToInput.value && parseFloat(this.value) > parseFloat(priceToInput.value)) {
-                        alert('From price cannot be greater than To price');
+                        toastManager.warning('From price cannot be greater than To price');
                         this.value = '';
                     }
                 });
                 
                 priceToInput.addEventListener('change', function() {
                     if (this.value && priceFromInput.value && parseFloat(this.value) < parseFloat(priceFromInput.value)) {
-                        alert('To price cannot be less than From price');
+                        toastManager.warning('To price cannot be less than From price');
                         this.value = '';
                     }
                 });
@@ -956,14 +1050,14 @@ $result = $conn->query($sql);
             if (dateFromInput && dateToInput) {
                 dateFromInput.addEventListener('change', function() {
                     if (this.value && dateToInput.value && new Date(this.value) > new Date(dateToInput.value)) {
-                        alert('From date cannot be later than To date');
+                        toastManager.warning('From date cannot be later than To date');
                         this.value = '';
                     }
                 });
                 
                 dateToInput.addEventListener('change', function() {
                     if (this.value && dateFromInput.value && new Date(this.value) < new Date(dateFromInput.value)) {
-                        alert('To date cannot be earlier than From date');
+                        toastManager.warning('To date cannot be earlier than From date');
                         this.value = '';
                     }
                 });

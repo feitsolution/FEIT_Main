@@ -210,7 +210,7 @@ if ($deliveryFeeResult && $deliveryFeeResult->num_rows > 0) {
         <div class="pc-content">
             <div class="page-header">
                 <div class="page-block">
-                    <div class="page-header-title" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="page-header-title" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                         <h5 class="mb-0 font-medium">Edit Order #<?= htmlspecialchars($order_id) ?></h5>
                         <div style="max-width: 400px;">
                             <div class="alert-container">

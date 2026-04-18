@@ -180,6 +180,7 @@ if ($role_result && $role_result->num_rows > 0) {
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/customers.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" />
 </head>
 
 <body>
@@ -501,6 +502,99 @@ if ($role_result && $role_result->num_rows > 0) {
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
 
     <script>
+        class ToastManager {
+            constructor() {
+                this.createContainer();
+            }
+
+            createContainer() {
+                if (!document.getElementById('toast-container')) {
+                    const container = document.createElement('div');
+                    container.id = 'toast-container';
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                }
+            }
+
+            show(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = this.createToast(message, type);
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toast);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+
+            createToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+                
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Information'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <i class="toast-icon ${icons[type] || icons.info}"></i>
+                        <span>${titles[type] || titles.info}</span>
+                        <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                `;
+                
+                return toast;
+            }
+
+            remove(toast) {
+                if (toast && toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }
+
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 6000) {
+                return this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 5000) {
+                return this.show(message, 'info', duration);
+            }
+        }
+
+        const toastManager = new ToastManager();
+
 // Complete JavaScript code for user management page
 
 function clearFilters() {
@@ -613,17 +707,19 @@ function toggleUserStatus(userId, newStatus) {
             closeConfirmationModal();
             
             // Show success message
-            alert('User status updated successfully!');
+            toastManager.success('User status updated successfully!');
             
             // Reload page to reflect changes
-            location.reload();
+            setTimeout(() => {
+                location.reload();
+            }, 1200);
         } else {
-            alert('Error updating user status: ' + data.message);
+            toastManager.error(data.message || 'Error updating user status');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the user status.');
+        toastManager.error('An error occurred while updating the user status.');
     });
 }
 

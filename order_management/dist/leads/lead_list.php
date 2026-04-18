@@ -200,6 +200,8 @@ if ($usersResult && $usersResult->num_rows > 0) {
     <link rel="stylesheet" href="../assets/css/style.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/orders.css" id="main-style-link" />
     <link rel="stylesheet" href="../assets/css/status-badge-colors.css" id="main-style-link" />
+    <link rel="stylesheet" href="../assets/css/message.css" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
 .print-btn {
     background-color: #28a745;
@@ -307,6 +309,28 @@ if ($usersResult && $usersResult->num_rows > 0) {
     cursor: pointer;
     margin-left: 4px;
 }
+
+.user-change-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    margin-top: 5px;
+    cursor: pointer;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 4px;
+    color: #1565c0;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-change-btn:hover {
+    background: #bbdefb;
+    color: #0d47a1;
+}
+
+
 </style>
 </head>
 
@@ -455,9 +479,27 @@ if ($usersResult && $usersResult->num_rows > 0) {
 
                 <!-- Leads Table -->
                 <div class="table-wrapper">
+                    <!-- Bulk Actions Bar -->
+                    <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+                        <div class="bulk-actions-left">
+                            <span id="selectedCount">0</span> leads selected
+                        </div>
+                        <div class="bulk-actions-right">
+                            <button class="bulk-btn bulk-assign-btn" onclick="openBulkUserModal()">
+                                <i class="fas fa-user-edit"></i> Change Assigned User
+                            </button>
+                            <button class="bulk-btn bulk-clear-btn" onclick="clearBulkSelection()">
+                                <i class="fas fa-times"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
+                    
                     <table class="orders-table">
                         <thead>
                             <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                </th>
                                 <th>Order ID</th>
                                 <th>Customer Name</th>
                                 <th>Phone Number</th>
@@ -472,6 +514,14 @@ if ($usersResult && $usersResult->num_rows > 0) {
                             <?php if ($result && $result->num_rows > 0): ?>
                                 <?php while ($row = $result->fetch_assoc()): ?>
                                     <tr>
+                                        <!-- Bulk Selection Checkbox -->
+                                        <td>
+                                            <input type="checkbox" class="order-checkbox" 
+                                                   value="<?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>"
+                                                   onchange="updateBulkSelection()"
+                                                   <?php echo (strtolower($row['status']) !== 'pending') ? 'disabled title="Only pending leads can be reassigned"' : ''; ?>>
+                                        </td>
+                                        
                                         <!-- Order ID -->
                                         <td class="order-id">
                                             <?php echo isset($row['order_id']) ? htmlspecialchars($row['order_id']) : ''; ?>
@@ -623,28 +673,11 @@ if ($usersResult && $usersResult->num_rows > 0) {
                                                     <?php endif; ?>
                                                     
                                                     <?php if (strtolower($row['status']) === 'pending'): ?>
-                                                        <button type="button" class="user-change-btn" onclick="toggleUserSelect('<?php echo htmlspecialchars($row['order_id']); ?>')">
+                                                        <button type="button" class="user-change-btn" onclick="openUserModal('<?php echo htmlspecialchars($row['order_id']); ?>', '<?php echo htmlspecialchars($row['user_id']); ?>', '<?php echo htmlspecialchars($row['user_name']); ?>')">
                                                             <i class="fas fa-user-edit"></i> Change
                                                         </button>
                                                     <?php endif; ?>
                                                 </div>
-                                                
-                                                <?php if (strtolower($row['status']) === 'pending'): ?>
-                                                    <div class="user-edit-ui" style="display: none;">
-                                                        <select class="user-assign-select" id="select-user-<?php echo htmlspecialchars($row['order_id']); ?>">
-                                                            <option value="">Select User</option>
-                                                            <?php foreach ($users as $user): ?>
-                                                                <option value="<?php echo $user['id']; ?>" <?php echo (isset($row['user_id']) && $row['user_id'] == $user['id']) ? 'selected' : ''; ?>>
-                                                                    <?php echo htmlspecialchars($user['name']); ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <div class="edit-actions">
-                                                            <button type="button" class="assign-confirm-btn" onclick="updateLeadUser('<?php echo htmlspecialchars($row['order_id']); ?>')">Update</button>
-                                                            <button type="button" class="assign-cancel-btn" onclick="toggleUserSelect('<?php echo htmlspecialchars($row['order_id']); ?>')">Cancel</button>
-                                                        </div>
-                                                    </div>
-                                                <?php endif; ?>
                                         </td>
                                         
                                         <!-- Action Buttons -->
@@ -663,7 +696,7 @@ if ($usersResult && $usersResult->num_rows > 0) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center" style="padding: 40px; text-align: center; color: #666;">
+                                    <td colspan="9" class="text-center" style="padding: 40px; text-align: center; color: #666;">
                                         <?php if (!empty($user_filter)): ?>
                                             No leads found assigned to the selected user
                                         <?php else: ?>
@@ -709,48 +742,323 @@ if ($usersResult && $usersResult->num_rows > 0) {
     <!-- Lead View Modal -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/order_view_modal.php'); ?>
 
+    <!-- User Change Modal -->
+    <div class="modal-overlay" id="userChangeModal" style="display: none; align-items: center;">
+        <div class="modal-container" style="width: 200px; height: 300px; margin: 0 auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-user-edit"></i>
+                    Change Assigned User
+                </h3>
+                <button class="modal-close" onclick="closeUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding-bottom: 20px;">
+                <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                    Current User: <strong id="modalCurrentUser">-</strong>
+                </div>
+                <select class="user-modal-select select2" id="modalUserSelect" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select User</option>
+                    <?php foreach ($users as $user): ?>
+                        <option value="<?php echo $user['id']; ?>">
+                            <?php echo htmlspecialchars($user['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeUserModal()">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-primary" id="modalConfirmBtn" onclick="confirmUserChange()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk User Assignment Modal -->
+    <div class="modal-overlay" id="bulkUserModal" style="display: none; align-items: center;">
+        <div class="modal-container" style="width: 400px; margin: 0 auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-users"></i>
+                    Bulk Assign User
+                </h3>
+                <button class="modal-close" onclick="closeBulkUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding-bottom: 20px;">
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    <strong id="bulkSelectedCount">0</strong> leads will be reassigned
+                </div>
+                <div style="font-size: 12px; color: #e74c3c; margin-bottom: 15px; padding: 10px; background: #fdf2f2; border-radius: 5px;">
+                    <i class="fas fa-exclamation-triangle"></i> Only leads with "pending" status can be reassigned.
+                </div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Select New User:</label>
+                <select class="select2" id="bulkUserSelect" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select User</option>
+                    <?php foreach ($users as $user): ?>
+                        <option value="<?php echo $user['id']; ?>">
+                            <?php echo htmlspecialchars($user['name']) . ' (ID: ' . $user['id'] . ')'; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeBulkUserModal()">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-primary" id="bulkConfirmBtn" onclick="confirmBulkUserChange()">
+                    <i class="fas fa-check"></i> Update All
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+    // Toast Message System
+    class ToastManager {
+        constructor() {
+            this.createContainer();
+        }
+
+        createContainer() {
+            if (!document.getElementById('toast-container')) {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+        }
+
+        show(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            const toast = this.createToast(message, type);
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('show'); }, 100);
+            if (duration > 0) {
+                setTimeout(() => { this.remove(toast); }, duration);
+            }
+            return toast;
+        }
+
+        createToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+            const titles = {
+                success: 'Success',
+                error: 'Error',
+                warning: 'Warning',
+                info: 'Information'
+            };
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <i class="toast-icon ${icons[type] || icons.info}"></i>
+                    <span>${titles[type] || titles.info}</span>
+                    <button class="toast-close" onclick="toastManager.remove(this.closest('.toast'))">&times;</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+            return toast;
+        }
+
+        remove(toast) {
+            if (toast && toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 300);
+            }
+        }
+
+        success(message, duration = 5000) { return this.show(message, 'success', duration); }
+        error(message, duration = 8000) { return this.show(message, 'error', duration); }
+        warning(message, duration = 6000) { return this.show(message, 'warning', duration); }
+        info(message, duration = 5000) { return this.show(message, 'info', duration); }
+    }
+
+    // Initialize toast manager
+    const toastManager = new ToastManager();
+
     // Lead-specific JavaScript functionality
     let currentLeadId = null;
 
-    // Toggle user selection UI
-    function toggleUserSelect(orderId) {
-        const userInfoCell = document.getElementById('user-info-' + orderId);
-        const displayDiv = userInfoCell.querySelector('.user-display');
-        const editDiv = userInfoCell.querySelector('.user-edit-ui');
-        const select = userInfoCell.querySelector('.user-assign-select');
-        const confirmBtn = userInfoCell.querySelector('.assign-confirm-btn');
-        const cancelBtn = userInfoCell.querySelector('.assign-cancel-btn');
+    // User Modal Functions
+    let currentModalOrderId = null;
+    let currentUserId = null;
+    let currentUserName = null;
+    
+    // Bulk Selection Variables
+    let selectedLeadIds = [];
 
-        if (editDiv.style.display === 'none') {
-            displayDiv.style.display = 'none';
-            editDiv.style.display = 'block';
-            select.style.display = 'block';
-            confirmBtn.style.display = 'inline-block';
-            cancelBtn.style.display = 'inline-block';
-        } else {
-            displayDiv.style.display = 'block';
-            editDiv.style.display = 'none';
-        }
+    function openUserModal(orderId, userId, userName) {
+        currentModalOrderId = orderId;
+        currentUserId = userId;
+        currentUserName = userName || 'Unassigned';
+        
+        const modal = document.getElementById('userChangeModal');
+        const currentUserSpan = document.getElementById('modalCurrentUser');
+        const userSelect = document.getElementById('modalUserSelect');
+        
+        currentUserSpan.textContent = currentUserName;
+        userSelect.value = userId || '';
+        
+        modal.style.display = 'flex';
     }
 
-    // Update lead assigned user via AJAX
-    function updateLeadUser(orderId) {
-        const userId = document.getElementById('select-user-' + orderId).value;
+    function closeUserModal() {
+        const modal = document.getElementById('userChangeModal');
+        modal.style.display = 'none';
+        currentModalOrderId = null;
+    }
+    
+    // ============ BULK SELECTION FUNCTIONS ============
+    
+    function toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.order-checkbox:not(:disabled)');
         
-        if (!userId) {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        
+        updateBulkSelection();
+    }
+    
+    function updateBulkSelection() {
+        const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+        selectedLeadIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        if (selectedLeadIds.length > 0) {
+            bulkActionsBar.style.display = 'flex';
+            selectedCount.textContent = selectedLeadIds.length;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+        
+        // Update select all checkbox state
+        const allCheckboxes = document.querySelectorAll('.order-checkbox:not(:disabled)');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        if (allCheckboxes.length > 0) {
+            selectAllCheckbox.checked = selectedLeadIds.length === allCheckboxes.length;
+        }
+    }
+    
+    function clearBulkSelection() {
+        const checkboxes = document.querySelectorAll('.order-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        document.getElementById('selectAll').checked = false;
+        selectedLeadIds = [];
+        
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        bulkActionsBar.style.display = 'none';
+    }
+    
+    // ============ BULK USER ASSIGNMENT FUNCTIONS ============
+    
+    function openBulkUserModal() {
+        if (selectedLeadIds.length === 0) {
+            toastManager.warning('Please select at least one lead to reassign');
+            return;
+        }
+        
+        document.getElementById('bulkSelectedCount').textContent = selectedLeadIds.length;
+        document.getElementById('bulkUserSelect').value = '';
+        
+        const modal = document.getElementById('bulkUserModal');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Reinitialize Select2 for bulk modal
+        if ($('#bulkUserSelect').data('select2')) {
+            $('#bulkUserSelect').select2('destroy');
+        }
+        $('#bulkUserSelect').select2({
+            dropdownParent: $('#bulkUserModal'),
+            width: '100%',
+            placeholder: 'Select User'
+        });
+    }
+    
+    function closeBulkUserModal() {
+        const modal = document.getElementById('bulkUserModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    function confirmBulkUserChange() {
+        const userSelect = document.getElementById('bulkUserSelect');
+        const newUserId = userSelect.value;
+        
+        if (!newUserId) {
+            toastManager.warning('Please select a user');
+            return;
+        }
+        
+        const confirmBtn = document.getElementById('bulkConfirmBtn');
+        const originalBtnText = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+        const formData = new FormData();
+        formData.append('order_ids', JSON.stringify(selectedLeadIds));
+        formData.append('user_id', newUserId);
+
+        fetch('bulk_update_lead_user.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                toastManager.success(data.message);
+                closeBulkUserModal();
+                clearBulkSelection();
+                
+                // Reload page to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastManager.error('Error: ' + data.message);
+            }
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalBtnText;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            toastManager.error('An unexpected error occurred');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalBtnText;
+        });
+    }
+
+    function confirmUserChange() {
+        const userSelect = document.getElementById('modalUserSelect');
+        const newUserId = userSelect.value;
+        
+        if (!newUserId) {
             alert('Please select a user');
             return;
         }
 
-        const confirmBtn = document.querySelector(`#user-info-${orderId} .assign-confirm-btn`);
+        const confirmBtn = document.getElementById('modalConfirmBtn');
         const originalBtnText = confirmBtn.innerText;
         confirmBtn.disabled = true;
         confirmBtn.innerText = 'Updating...';
 
         const formData = new FormData();
-        formData.append('order_id', orderId);
-        formData.append('user_id', userId);
+        formData.append('order_id', currentModalOrderId);
+        formData.append('user_id', newUserId);
 
         fetch('update_lead_user.php', {
             method: 'POST',
@@ -760,43 +1068,33 @@ if ($usersResult && $usersResult->num_rows > 0) {
         .then(data => {
             if (data.success) {
                 // Update the UI
-                const userInfoCell = document.getElementById('user-info-' + orderId);
-                const userDisplayDiv = userInfoCell.querySelector('.user-display');
+                const userInfoCell = document.getElementById('user-info-' + currentModalOrderId);
+                const userDisplay = userInfoCell.querySelector('.user-display');
                 
-                // Update user name and ID text
-                userDisplayDiv.innerHTML = `
-                    <div class="user-name">${data.new_user_name}</div>
-                    <div class="user-id">ID: ${data.new_user_id}</div>
-                    <button type="button" class="user-change-btn" onclick="toggleUserSelect('${orderId}')">
+                userDisplay.innerHTML = `
+                    <div class="user-name">
+                        ${data.new_user_name}
+                        <span class="user-id">(ID: ${data.new_user_id})</span>
+                    </div>
+                    <button type="button" class="user-change-btn" onclick="openUserModal('${currentModalOrderId}', '${data.new_user_id}', '${data.new_user_name}')">
                         <i class="fas fa-user-edit"></i> Change
                     </button>
                 `;
                 
-                // Reset UI state
-                toggleUserSelect(orderId);
-                
-                // RESET BUTTON STATE for future use
-                confirmBtn.disabled = false;
-                confirmBtn.innerText = originalBtnText;
-                
-                // alert('Lead reassigned successfully');
+                closeUserModal();
+                toastManager.success('Assigned user updated successfully!');
             } else {
-                alert('Error: ' + data.message);
-                confirmBtn.disabled = false;
-                confirmBtn.innerText = originalBtnText;
+                toastManager.error('Error: ' + data.message);
             }
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = originalBtnText;
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An unexpected error occurred');
+            toastManager.error('An unexpected error occurred');
             confirmBtn.disabled = false;
             confirmBtn.innerText = originalBtnText;
         });
-    }
-
-    // Handle user filter selection - simplified
-    function handleUserSelection() {
-        // No longer needed with simple dropdown
     }
 
     // Clear all filter inputs
@@ -989,16 +1287,39 @@ if ($usersResult && $usersResult->num_rows > 0) {
         }
     });
 
+    // User modal click outside to close
+    document.getElementById('userChangeModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeUserModal();
+        }
+    });
+    
+    // Bulk user modal click outside to close
+    document.getElementById('bulkUserModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeBulkUserModal();
+        }
+    });
+
     // Close modal with Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeOrderModal();
+            closeUserModal();
+            closeBulkUserModal();
         }
     });
 
     // Initialize page functionality when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Leads page loaded, initializing...');
+        
+        // Initialize Select2 for user modal
+        $('#modalUserSelect').select2({
+            dropdownParent: $('#userChangeModal'),
+            width: '100%',
+            placeholder: 'Select User'
+        });
         
         const tableRows = document.querySelectorAll('.orders-table tbody tr');
         tableRows.forEach(row => {
@@ -1022,6 +1343,7 @@ if ($usersResult && $usersResult->num_rows > 0) {
     <!-- Include Footer and Scripts -->
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 </body>
 </html>
