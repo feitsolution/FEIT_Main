@@ -412,27 +412,26 @@ $result = $conn->query($sql);
                     </table>
                 </div>
 
-                <!-- Pagination Controls -->
                 <div class="pagination">
                     <div class="pagination-info">
                         Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $limit, $totalRows); ?> of <?php echo $totalRows; ?> entries
                     </div>
                     <div class="pagination-controls">
                         <?php if ($page > 1): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page - 1; ?>&limit=<?php echo $limit; ?>&product_id_filter=<?php echo urlencode($product_id_filter); ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&low_stock_filter=<?php echo urlencode($low_stock_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
                         <?php endif; ?>
                         
                         <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
                             <button class="page-btn <?php echo ($i == $page) ? 'active' : ''; ?>" 
-                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                                    onclick="window.location.href='?page=<?php echo $i; ?>&limit=<?php echo $limit; ?>&product_id_filter=<?php echo urlencode($product_id_filter); ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&low_stock_filter=<?php echo urlencode($low_stock_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <?php echo $i; ?>
                             </button>
                         <?php endfor; ?>
                         
                         <?php if ($page < $totalPages): ?>
-                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&description_filter=<?php echo urlencode($description_filter); ?>&price_from=<?php echo urlencode($price_from); ?>&price_to=<?php echo urlencode($price_to); ?>&status_filter=<?php echo urlencode($status_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
+                            <button class="page-btn" onclick="window.location.href='?page=<?php echo $page + 1; ?>&limit=<?php echo $limit; ?>&product_id_filter=<?php echo urlencode($product_id_filter); ?>&product_name_filter=<?php echo urlencode($product_name_filter); ?>&product_code_filter=<?php echo urlencode($product_code_filter); ?>&status_filter=<?php echo urlencode($status_filter); ?>&low_stock_filter=<?php echo urlencode($low_stock_filter); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&search=<?php echo urlencode($search); ?>'">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         <?php endif; ?>
