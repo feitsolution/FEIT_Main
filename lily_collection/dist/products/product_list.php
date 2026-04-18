@@ -101,7 +101,7 @@ if (!empty($date_to)) {
 
 // Low stock filter
 if ($low_stock_filter === '1' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
-    $searchConditions[] = "p.stock_quantity <= p.low_stock_threshold";
+    $searchConditions[] = "stock_quantity <= low_stock_threshold";
 }
 
 // Apply all search conditions
