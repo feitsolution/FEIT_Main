@@ -26,6 +26,7 @@ $price_to = isset($_GET['price_to']) ? trim($_GET['price_to']) : '';
 $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : '';
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+$low_stock_filter = isset($_GET['low_stock_filter']) ? trim($_GET['low_stock_filter']) : '';
 
 // Pagination settings
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
@@ -96,6 +97,11 @@ if (!empty($date_from)) {
 if (!empty($date_to)) {
     $dateToTerm = $conn->real_escape_string($date_to);
     $searchConditions[] = "DATE(created_at) <= '$dateToTerm'";
+}
+
+// Low stock filter
+if ($low_stock_filter === '1' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+    $searchConditions[] = "p.stock_quantity <= p.low_stock_threshold";
 }
 
 // Apply all search conditions
@@ -205,6 +211,16 @@ $result = $conn->query($sql);
                                 <option value="inactive" <?php echo ($status_filter == 'inactive') ? 'selected' : ''; ?>>Inactive</option>
                             </select>
                         </div>
+
+                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                        <div class="form-group">
+                            <label for="low_stock_filter">Stock Status</label>
+                            <select id="low_stock_filter" name="low_stock_filter">
+                                <option value="">All Products</option>
+                                <option value="1" <?php echo ($low_stock_filter === '1') ? 'selected' : ''; ?>>Low Stock Only</option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
                         
                         <div class="form-group">
                             <label for="date_from">Date From</label>

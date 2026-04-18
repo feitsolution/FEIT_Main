@@ -195,6 +195,18 @@ if ($tableExists && $tableExists->num_rows > 0) {
     $stats['return_handover_orders'] = safeQuery($conn, $return_handover_orders_query);
 }
 
+// Check for low stock products count
+$low_stock_count = 0;
+$allow_inventory = isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1;
+if ($allow_inventory) {
+    $low_stock_query = "SELECT COUNT(*) as count FROM products WHERE status = 'active' AND stock_quantity <= low_stock_threshold";
+    $low_stock_result = $conn->query($low_stock_query);
+    if ($low_stock_result) {
+        $row = $low_stock_result->fetch_assoc();
+        $low_stock_count = (int)$row['count'];
+    }
+}
+
 // Check for unpaid invoices 
 $suspend_notice = null;
 $customer_id_session = $_SESSION['customer_id'] ?? 0;
@@ -473,6 +485,12 @@ if (isset($_SESSION['customer_id'])){
                 }
                 ?>
             </div>
+            
+            <?php if ($low_stock_count > 0): ?>
+            <div class="date-info" style="color: #dc3545; border-color: #fca5a5; background: #fff5f5;">
+                <i class="fas fa-exclamation-triangle"></i> Low Stock: <?php echo $low_stock_count; ?> products
+            </div>
+            <?php endif; ?>
             
             <!-- Filter Bar -->
             <div class="filter-bar no-print">

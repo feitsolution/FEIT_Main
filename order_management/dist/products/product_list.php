@@ -27,6 +27,7 @@ $status_filter = isset($_GET['status_filter']) ? trim($_GET['status_filter']) : 
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $category_filter = isset($_GET['category_filter']) ? trim($_GET['category_filter']) : '';
+$low_stock_filter = isset($_GET['low_stock_filter']) ? trim($_GET['low_stock_filter']) : '';
 
 // Fetch all categories for filter with parent name
 $categories = [];
@@ -117,6 +118,11 @@ if (!empty($category_filter)) {
     $catTerm = $conn->real_escape_string($category_filter);
     // Show products in selected category OR any subcategory of this category
     $searchConditions[] = "(p.category_id = '$catTerm' OR c.parent_id = '$catTerm')";
+}
+
+// Low stock filter
+if ($low_stock_filter === '1' && isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1) {
+    $searchConditions[] = "p.stock_quantity <= p.low_stock_threshold";
 }
 
 // Apply all search conditions
@@ -253,6 +259,16 @@ $result = $conn->query($sql);
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
+                        <?php if (isset($_SESSION['allow_inventory']) && $_SESSION['allow_inventory'] == 1): ?>
+                        <div class="form-group">
+                            <label for="low_stock_filter">Stock Status</label>
+                            <select id="low_stock_filter" name="low_stock_filter">
+                                <option value="">All Products</option>
+                                <option value="1" <?php echo ($low_stock_filter === '1') ? 'selected' : ''; ?>>Low Stock Only</option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
 
                         <div class="form-group">
                             <label for="date_from">Date From</label>
