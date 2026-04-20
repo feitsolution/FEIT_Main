@@ -93,20 +93,23 @@ if (!function_exists('get_logo_with_fallback')) {
       } */
 
         .brand-company-name {
-            font-size: 1rem;
-            font-weight: 700;
+            font-size: 1.1rem;
+            font-weight: 600;
             color: white;
-            padding: 6px 16px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.15); /* transparent */
-            backdrop-filter: blur(6px);            /* glass effect */
-            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 24px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 100%);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.25);
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            white-space: nowrap;
         }
     </style>
-       <div class="m-header branding-header">
-       <a href="../dashboard/index.php" class="b-brand branding-link">
-        
+       <div class="m-header branding-header"> 
         <?php
         // Fetch branding info from database
         // Assuming $conn is available for database connection

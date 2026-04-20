@@ -470,7 +470,8 @@ if ($result && $result->num_rows > 0) {
                                     <div class="form-column">
                                         <div class="form-group">
                                             <label for="company_name" class="form-label">Company Name *</label>
-                                            <input type="text" class="form-control" id="company_name" name="company_name" 
+                                            <span>(max 15 characters)</span>
+                                            <input type="text" class="form-control" id="company_name" name="company_name" maxlength="15"
                                                    value="<?php echo htmlspecialchars($branding['company_name']); ?>" required>
                                         </div>
                                     </div>
