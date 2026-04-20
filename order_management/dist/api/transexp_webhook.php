@@ -76,7 +76,7 @@ function fetchTransexpStatus($api_url, $api_token, $waybill_number)
 }
 
 // =======================================
-// STATUS MAPPING (Transexpress → System)
+// STATUS MAPPING (Transexpress System)
 // =======================================
 function mapTransexpStatus($status)
 {

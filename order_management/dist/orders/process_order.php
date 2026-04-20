@@ -49,7 +49,7 @@ function cs_condition($conn, $customer_id) {
     $failedOrders = $stmt->get_result()->fetch_assoc()['failed'] ?? 0;
     $stmt->close();
 
-    // If no failed orders → Excellent
+    // If no failed orders to Excellent
     if ($failedOrders == 0) return 0;
 
     $rate = ($failedOrders / $totalOrders) * 100;

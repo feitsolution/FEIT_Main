@@ -332,7 +332,7 @@ try {
 
     if ($name !== $existingCustomer['name']) {
         $hasChanges = true;
-        $changes[] = "Name: '{$existingCustomer['name']}' → '{$name}'";
+        $changes[] = "Name: '{$existingCustomer['name']}' to '{$name}'";
     }
     
     $existingEmail = $existingCustomer['email'] ?? '';
@@ -340,12 +340,12 @@ try {
         $hasChanges = true;
         $oldEmailDisplay = empty($existingEmail) ? '(empty)' : $existingEmail;
         $newEmailDisplay = empty($email) ? '(empty)' : $email;
-        $changes[] = "Email: '{$oldEmailDisplay}' → '{$newEmailDisplay}'";
+        $changes[] = "Email: '{$oldEmailDisplay}' to '{$newEmailDisplay}'";
     }
     
     if ($phone !== $existingCustomer['phone']) {
         $hasChanges = true;
-        $changes[] = "Phone: '{$existingCustomer['phone']}' → '{$phone}'";
+        $changes[] = "Phone: '{$existingCustomer['phone']}' to '{$phone}'";
     }
     
     $existingPhone2 = $existingCustomer['phone_2'] ?? '';
@@ -353,17 +353,17 @@ try {
         $hasChanges = true;
         $oldPhone2Display = empty($existingPhone2) ? '(empty)' : $existingPhone2;
         $newPhone2Display = empty($phone_2) ? '(empty)' : $phone_2;
-        $changes[] = "Phone 2: '{$oldPhone2Display}' → '{$newPhone2Display}'";
+        $changes[] = "Phone 2: '{$oldPhone2Display}' to '{$newPhone2Display}'";
     }
     
     if ($status !== $existingCustomer['status']) {
         $hasChanges = true;
-        $changes[] = "Status: '{$existingCustomer['status']}' → '{$status}'";
+        $changes[] = "Status: '{$existingCustomer['status']}' to '{$status}'";
     }
     
     if ($address_line1 !== $existingCustomer['address_line1']) {
         $hasChanges = true;
-        $changes[] = "Address Line 1: '{$existingCustomer['address_line1']}' → '{$address_line1}'";
+        $changes[] = "Address Line 1: '{$existingCustomer['address_line1']}' to '{$address_line1}'";
     }
     
     $existingAddress2 = $existingCustomer['address_line2'] ?? '';
@@ -371,7 +371,7 @@ try {
         $hasChanges = true;
         $oldAddr2Display = empty($existingAddress2) ? '(empty)' : $existingAddress2;
         $newAddr2Display = empty($address_line2) ? '(empty)' : $address_line2;
-        $changes[] = "Address Line 2: '{$oldAddr2Display}' → '{$newAddr2Display}'";
+        $changes[] = "Address Line 2: '{$oldAddr2Display}' to '{$newAddr2Display}'";
     }
     
     if ($city_id != $existingCustomer['city_id']) {
@@ -384,7 +384,7 @@ try {
         $newCityName = $newCityResult->fetch_assoc()['city_name'] ?? 'Unknown';
         $newCityStmt->close();
         
-        $changes[] = "City: '{$existingCustomer['city_name']}' → '{$newCityName}'";
+        $changes[] = "City: '{$existingCustomer['city_name']}' to '{$newCityName}'";
     }
 
     // If no changes detected, return early

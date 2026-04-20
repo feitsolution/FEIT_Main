@@ -214,7 +214,7 @@ function cs_condition($conn, $customer_id) {
     $failedOrders = $stmt->get_result()->fetch_assoc()['failed'] ?? 0;
     $stmt->close();
 
-    // If no failed orders → Excellent
+    // If no failed orders to Excellent
     if ($failedOrders == 0) return 0;
 
     $rate = ($failedOrders / $totalOrders) * 100;
@@ -262,7 +262,7 @@ function cs_condition($conn, $customer_id) {
                 // FIX: Preserve leading 0 in phone numbers
                 // ===============================
                
-                // Convert +94XXXXXXXXX → 0XXXXXXXXX
+                // Convert +94XXXXXXXXX to 0XXXXXXXXX
                 if (strlen($phoneNumber) === 12 && substr($phoneNumber, 0, 3) === '+94') {
                     $phoneNumber = '0' . substr($phoneNumber, 3);
                 } elseif (strlen($phoneNumber) === 11 && substr($phoneNumber, 0, 2) === '94') {
@@ -277,7 +277,7 @@ function cs_condition($conn, $customer_id) {
                     }
                 }
 
-                // Excel removed leading 0 → add it back
+                // Excel removed leading 0 to add it back
                 if (strlen($phoneNumber) === 9 && ctype_digit($phoneNumber)) {
                     $phoneNumber = '0' . $phoneNumber;
                 }

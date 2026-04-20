@@ -159,7 +159,7 @@ try {
         $checkCodeStmt->close();
     }
 
-    // If errors exist → stop and return
+    // If errors exist to stop and return
     if (!empty($errors)) {
         $response['errors'] = $errors;
         $response['message'] = 'Please correct the errors below';
@@ -194,16 +194,16 @@ try {
                 $changes = [];
 
                 if ($originalProduct['name'] !== $name) {
-                    $changes[] = "Name: '{$originalProduct['name']}' → '{$name}'";
+                    $changes[] = "Name: '{$originalProduct['name']}' to '{$name}'";
                 }
                 if ($originalProduct['status'] !== $status) {
-                    $changes[] = "Status: '{$originalProduct['status']}' → '{$status}'";
+                    $changes[] = "Status: '{$originalProduct['status']}' to '{$status}'";
                 }
                 if (floatval($originalProduct['lkr_price']) !== floatval($lkr_price)) {
-                    $changes[] = "Price: LKR {$originalProduct['lkr_price']} → LKR {$lkr_price}";
+                    $changes[] = "Price: LKR {$originalProduct['lkr_price']} to LKR {$lkr_price}";
                 }
                 if ($originalProduct['product_code'] !== $product_code) {
-                    $changes[] = "Code: '{$originalProduct['product_code']}' → '{$product_code}'";
+                    $changes[] = "Code: '{$originalProduct['product_code']}' to '{$product_code}'";
                 }
                 if (($originalProduct['description'] ?? '') !== ($description ?? '')) {
                     $changes[] = "Description updated";
