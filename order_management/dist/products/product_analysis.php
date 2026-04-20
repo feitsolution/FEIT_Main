@@ -163,18 +163,15 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
 
     <div class="pc-container">
         <div class="pc-content">
-            <div class="page-header">
-                <div class="page-block">
-                    <div class="page-header-title">
-                        <h5 class="mb-0 font-medium">Product Analysis</h5>
+                <div class="page-header">
+                    <div class="page-block">
+                        <div class="page-header-title">
+                            <h5 class="mb-0 font-medium">Product Analysis</h5>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <div class="main-content-wrapper">
-                <div class="col-span-12 mb-4">
-                    <h2 class="section-title" style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">Filters</h2>
-                </div>
                 <div class="tracking-container">
                     <form class="tracking-form" method="GET" action="">
                         <div class="form-group">
@@ -208,96 +205,25 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
                 </div>
 
                 <div class="col-span-12 mb-4">
-                    <h2 class="section-title" style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">Analysis Summary</h2>
+                    <h2 class="section-title" style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">Analysis Summary <i class="fas fa-info-circle text-primary" style="cursor: pointer; font-size: 16px;" onclick="openInfoModal()" title="Click here to know more about this page"></i></h2>
                 </div>
 
-                <div class="flex flex-wrap gap-6 mb-6">
-    <!-- Unique Products -->
-    <div class="flex-1 min-w-[200px]">
-        <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
-                <h5>Products Sold</h5>
-                <i class="fas fa-box text-blue-500 text-xl"></i>
-            </div>
-            <div class="card-body">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="font-light flex items-center mb-0">
-                        <span class="status-indicator" style="background-color: #3b82f6;"></span>
-                        <?php echo number_format($summary['unique_products'] ?? 0); ?>
-                    </h3>
-                    <p class="mb-0 text-sm text-blue-600">Products</p>
-                </div>
-                <div class="w-full bg-theme-bodybg rounded-lg h-1.5 mt-6 dark:bg-themedark-bodybg">
-                    <div class="bg-blue-500 h-full rounded-lg shadow-[0_10px_20px_0_rgba(0,0,0,0.3)]" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
+                <div class="flex flex-wrap gap-4 mb-6">
+    <div class="flex-1 min-w-[180px] bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div class="text-sm text-gray-500 mb-1">Products Sold</div>
+        <div class="text-2xl font-semibold text-blue-600"><?php echo number_format($summary['unique_products'] ?? 0); ?></div>
     </div>
-
-    <!-- Items Sold -->
-    <div class="flex-1 min-w-[200px]">
-        <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
-                <h5>Total Items Sold</h5>
-                <i class="fas fa-shopping-cart text-purple-500 text-xl"></i>
-            </div>
-            <div class="card-body">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="font-light flex items-center mb-0">
-                        <span class="status-indicator" style="background-color: #8b5cf6;"></span>
-                        <?php echo number_format($summary['total_items_sold'] ?? 0); ?>
-                    </h3>
-                    <p class="mb-0 text-sm text-purple-600">Items</p>
-                </div>
-                <div class="w-full bg-theme-bodybg rounded-lg h-1.5 mt-6 dark:bg-themedark-bodybg">
-                    <div class="bg-purple-500 h-full rounded-lg shadow-[0_10px_20px_0_rgba(0,0,0,0.3)]" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
+    <div class="flex-1 min-w-[180px] bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div class="text-sm text-gray-500 mb-1">Items Sold</div>
+        <div class="text-2xl font-semibold text-purple-600"><?php echo number_format($summary['total_items_sold'] ?? 0); ?></div>
     </div>
-
-    <!-- Success Rate -->
-    <div class="flex-1 min-w-[200px]">
-        <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
-                <h5>Success Rate</h5>
-                <i class="fas fa-check-double text-green-500 text-xl"></i>
-            </div>
-            <div class="card-body">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="font-light flex items-center mb-0">
-                        <span class="status-indicator" style="background-color: #10b981;"></span>
-                        <?php echo number_format($summary['avg_success_rate'] ?? 0, 1); ?>%
-                    </h3>
-                    <p class="mb-0 text-sm text-green-600">Avg Success</p>
-                </div>
-                <div class="w-full bg-theme-bodybg rounded-lg h-1.5 mt-6 dark:bg-themedark-bodybg">
-                    <div class="bg-green-500 h-full rounded-lg shadow-[0_10px_20px_0_rgba(0,0,0,0.3)]" style="width: <?php echo min(100, max(0, $summary['avg_success_rate'] ?? 0)); ?>%"></div>
-                </div>
-            </div>
-        </div>
+    <div class="flex-1 min-w-[180px] bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div class="text-sm text-gray-500 mb-1">Success Rate</div>
+        <div class="text-2xl font-semibold text-green-600"><?php echo number_format($summary['avg_success_rate'] ?? 0, 1); ?>%</div>
     </div>
-
-    <!-- Total Orders -->
-    <div class="flex-1 min-w-[200px]">
-        <div class="card">
-            <div class="card-header !pb-0 !border-b-0">
-                <h5>Total Orders</h5>
-                <i class="fas fa-file-invoice text-amber-500 text-xl"></i>
-            </div>
-            <div class="card-body">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="font-light flex items-center mb-0">
-                        <span class="status-indicator" style="background-color: #f59e0b;"></span>
-                        <?php echo number_format($summary['total_orders'] ?? 0); ?>
-                    </h3>
-                    <p class="mb-0 text-sm text-amber-600">Orders</p>
-                </div>
-                <div class="w-full bg-theme-bodybg rounded-lg h-1.5 mt-6 dark:bg-themedark-bodybg">
-                    <div class="bg-amber-500 h-full rounded-lg shadow-[0_10px_20px_0_rgba(0,0,0,0.3)]" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
+    <div class="flex-1 min-w-[180px] bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div class="text-sm text-gray-500 mb-1">Total Orders</div>
+        <div class="text-2xl font-semibold text-amber-600"><?php echo number_format($summary['total_orders'] ?? 0); ?></div>
     </div>
 </div>
 
@@ -435,6 +361,110 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
             </div>
         </div>
     </div>
+    <div id="infoModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container" style="max-width: 500px;">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-chart-bar mr-2"></i>How Product Analysis Works</h5>
+                <button class="modal-close" onclick="closeInfoModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <h6 style="color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">📊 Summary Cards (Top Section)</h6>
+                <p style="color: #6b7280; font-size: 13px;">Quick overview of your product performance:</p>
+                <ul style="color: #4b5563;">
+                    <li><span style="color: #3b82f6;">●</span> <strong>Products Sold:</strong> Count of different products sold</li>
+                    <li><span style="color: #8b5cf6;">●</span> <strong>Items Sold:</strong> Total quantity of all items</li>
+                    <li><span style="color: #10b981;">●</span> <strong>Success Rate:</strong> Orders completed without cancellation</li>
+                    <li><span style="color: #f59e0b;">●</span> <strong>Total Orders:</strong> All orders in selected period</li>
+                </ul>
+                
+                <h6 style="color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 16px;">📋 Product Table</h6>
+                <p style="color: #6b7280; font-size: 13px;">Detailed breakdown per product:</p>
+                <ul style="color: #4b5563;">
+                    <li><strong>Qty Sold & Earn:</strong> Only counts completed/delivered orders</li>
+                    <li><strong>Success %:</strong> How often this product's orders complete successfully</li>
+                    <li><strong>Status Columns:</strong> Shows pending, dispatched, completed, and cancelled orders</li>
+                </ul>
+                
+                <h6 style="color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 16px;">🔍 How to Use Filters</h6>
+                <ul style="color: #4b5563;">
+                    <li><strong>Date From/To:</strong> Select a date range to analyze</li>
+                    <li><strong>Product Search:</strong> Type product name or code to find specific products</li>
+                    <li><strong>Search button:</strong> Apply filters</li>
+                    <li><strong>Clear button:</strong> Reset all filters</li>
+                </ul>
+                
+                <div style="background: #fef3c7; padding: 10px; border-radius: 6px; margin-top: 16px; font-size: 13px;">
+                    <strong>💡 Tip:</strong> Products are sorted by highest earnings first. Use filters to find specific products or analyze different time periods.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeInfoModal()">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-container {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .modal-header .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-body h6 {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .modal-body ul {
+            padding-left: 20px;
+        }
+        .modal-body li {
+            margin-bottom: 4px;
+        }
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: right;
+        }
+    </style>
 
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/footer.php'); ?>
     <?php include($_SERVER['DOCUMENT_ROOT'] . '/order_management/dist/include/scripts.php'); ?>
@@ -443,6 +473,22 @@ if ($summaryResult && $summaryResult->num_rows > 0) {
         function clearFilters() {
             window.location.href = 'product_analysis.php';
         }
+
+        function openInfoModal() {
+            document.getElementById('infoModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        document.getElementById('infoModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeInfoModal();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
             const dateFromInput = document.getElementById('date_from');
